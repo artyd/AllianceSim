@@ -1,0 +1,9 @@
+alliancesim.alliancegroup95.com {
+    handle_path /api/* {
+        reverse_proxy 127.0.0.1:8011
+    }
+    handle {
+        root * /var/www/alliancesim
+        file_server
+    }
+}
