@@ -56,10 +56,11 @@ Per-person HR login / audit trail is a v2 item.
 See [`deploy/DEPLOY.md`](deploy/DEPLOY.md). TL;DR on the server:
 
 ```bash
+sudo mkdir -p /opt/alliancesim && sudo chown "$USER" /opt/alliancesim   # /opt is root-owned
 git clone https://github.com/artyd/AllianceSim.git /opt/alliancesim
 cd /opt/alliancesim && cp .env.example .env   # set POSTGRES_PASSWORD + EDIT_TOKEN
 sudo docker compose up -d --build
-sudo cp -r public/* /var/www/alliancesim/
+sudo mkdir -p /var/www/alliancesim && sudo cp -r public/* /var/www/alliancesim/
 # add `import /opt/alliancesim/caddy/Caddyfile` to /etc/caddy/Caddyfile, reload caddy
 ```
 
