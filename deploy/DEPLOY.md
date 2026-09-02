@@ -100,10 +100,10 @@ sudo cp -r /opt/alliancesim/public/* /var/www/alliancesim/
 
 (Re-run this copy after every `git pull` that changes the frontend.)
 
-> **3D avatar models:** the employee figures load from `public/assets/models/{sit,stand,walk}.glb`.
-> These are large custom meshes not stored in git (see `public/assets/models/README.md`) — copy them
-> into that folder from the original design project, then re-run the copy above. Without them the app
-> still fully works; seated employees just show as a marker + name tag instead of a 3D figure.
+> **3D avatar models:** the employee figures load from `public/assets/models/{sit,stand,walk}.glb`,
+> which are committed to the repo (tracked as binary) and copied by the command above — nothing extra
+> to do. If they were ever missing the app still fully works; seated employees would just show as a
+> marker + name tag instead of a 3D figure.
 
 ---
 

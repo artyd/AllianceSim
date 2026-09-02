@@ -1,26 +1,18 @@
 # Avatar models (GLB)
 
-The 3D employee avatars are loaded at runtime from three GLB files that must live
-in this folder and be served by Caddy alongside the rest of `public/`:
+The 3D employee avatars load at runtime from these three GLB files (served by Caddy
+alongside the rest of `public/`):
 
 ```
-public/assets/models/sit.glb     # seated pose (used when an employee is at a desk)
-public/assets/models/stand.glb   # standing pose (roaming "pause")
-public/assets/models/walk.glb    # walking pose (roaming movement, animated)
+sit.glb     # seated pose   — Meshy "Sitting Answering Questions" (224632 bytes)
+stand.glb   # standing pose — Meshy "Stand and Chat"              (175228 bytes)
+walk.glb    # walking pose  — Meshy "Walking" (animated)          (125072 bytes)
 ```
 
-These are custom Meshy-AI generated meshes from the original Claude Design project.
-They exceed the design-export API's 256 KiB per-file limit, so they are **not**
-committed here automatically — copy them in from the design project's
-`assets/models/` before (or right after) deploying.
+They are the exact meshes from the original Claude Design project and are committed
+here. They are tracked as binary (see `.gitattributes`) so line-ending conversion
+never corrupts them.
 
-The app degrades gracefully if they are missing: the office, furniture, zones,
-seating, search and save all work; seated employees simply render as a floating
-marker + name tag instead of a 3D figure, and no console error is thrown
-(`modelsReady` swallows the failed fetch).
-
-After copying the files in, on the server re-run:
-
-```bash
-sudo cp -r /opt/alliancesim/public/* /var/www/alliancesim/
-```
+The app degrades gracefully if any are missing: office, furniture, zones, seating,
+search and save all still work; a seated employee just renders as a floating marker
++ name tag instead of a 3D figure, and no console error is thrown.
