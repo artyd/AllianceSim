@@ -3,7 +3,7 @@ import { query, initSchema } from './db.js';
 import { requireEditToken } from './auth.js';
 
 const app = express();
-app.use(express.json({ limit: '5mb' })); // layout JSON can be sizeable
+app.use(express.json({ limit: '25mb' })); // layout blob embeds employees (+ optional base64 photos)
 
 const router = express.Router();
 

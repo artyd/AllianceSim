@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AllianceSim — офіс Харків</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.184.0/build/three.module.js",
+    "three/addons/controls/OrbitControls.js": "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js",
+    "three/addons/loaders/GLTFLoader.js": "https://unpkg.com/three@0.184.0/examples/jsm/loaders/GLTFLoader.js",
+    "three/addons/exporters/OBJExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js",
+    "three/addons/exporters/GLTFExporter.js": "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js"
+  },
+  "integrity": {
+    "https://unpkg.com/three@0.184.0/build/three.module.js": "sha384-8FCZ1eVO6it4+pbec2aDtnTrwjWXZLJRC+MAGCIPDgsYnUrl/E0A2YlF8ioMKI/J",
+    "https://unpkg.com/three@0.184.0/build/three.core.js": "sha384-dw2ooPewaEIrAgl6oFDBmmBWCE9oW9LxRGcfwZ0hLvEprzo202wXl7vCYHRlSnOT",
+    "https://unpkg.com/three@0.184.0/examples/jsm/controls/OrbitControls.js": "sha384-4rziNxOBZKQ69i+w+f89KJ55TCYquwchVbByQwmaOeIOXdOU2PLDn3kOfXHwIJC9",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/OBJExporter.js": "sha384-nbwtoZENJD3Vq+ACK0CuGQdPMuDWHkamC2KJD70EV5nfg6jQjfppKOea07YJN+N3",
+    "https://unpkg.com/three@0.184.0/examples/jsm/exporters/GLTFExporter.js": "sha384-VofkvpG6HERhFCYbsUOHeNXBCqID2nfqkQqnVzE1jc/oPcz+qJ13ADdXH08hE+cQ"
+  }
+}
+</script>
+<style>
+:root{--red:#E2001A;--red-soft:#FCE7E9;--ink:#2B2530;--muted:#8A7F86;--line:rgba(60,40,30,.10);--panel:rgba(255,252,248,.94);--panel-solid:#FFFCF8;--chip:#F5EFE8;--shadow:0 12px 34px rgba(70,45,30,.14),0 1px 2px rgba(70,45,30,.08);--r:18px}
+#app[data-ui="dark"]{--ink:#F3EEF2;--muted:#A79FA8;--line:rgba(255,255,255,.10);--panel:rgba(40,38,48,.94);--panel-solid:#2A2833;--chip:#38353F;--shadow:0 12px 34px rgba(0,0,0,.4)}
+*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;font-family:Nunito,system-ui,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}button{cursor:pointer;border:0;background:none}
+a{color:var(--red)}a:hover{color:#b5000f}
+#app{position:fixed;inset:0;background:#dbe7f0;color:var(--ink)}
+.card,.ibtn,.item,.emp,.rl,.tag .b,#sugg,#modal{color:var(--ink)}
+#c{position:absolute;inset:0;display:block;touch-action:none}
+#labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.card{background:var(--panel);backdrop-filter:blur(14px);border-radius:var(--r);box-shadow:var(--shadow);border:1px solid var(--line)}
+/* header */
+#hdr{position:absolute;top:16px;left:16px;right:16px;height:64px;display:flex;align-items:center;gap:14px;padding:0 14px 0 12px;z-index:5}
+#logo{height:40px;width:auto;display:block;padding:4px 6px;background:#fff;border-radius:10px}
+#brand{display:flex;flex-direction:column;line-height:1.1}
+#brand b{font-weight:800;font-size:17px;letter-spacing:-.01em}#brand span{font-size:12px;color:var(--muted);font-weight:600}
+.seg{display:flex;background:var(--chip);border-radius:999px;padding:4px;gap:2px}
+.seg button{padding:8px 16px;border-radius:999px;font-weight:700;font-size:14px;color:var(--muted);transition:all .2s}
+.seg button[aria-pressed="true"]{background:var(--panel-solid);color:var(--ink);box-shadow:0 2px 8px rgba(60,40,30,.12)}
+#hdr .spacer{flex:1}
+.ibtn{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--chip);transition:background .15s}
+.ibtn:hover{background:var(--red-soft)}#app[data-ui="dark"] .ibtn:hover{background:#4a3038}
+.ibtn:disabled{opacity:.4;cursor:default}
+.ibtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.btn{padding:10px 18px;border-radius:12px;font-weight:800;font-size:14px;background:var(--red);color:#fff;display:flex;align-items:center;gap:8px;transition:transform .12s,box-shadow .2s;box-shadow:0 6px 16px rgba(226,0,26,.28)}
+.btn:hover{transform:translateY(-1px)}.btn:active{transform:translateY(0)}
+.btn.ghost{background:var(--chip);color:var(--ink);box-shadow:none}
+#status{font-size:12px;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:var(--chip)}
+#status i{width:8px;height:8px;border-radius:50%;background:#e0a300;display:block}#status.saved i{background:#4CAF6E}
+#app[data-mode="viewer"] .builder-only{display:none!important}
+#app[data-mode="builder"] .viewer-only{display:none!important}
+/* search (viewer) */
+#search{position:relative;width:420px}
+#search input{width:100%;height:44px;border-radius:14px;border:1.5px solid var(--line);background:var(--panel-solid);padding:0 44px 0 42px;font-size:15px;font-weight:600;outline:0}
+#search input:focus{border-color:var(--red)}
+#search svg{position:absolute;left:14px;top:13px;width:18px;height:18px;stroke:var(--muted);fill:none;stroke-width:2.2;stroke-linecap:round}
+#sugg{position:absolute;top:50px;left:0;right:0;background:var(--panel-solid);border-radius:14px;box-shadow:var(--shadow);border:1px solid var(--line);overflow:hidden;display:none;max-height:300px;overflow-y:auto}
+#sugg.open{display:block}
+#sugg button{width:100%;display:flex;align-items:center;gap:10px;padding:10px 14px;text-align:left}
+#sugg button:hover,#sugg button.act{background:var(--chip)}
+.av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;color:#fff;flex:none;overflow:hidden;background-size:cover;background-position:center}
+.nm{font-weight:700;font-size:14px}.dp{font-size:12px;color:var(--muted);font-weight:600}
+#filters{position:absolute;top:92px;transition:opacity .25s}
+#app.hl #filters{opacity:0;pointer-events:none}
+#filters{left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:4;flex-wrap:wrap;justify-content:center;max-width:70vw}
+.chipb{padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700;background:var(--panel);box-shadow:0 2px 8px rgba(60,40,30,.08);border:1px solid var(--line);display:flex;align-items:center;gap:6px}
+.chipb[aria-pressed="true"]{background:var(--ink);color:var(--panel-solid)}
+.chipb i{width:8px;height:8px;border-radius:50%;display:block}
+/* dock */
+#dock{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);width:min(1120px,calc(100% - 32px));z-index:5;transition:transform .45s cubic-bezier(.2,.8,.2,1),opacity .3s;display:flex;flex-direction:column}
+#app[data-mode="viewer"] #dock{transform:translate(-50%,130%);opacity:0;pointer-events:none}
+#tabs{display:flex;gap:3px;padding:8px 10px 0;align-items:center}
+#tabs button[role="tab"]{padding:9px 16px;border-radius:12px 12px 0 0;font-weight:800;font-size:14px;color:var(--muted);position:relative;transition:background .18s,color .18s}
+#tabs button[role="tab"]:hover{color:var(--ink);background:var(--chip)}
+#tabs button[role="tab"][aria-selected="true"]{color:var(--ink);background:var(--panel-solid);box-shadow:0 -2px 8px rgba(60,40,30,.06)}
+#tabs button b{margin-left:6px;font-size:11px;background:var(--red);color:#fff;border-radius:999px;padding:1px 6px}
+.pane{display:none;padding:14px;background:var(--panel-solid);border-radius:3px 14px 14px 14px;margin:0 10px 10px}.pane.on{display:block}
+.hint{font-size:12px;color:var(--muted);font-weight:600;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;text-align:center;gap:8px}
+kbd{font:700 11px Nunito;background:var(--chip);border:1px solid var(--line);border-radius:6px;padding:1px 6px;color:var(--ink)}
+#cat{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;justify-content:safe center}
+.item{flex:none;width:104px;border-radius:14px;background:var(--chip);padding:8px 8px 10px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:grab;user-select:none;transition:transform .15s,box-shadow .15s;border:1.5px solid transparent}
+.item:hover{transform:translateY(-3px);box-shadow:0 8px 18px rgba(60,40,30,.14);border-color:var(--line)}
+.item img{width:84px;height:84px;object-fit:contain;pointer-events:none}
+.item span{font-size:12px;font-weight:700;text-align:center;line-height:1.2;text-wrap:balance}
+.item small{font-size:10px;color:var(--muted);font-weight:700}
+#zonesList{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.catf{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:12px}.catf .chipb{box-shadow:none;background:var(--chip);border-color:transparent}
+.zt{display:flex;align-items:center;gap:8px;padding:8px 12px 8px 8px;border-radius:12px;background:var(--chip);font-weight:700;font-size:13px}
+.zt i{width:18px;height:18px;border-radius:6px;display:block}
+#people{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;align-items:stretch;justify-content:safe center}
+.emp{flex:none;width:220px;display:flex;align-items:center;gap:10px;padding:10px;border-radius:14px;background:var(--chip);cursor:grab;user-select:none;border:1.5px solid transparent;transition:transform .15s,box-shadow .15s;position:relative}
+.emp:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(60,40,30,.14)}
+.emp .av{width:38px;height:38px;font-size:14px}
+.emp .txt{min-width:0;flex:1}.emp .txt div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.emp .st{font-size:11px;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:5px}
+.emp .st.seated{color:#2f8f52}
+.emp .x{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;font-size:14px;line-height:22px;text-align:center;color:var(--muted);display:none;background:var(--panel-solid)}
+.emp:hover .x{display:block}.emp .x:hover{color:var(--red)}
+.addemp{flex:none;width:150px;border-radius:14px;border:2px dashed var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-weight:800;font-size:13px;color:var(--red);padding:10px}
+.addemp:hover{background:var(--red-soft)}
+.addemp b{font-size:24px;line-height:1}
+/* side layouts */
+#app[data-layout="right"] #dock{left:auto;right:16px;bottom:auto;top:96px;transform:none;width:360px;max-height:calc(100% - 120px);overflow-y:auto}
+#app[data-layout="right"] .hint,#app[data-layout="sides"] .hint{flex-wrap:wrap;row-gap:4px}
+#app[data-layout="right"] #cat,#app[data-layout="right"] #people{flex-wrap:wrap;overflow:visible}
+#app[data-layout="right"] .emp{width:100%}
+#app[data-layout="right"][data-mode="viewer"] #dock{transform:translateX(120%)}
+#app[data-layout="sides"] #dock{left:16px;right:auto;bottom:auto;top:96px;transform:none;width:360px;max-height:calc(100% - 120px);overflow-y:auto}
+#app[data-layout="sides"] #cat{flex-wrap:wrap;overflow:visible}
+#app[data-layout="sides"] #tabPeople{display:none}
+#app[data-layout="sides"] #dock2{display:flex}
+#app[data-layout="sides"][data-mode="viewer"] #dock{transform:translateX(-120%)}
+#dock2{display:none;position:absolute;right:16px;top:96px;width:340px;max-height:calc(100% - 120px);overflow-y:auto;z-index:5;flex-direction:column;padding:12px;transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+#dock2 h4{margin:0 0 10px;font-size:14px}
+#dock2 #people{flex-wrap:wrap;overflow:visible}#dock2 .emp{width:100%}
+#app[data-layout="sides"][data-mode="viewer"] #dock2{transform:translateX(120%)}
+/* pops */
+.pop{position:absolute;z-index:8;padding:14px;width:280px;display:none}
+.pop.open{display:block}
+.pop h4{margin:0 0 10px;font-size:15px;font-weight:800}
+.pop .grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.pop .grid button{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:var(--chip);font-weight:700;font-size:12px;text-align:left;border:1.5px solid transparent}
+.pop .grid button[aria-pressed="true"]{border-color:var(--ink)}
+.pop .grid i{width:14px;height:14px;border-radius:5px;display:block;flex:none}
+.pop label{display:block;font-size:11px;font-weight:800;color:var(--muted);margin:12px 0 4px;text-transform:uppercase;letter-spacing:.04em}
+.field{width:100%;height:40px;border-radius:10px;border:1.5px solid var(--line);background:var(--panel-solid);padding:0 12px;outline:0;font-weight:600;font-size:14px}
+.field:focus{border-color:var(--red)}
+.pop .row{display:flex;gap:8px;margin-top:12px;justify-content:space-between}
+.tbtn{padding:8px 12px;border-radius:10px;font-weight:800;font-size:13px;background:var(--chip)}
+.tbtn.red{background:var(--red);color:#fff}.tbtn.txt{background:none;color:var(--muted)}.tbtn.txt:hover{color:var(--red)}
+#itemBar{position:absolute;z-index:8;display:none;gap:4px;padding:6px;border-radius:14px}
+#itemBar.open{display:flex}
+#itemBar button{padding:8px 12px;border-radius:10px;font-weight:800;font-size:13px;display:flex;align-items:center;gap:6px}
+#itemBar button:hover{background:var(--chip)}#itemBar button.del:hover{background:var(--red-soft);color:var(--red)}
+#itemBar svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+/* labels */
+.rl{position:absolute;transform:translate(-50%,-50%);padding:5px 10px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap;background:rgba(255,255,255,.82);color:var(--ink);box-shadow:0 2px 8px rgba(60,40,30,.10);transition:opacity .2s}
+#app[data-ui="dark"] .rl{background:rgba(40,38,48,.85);color:#f3eef2}
+.rl.empty{border:1.5px dashed rgba(60,40,30,.25);background:rgba(255,255,255,.5);color:var(--muted);font-weight:700}
+.rl i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+#app[data-mode="builder"][data-tab="zones"] .rl{pointer-events:auto;cursor:pointer}
+#app[data-mode="builder"][data-tab="zones"] .rl:hover{background:var(--panel-solid);box-shadow:0 6px 16px rgba(60,40,30,.16)}
+.tag{position:absolute;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;white-space:nowrap;opacity:0;transition:opacity .2s}
+.tag .b{background:var(--panel-solid);border-radius:12px;padding:5px 10px;box-shadow:0 4px 12px rgba(60,40,30,.16);display:flex;align-items:center;gap:6px;border:1.5px solid transparent}
+.tag .b i{width:8px;height:8px;border-radius:50%;display:block}
+.tag .b .n{font-size:12px;font-weight:800}.tag .b .d{font-size:11px;font-weight:700;color:var(--muted)}
+.tag:after{content:"";width:0;height:0;border:6px solid transparent;border-top-color:var(--panel-solid);margin-top:-1px}
+.tag.hi .b{border-color:var(--red);box-shadow:0 6px 18px rgba(226,0,26,.3)}
+.tag.dim{opacity:.25}
+#app[data-mode="viewer"] .tag{pointer-events:auto;cursor:pointer}
+/* modal */
+#backdrop{position:absolute;inset:0;background:rgba(40,25,30,.35);backdrop-filter:blur(3px);z-index:20;display:none;align-items:center;justify-content:center}
+#backdrop.open{display:flex}
+#modal{width:880px;max-width:calc(100vw - 32px);display:grid;grid-template-columns:1fr 300px;overflow:hidden;animation:pop .28s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes pop{from{transform:scale(.94) translateY(10px);opacity:0}}
+#modal form{padding:24px 24px 20px;display:flex;flex-direction:column;justify-content:center}
+#modal h3{margin:0 0 4px;font-size:20px;font-weight:800}
+#modal p{margin:0 0 16px;font-size:13px;color:var(--muted);font-weight:600}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fl{display:block;font-size:11px;font-weight:800;color:var(--muted);margin:10px 0 4px;text-transform:uppercase;letter-spacing:.04em}
+.sw{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.sw button{width:26px;height:26px;border-radius:50%;border:2.5px solid transparent;transition:transform .12s}
+.sw button[aria-pressed="true"]{border-color:var(--ink);transform:scale(1.1)}
+.sw span{font-size:11px;color:var(--muted);font-weight:700;margin-left:6px}
+.photo{display:flex;align-items:center;gap:10px}
+.photo .av{width:40px;height:40px;font-size:14px;background:var(--chip);color:var(--muted)}.photo{height:40px}
+.photo label.up{padding:8px 12px;border-radius:10px;background:var(--chip);font-weight:800;font-size:13px;cursor:pointer}
+.photo input{display:none}
+#preview{background:linear-gradient(180deg,#FBF1E6,#F3E4D3);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;position:relative}
+#app[data-ui="dark"] #preview{background:linear-gradient(180deg,#3a3746,#2c2a35)}
+#preview canvas{width:240px;height:280px}
+#preview .cap{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;position:absolute;top:16px}
+#ptag{position:absolute;left:50%;top:60px}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}.actions button{width:100%;justify-content:center;height:44px}
+#modal h3,#modal p{text-align:center}
+/* welcome / viewer intro */
+.center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:9;padding:28px 30px;width:520px;text-align:center;animation:pop .35s cubic-bezier(.2,.9,.3,1.15)}
+.center h2{margin:0 0 8px;font-size:26px;font-weight:800;letter-spacing:-.01em}
+.center p{margin:0 0 18px;color:var(--muted);font-weight:600;font-size:14px;line-height:1.5}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;text-align:left}
+.steps div{background:var(--chip);border-radius:14px;padding:12px;font-size:13px;font-weight:700;line-height:1.35}
+.steps b{display:block;width:24px;height:24px;border-radius:50%;background:var(--red);color:#fff;font-size:12px;display:grid;place-items:center;margin-bottom:8px}
+#vintro #search{width:100%;margin-bottom:10px}
+#modePill{position:absolute;left:50%;top:100px;transform:translate(-50%,-10px);z-index:9;padding:10px 18px;border-radius:999px;font-weight:800;font-size:14px;opacity:0;pointer-events:none;transition:all .35s}
+#modePill.show{opacity:1;transform:translate(-50%,0)}
+#toast{position:absolute;left:50%;bottom:120px;transform:translate(-50%,20px);padding:12px 18px;border-radius:14px;background:var(--ink);color:var(--panel-solid);font-weight:800;font-size:14px;opacity:0;transition:all .3s;z-index:30;pointer-events:none;display:flex;gap:8px;align-items:center}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+#app[data-mode="viewer"] #toast{bottom:40px}
+/* settings */
+#settings{width:300px;right:16px;top:90px;left:auto}
+#settings .opt{display:flex;gap:4px;flex-wrap:wrap}
+#settings .opt button{padding:6px 10px;border-radius:9px;background:var(--chip);font-weight:700;font-size:12px;border:1.5px solid transparent}
+#settings .opt button[aria-pressed="true"]{border-color:var(--ink)}
+#empcard{width:260px}
+#empcard .top{display:flex;gap:12px;align-items:center;margin-bottom:10px}
+#empcard .top .av{width:48px;height:48px;font-size:16px}
+#empcard dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:12px}
+#empcard dt{color:var(--muted);font-weight:700}#empcard dd{margin:0;font-weight:700;overflow:hidden;text-overflow:ellipsis}
+#hdr svg.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+/* --- v4 additions --- */
+.catf .chipb[aria-pressed="true"]{background:var(--ink);color:var(--panel-solid);border-color:var(--ink)}
+#tabs{align-items:center}
+#collapseBtn{margin-left:auto;width:32px;height:32px;border-radius:10px}
+#collapseBtn svg{width:16px;height:16px;transition:transform .3s}
+#app[data-dock="closed"] #collapseBtn svg{transform:rotate(180deg)}
+#app[data-layout="dock"] .pane.on{max-height:72vh;overflow:hidden;transform-origin:top center;transition:max-height .42s cubic-bezier(.2,.8,.2,1),opacity .3s ease,padding .3s ease,margin .3s ease}
+#app[data-layout="dock"][data-dock="closed"] .pane.on{max-height:0;opacity:0;padding-top:0;padding-bottom:0;margin-top:0;margin-bottom:0}
+#app:not([data-layout="dock"])[data-dock="closed"] #dock .pane{display:none!important}
+#app:not([data-layout="dock"])[data-dock="closed"] #dock2 h4~*{display:none}
+#modal form{padding:22px 26px 20px;justify-content:flex-start;gap:0;max-height:92vh;overflow:auto}
+.fsec-t{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:16px 0 8px;padding-top:14px;border-top:1px solid var(--line);display:flex;align-items:center;gap:8px}
+.fsec-t:first-of-type{border-top:0;padding-top:0;margin-top:2px}
+.optrow{display:flex;gap:6px;flex-wrap:wrap}
+.optbtn{padding:7px 11px;border-radius:10px;background:var(--chip);font-weight:700;font-size:12.5px;border:1.5px solid transparent;display:flex;align-items:center;gap:6px}
+.optbtn[aria-pressed="true"]{border-color:var(--ink)}
+.optbtn i{width:9px;height:9px;border-radius:50%;display:block;flex:none}
+.moodrow{display:flex;gap:6px}
+.moodbtn{font-size:19px;width:42px;height:42px;border-radius:12px;background:var(--chip);border:2px solid transparent;display:grid;place-items:center;line-height:1}
+.moodbtn[aria-pressed="true"]{border-color:var(--red);background:var(--red-soft)}
+.emp .st i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.emp .st .mood{font-size:13px;margin-right:1px}
+#empcard{max-height:calc(100% - 130px);overflow:auto}
+#empcard .badges{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 12px}
+#empcard .pill{font-size:11px;font-weight:800;padding:4px 9px;border-radius:999px;background:var(--chip);display:flex;align-items:center;gap:5px}
+#empcard .fsec-t{margin:12px 0 7px;padding-top:11px}
+</style>
+</head>
+<body>
+<div id="app" data-mode="builder" data-ui="light" data-layout="dock" data-tab="furniture" data-dock="open">
+<canvas id="c"></canvas>
+<div id="labels"></div>
+
+<header id="hdr" class="card" data-screen-label="Header">
+  <img id="logo" src="assets/logo.png" alt="Альянс Група 95">
+  <div id="brand"><b>AllianceSim</b><span>Офіс · Харків</span></div>
+  <div class="spacer"></div>
+  <div id="search" class="viewer-only">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+    <input id="q" placeholder="Введіть своє ім'я…" autocomplete="off">
+    <div id="sugg"></div>
+  </div>
+  <div class="spacer"></div>
+  <div class="seg" id="modeSeg">
+    <button data-m="builder" aria-pressed="true">Будівник</button>
+    <button data-m="viewer" aria-pressed="false">Перегляд</button>
+  </div>
+  <button class="ibtn builder-only" id="undoBtn" title="Скасувати (Ctrl+Z)" disabled><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+  <div id="status" class="builder-only"><i></i><span>Немає змін</span></div>
+  <button class="btn builder-only" id="saveBtn"><svg class="i" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>Зберегти планування</button>
+  <button class="btn viewer-only" id="shareBtn"><svg class="i" viewBox="0 0 24 24"><path d="M10 14 21 3"/><path d="M21 3h-6m6 0v6"/><path d="M19 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6"/></svg>Поділитися посиланням</button>
+  <button class="ibtn" id="gear" title="Вигляд"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+</header>
+
+<div id="filters" class="viewer-only"></div>
+
+<div id="dock" class="card" data-screen-label="Dock">
+  <div id="tabs" role="tablist">
+    <button role="tab" data-tab="furniture" aria-selected="true">Меблі</button>
+    <button role="tab" data-tab="zones" aria-selected="false">Зони</button>
+    <button role="tab" data-tab="people" id="tabPeople" aria-selected="false">Співробітники<b id="empCount">0</b></button>
+    <button id="collapseBtn" class="ibtn" title="Згорнути / розгорнути панель"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button>
+  </div>
+  <div class="pane on" data-pane="furniture">
+    <div class="hint" style="justify-content:space-between"><span>Перетягніть предмет на підлогу. <kbd>R</kbd> повернути · <kbd>Esc</kbd> скасувати</span></div>
+    <div id="catFilter" class="catf"></div>
+    <div id="cat"></div>
+  </div>
+  <div class="pane" data-pane="zones">
+    <p class="hint" id="zoneHint">Натисніть на кімнату в офісі, щоб призначити зону</p>
+    <div id="zonesList"></div>
+  </div>
+  <div class="pane" data-pane="people" id="panePeople">
+    <p class="hint">Перетягніть співробітника на вільний стіл, диван або крісло</p>
+    <div id="people"></div>
+  </div>
+</div>
+<div id="dock2" class="card"><h4>Співробітники</h4></div>
+
+<div id="zonePop" class="pop card"></div>
+<div id="itemBar" class="card">
+  <button id="rotBtn"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></svg>Повернути</button>
+  <button id="moveBtn"><svg viewBox="0 0 24 24"><path d="M12 2v20M2 12h20"/><path d="m9 5 3-3 3 3M9 19l3 3 3-3M5 9 2 12l3 3M19 9l3 3-3 3"/></svg>Перемістити</button>
+  <button id="delBtn" class="del"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>Видалити</button>
+</div>
+<div id="settings" class="pop card">
+  <h4>Вигляд прототипу</h4>
+  <label>Стиль офісу</label><div class="opt" data-set="theme"><button data-v="pastel">Пастель</button><button data-v="wood">Дерево</button><button data-v="white">Білий</button><button data-v="dark">Вечірній</button></div>
+  <label>Панелі</label><div class="opt" data-set="layout"><button data-v="dock">Док знизу</button><button data-v="right">Праворуч</button><button data-v="sides">З двох боків</button></div>
+  <label>Зонування</label><div class="opt" data-set="zoning"><button data-v="click">Клік по кімнаті</button><button data-v="rect">Прямокутник</button></div>
+  <label>Підсвітка місця</label><div class="opt" data-set="hl"><button data-v="glow">Сяйво</button><button data-v="arrow">Стрілка</button><button data-v="both">Обидва</button></div>
+  <label>Рух співробітників</label><div class="opt" data-set="move"><button data-v="off">Статично</button><button data-v="on">Оживити офіс</button></div>
+  <div class="row"><button class="tbtn txt" id="resetBtn">Очистити офіс</button></div>
+</div>
+<div id="empcard" class="pop card"></div>
+
+<div id="welcome" class="card center builder-only" data-screen-label="Welcome" style="display:none">
+  <h2>Вітаємо в AllianceSim</h2>
+  <p>Це ваш офіс у Харкові — поки порожній. Розставте меблі, призначте кімнатам зони й посадіть колег за їхні столи.</p>
+  <div class="steps">
+    <div><b>1</b>Перетягніть стіл з каталогу на підлогу</div>
+    <div><b>2</b>Натисніть на кімнату й оберіть тип зони</div>
+    <div><b>3</b>Додайте співробітника та перетягніть на стіл</div>
+  </div>
+  <button class="btn" id="startBtn" style="margin:0 auto">Почати</button>
+</div>
+<div id="vintro" class="card center viewer-only" data-screen-label="Viewer intro" style="display:none">
+  <h2>Знайдіть своє місце</h2>
+  <p>Введіть своє ім'я — і ми покажемо, де ваш стіл.</p>
+  <div id="vsearchHolder"></div>
+  <button class="tbtn txt" id="skipIntro">Просто подивитись офіс</button>
+</div>
+<div id="modePill" class="card"></div>
+
+<div id="backdrop">
+  <div id="modal" class="card" data-screen-label="Add employee">
+    <form id="empForm" autocomplete="off">
+      <h3 id="empTitle">Новий співробітник</h3>
+      <p id="empSub">Після додавання перетягніть картку на вільне місце.</p>
+      <div class="fsec-t">Основне</div>
+      <label class="fl" for="fName">Ім'я та прізвище</label><input class="field" id="fName" required placeholder="Олена Коваленко">
+      <div class="f2">
+        <div><label class="fl" for="fDept">Відділ</label><input class="field" id="fDept" list="deptList" required placeholder="Логістика"><datalist id="deptList"></datalist></div>
+        <div><label class="fl" for="fPos">Посада</label><input class="field" id="fPos" placeholder="Менеджер"></div>
+      </div>
+      <label class="fl">Колір відділу</label><div class="sw" id="swatches"></div>
+      <div class="fsec-t">Контакти</div>
+      <div class="f2">
+        <div><label class="fl" for="fMail">Email</label><input class="field" id="fMail" type="email" placeholder="o.kovalenko@ag95.ua"></div>
+        <div><label class="fl" for="fPhone">Телефон</label><input class="field" id="fPhone" placeholder="+380 …"></div>
+      </div>
+      <div class="f2">
+        <div><label class="fl" for="fExt">Робочий номер</label><input class="field" id="fExt" placeholder="Напр. 214"></div>
+        <div><label class="fl">Фото</label><div class="photo"><div class="av" id="fAv">?</div><label class="up">Завантажити<input id="fPhoto" type="file" accept="image/*"></label><span class="dp" id="fPhotoName">необов'язково</span></div></div>
+      </div>
+      <div class="fsec-t">Де зараз</div>
+      <div class="optrow" id="fStatus"></div>
+      <div class="fsec-t">Настрій</div>
+      <div class="moodrow" id="fMood"></div>
+      <div class="actions"><button type="button" class="tbtn" id="cancelEmp">Скасувати</button><button type="submit" class="btn" id="empSubmit">Додати</button></div>
+    </form>
+    <div id="preview"><span class="cap">Так виглядатиме в офісі</span><div id="ptag" class="tag"><div class="b"><i></i><span class="n">Ім'я</span><span class="d">Відділ</span></div></div><canvas id="pc" width="480" height="560"></canvas></div>
+  </div>
+</div>
+<div id="toast"></div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+
+/* ---------- data ---------- */
+const S=2.25; // office scale: sketch units → meters
+const OW=14*S, OD=30*S, WALL_H=1.1;
+const sc=a=>a.map(v=>Array.isArray(v)?sc(v):v*S);
+const ROOMS=[
+  {id:'r1',n:1,rects:sc([[0,2,4.5,8],[4.5,3.5,6,8]]),polys:sc([[[0,2],[4.5,2],[6,3.5],[6,8],[0,8]]])},{id:'r2',n:2,rects:sc([[0,8,6,12]])},{id:'r3',n:3,rects:sc([[0,12,6,15]])},
+  {id:'r4',n:4,rects:sc([[0,15,6,19]])},{id:'r5',n:5,rects:sc([[0,19,6,27]])},{id:'r6',n:6,rects:sc([[0,27,6,30]])},
+  {id:'r7',n:7,rects:sc([[8,0,14,4]])},{id:'r8',n:8,rects:sc([[8,4,14,8]])},{id:'r9',n:9,rects:sc([[8,8,14,14]])},
+  {id:'r10',n:10,rects:sc([[8,14,14,16.5]])},{id:'r11',n:11,rects:sc([[8,16.5,14,19]])},{id:'r12',n:12,rects:sc([[8,19,14,22]])},
+  {id:'r13',n:13,rects:sc([[8,22,14,27]])},{id:'r14',n:14,rects:sc([[8,27,14,30]])},
+  {id:'cor',n:0,rects:sc([[6,0,8,30],[0,0,6,2]]),polys:sc([[[6,0],[8,0],[8,30],[6,30]],[[0,0],[6,0],[6,3.5],[4.5,2],[0,2]]]),corridor:true,label:'Коридор'}
+];
+// walls [x0,z0,x1,z1]
+const WALLS=sc([
+  [0,0,2.3,0],[3.7,0,14,0],[0,30,14,30],[0,0,0,30],[14,0,14,30],
+  [0,2,4.5,2],[4.5,2,6,3.5],[0,8,6,8],[0,12,6,12],[0,15,6,15],[0,19,6,19],[0,27,6,27],
+  [6,3.5,6,6.3],[6,7.5,6,10.5],[6,11.7,6,13.5],[6,14.7,6,17.5],[6,18.7,6,25.3],[6,26.5,6,28.1],[6,29.3,6,30],
+  [8,4,14,4],[8,8,14,8],[8,14,14,14],[8,16.5,14,16.5],[8,19,14,19],[8,22,14,22],[8,27,14,27],
+  [8,4,8,4.5],[8,5.7,8,8.5],[8,9.7,8,14.3],[8,15.5,8,16.8],[8,18,8,19.5],[8,20.7,8,22.5],[8,23.7,8,28.1],[8,29.3,8,30]
+]);
+const ZONES={
+  open:{n:'Опен-спейс',c:'#9FD9B0'},meeting:{n:'Переговорна',c:'#A9C4F5'},kitchen:{n:'Кухня',c:'#F6D389'},
+  reception:{n:'Рецепція',c:'#F5A9B0'},storage:{n:'Склад',c:'#CFC2AD'},wc:{n:'Санвузол',c:'#A6DDEB'},
+  office:{n:'Кабінет',c:'#D2B7F0'},custom:{n:'Своя зона',c:'#F5C08A'}
+};
+const THEMES={
+  pastel:{bg:'#DCE8F1',base:'#FFFFFF',floor:'#F4EBE1',cor:'#EADFD2',wall:'#FFF8F0',ui:'light',zone:.75},
+  wood:{bg:'#E9DCCB',base:'#FBF5EC',floor:'#CFA274',cor:'#BC8C5E',wall:'#F7EFE3',ui:'light',zone:.55},
+  white:{bg:'#F1F1F3',base:'#FFFFFF',floor:'#EBEBEE',cor:'#DFDFE4',wall:'#FFFFFF',ui:'light',zone:.7},
+  dark:{bg:'#1B1A22',base:'#2B2A34',floor:'#3F3D4C',cor:'#36343F',wall:'#5C596A',ui:'dark',zone:.45}
+};
+const DEPT_COLORS=['#E2001A','#F28C28','#F2C036','#5DBE7C','#3EA8C9','#5B76E6','#A36BE0','#E06CA6'];
+const STATUS={office:{n:'В офісі',c:'#4CAF6E',icon:'🏢'},remote:{n:'Працює з дому',c:'#5B76E6',icon:'🏠'},absent:{n:'Немає в офісі',c:'#9AA3AA',icon:'🚶'},sick:{n:'Хворіє',c:'#E8912F',icon:'🤒'},vacation:{n:'У відпустці',c:'#3EC9C0',icon:'🌴'}};
+const MOODS={great:{n:'Чудовий',e:'😄'},good:{n:'Гарний',e:'🙂'},ok:{n:'Нормально',e:'😐'},tired:{n:'Втомлений',e:'😴'},stressed:{n:'У стресі',e:'😫'}};
+const CATS={work:'Робочі місця',meeting:'Переговорні',kitchen:'Кухня',reception:'Рецепція і відпочинок',storage:'Склад і техніка',decor:'Декор'};
+const DEPTS=['Закупівлі','Логістика','IT','Бухгалтерія','Юридичний','HR','Продажі','Маркетинг','Адміністрація','Керівництво','Склад','Підтримка','Виробництво','Сервіс'];
+function fillDeptList(){const seen=new Set(), out=[]; for(const d of [...DEPTS,...Object.keys(state.depts)]){if(d&&!seen.has(d)){seen.add(d); out.push(d);}} const dl=$('#deptList'); if(dl) dl.innerHTML=out.map(d=>`<option value="${esc(d)}">`).join('');}
+const FURN={
+  desk:{n:'Стіл',cat:'work',seats:[{x:0,z:.55,ry:Math.PI,y:.45}]},
+  doubleDesk:{n:'Подвійний стіл',cat:'work',seats:[{x:0,z:-1.1,ry:0,y:.45},{x:0,z:1.1,ry:Math.PI,y:.45}]},
+  chair:{n:'Крісло',cat:'work',seats:[{x:0,z:0,ry:0,y:.45}]},
+  monitor:{n:'Монітор',cat:'work',onDesk:true},
+  partition:{n:'Перегородка',cat:'work'},
+  lockers:{n:'Шафки',cat:'work'},
+  meeting:{n:'Стіл для переговорів',cat:'meeting',seats:[{x:-.7,z:1.05,ry:Math.PI,y:.45},{x:0,z:1.05,ry:Math.PI,y:.45},{x:.7,z:1.05,ry:Math.PI,y:.45},{x:-.7,z:-1.05,ry:0,y:.45},{x:0,z:-1.05,ry:0,y:.45},{x:.7,z:-1.05,ry:0,y:.45}]},
+  roundTable:{n:'Круглий стіл',cat:'meeting',seats:[{x:0,z:1.05,ry:Math.PI,y:.45},{x:0,z:-1.05,ry:0,y:.45},{x:1.05,z:0,ry:-Math.PI/2,y:.45},{x:-1.05,z:0,ry:Math.PI/2,y:.45}]},
+  board:{n:'Дошка',cat:'meeting'},
+  tv:{n:'Екран',cat:'meeting'},
+  counter:{n:'Кухонна стійка',cat:'kitchen'},
+  fridge:{n:'Холодильник',cat:'kitchen'},
+  cooler:{n:'Кулер',cat:'kitchen'},
+  barTable:{n:'Барний стіл',cat:'kitchen',seats:[{x:-.3,z:.55,ry:Math.PI,y:.7},{x:.3,z:.55,ry:Math.PI,y:.7}]},
+  reception:{n:'Стійка рецепції',cat:'reception',seats:[{x:0,z:-.6,ry:0,y:.45}]},
+  sofa:{n:'Диван',cat:'reception',seats:[{x:-.42,z:.1,ry:0,y:.4},{x:.42,z:.1,ry:0,y:.4}]},
+  armchair:{n:'М’яке крісло',cat:'reception',seats:[{x:0,z:.05,ry:0,y:.4}]},
+  bench:{n:'Лавка',cat:'reception',seats:[{x:-.6,z:0,ry:0,y:.4},{x:0,z:0,ry:0,y:.4},{x:.6,z:0,ry:0,y:.4}]},
+  coffeeTable:{n:'Журнальний стіл',cat:'reception'},
+  shelf:{n:'Книжкова шафа',cat:'storage'},
+  rack:{n:'Стелаж',cat:'storage'},
+  printer:{n:'Принтер',cat:'storage'},
+  plant:{n:'Рослина',cat:'decor'},
+  lamp:{n:'Торшер',cat:'decor'},
+  deskPC:{n:'Стіл з ПК',cat:'work',seats:[{x:0,z:.55,ry:Math.PI,y:.45}]},
+  pod4:{n:'4 місця з ПК',cat:'work',seats:[{x:-.8,z:1.05,ry:Math.PI,y:.45},{x:.8,z:1.05,ry:Math.PI,y:.45},{x:-.8,z:-1.05,ry:0,y:.45},{x:.8,z:-1.05,ry:0,y:.45}]},
+  standingDesk:{n:'Стіл-стійка',cat:'work'},
+  drawerCab:{n:'Тумба',cat:'work'},
+  phoneBooth:{n:'Акустична кабіна',cat:'meeting',seats:[{x:0,z:.1,ry:Math.PI,y:.45}]},
+  flipchart:{n:'Фліпчарт',cat:'meeting'},
+  diningTable:{n:'Обідній стіл',cat:'kitchen',seats:[{x:-.5,z:.7,ry:Math.PI,y:.45},{x:.5,z:.7,ry:Math.PI,y:.45},{x:-.5,z:-.7,ry:0,y:.45},{x:.5,z:-.7,ry:0,y:.45}]},
+  stool:{n:'Табурет',cat:'kitchen',seats:[{x:0,z:0,ry:0,y:.5}]},
+  coffeeMachine:{n:'Кавомашина',cat:'kitchen'},
+  microwave:{n:'Мікрохвильовка',cat:'kitchen'},
+  vending:{n:'Вендінг-автомат',cat:'kitchen'},
+  beanbag:{n:'Крісло-мішок',cat:'reception',seats:[{x:0,z:0,ry:0,y:.35}]},
+  pouf:{n:'Пуф',cat:'reception',seats:[{x:0,z:0,ry:0,y:.4}]},
+  coatRack:{n:'Вішалка',cat:'reception'},
+  foosball:{n:'Настільний футбол',cat:'reception'},
+  filingCab:{n:'Картотека',cat:'storage'},
+  safe:{n:'Сейф',cat:'storage'},
+  serverRack:{n:'Серверна шафа',cat:'storage'},
+  bigPlant:{n:'Велика рослина',cat:'decor'},
+  wallClock:{n:'Годинник',cat:'decor'},
+  picture:{n:'Картина',cat:'decor'},
+  fan:{n:'Вентилятор',cat:'decor'},
+  trashBin:{n:'Кошик',cat:'decor'},
+  rug:{n:'Килим',cat:'decor',underlay:true}
+};
+
+/* ---------- state ---------- */
+const LS_LAYOUT='alliancesim.layout.v3', LS_SET='alliancesim.settings';
+let state={furniture:[],zones:{},rects:[],employees:[],depts:{}};
+let settings=Object.assign({theme:'pastel',avatar:'blocky',layout:'dock',zoning:'click',hl:'both',move:'off'},JSON.parse(localStorage.getItem(LS_SET)||'{}'));
+let mode='builder', tab='furniture', dirty=false, undoStack=[], uidc=1;
+
+/* ---------- backend sync (MVP: localStorage -> API з офлайн-фолбеком) ---------- */
+const API=(location.protocol==='file:')?'http://localhost:8011/api':'/api';
+const LS_TOKEN='alliancesim.edit_token', LS_PENDING='alliancesim.pending';
+const getToken=()=>localStorage.getItem(LS_TOKEN)||'';
+function setSyncStatus(txt,saved){const s=document.querySelector('#status'); if(!s) return; s.classList.toggle('saved',!!saved); const sp=s.querySelector('span'); if(sp) sp.textContent=txt;}
+async function apiLayoutGet(){const r=await fetch(API+'/layout',{headers:{'accept':'application/json'}}); if(!r.ok) throw new Error('http '+r.status); const j=await r.json(); return (j&&j.data)?j.data:null;}
+async function apiLayoutPut(data){const r=await fetch(API+'/layout',{method:'PUT',headers:{'content-type':'application/json','X-Edit-Token':getToken()},body:JSON.stringify({data})}); if(r.status===401){const e=new Error('unauthorized');e.code=401;throw e;} if(!r.ok) throw new Error('http '+r.status); return true;}
+async function saveLayout(){
+  try{localStorage.setItem(LS_LAYOUT,JSON.stringify(state));}catch(e){}
+  if(!getToken()){openTokenModal(); return;}
+  try{
+    await apiLayoutPut(state);
+    localStorage.removeItem(LS_PENDING); dirty=false;
+    setSyncStatus('Збережено '+new Date().toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'}),true);
+    if(window.toast) toast('Планування збережено на сервері');
+  }catch(e){
+    if(e.code===401){localStorage.removeItem(LS_TOKEN); if(window.toast) toast('Невірний код доступу'); openTokenModal(); return;}
+    localStorage.setItem(LS_PENDING,'1'); dirty=false;
+    setSyncStatus('Збережено локально (сервер недоступний)',true);
+    if(window.toast) toast('Сервер недоступний — збережено локально');
+  }
+}
+async function initLoad(){
+  let data=null, okServer=false;
+  try{data=await apiLayoutGet(); okServer=true;}catch(e){okServer=false;}
+  const base={furniture:[],zones:{},rects:[],employees:[],depts:{}};
+  if(okServer){
+    if(data) state=Object.assign(base,data);
+    try{localStorage.setItem(LS_LAYOUT,JSON.stringify(state));}catch(e){}
+    if(localStorage.getItem(LS_PENDING)&&getToken()){try{await apiLayoutPut(state); localStorage.removeItem(LS_PENDING);}catch(e){}}
+  }else{
+    try{const saved=localStorage.getItem(LS_LAYOUT); if(saved) state=Object.assign(base,JSON.parse(saved));}catch(e){}
+  }
+  return okServer;
+}
+/* token modal (будується в JS, щоб не чіпати розмітку дизайну) */
+function ensureTokenModal(){
+  if(document.querySelector('#asTokenModal')) return;
+  const wrap=document.createElement('div'); wrap.id='asTokenModal';
+  wrap.style.cssText='position:fixed;inset:0;background:rgba(20,10,15,.55);display:none;align-items:center;justify-content:center;z-index:99999';
+  wrap.innerHTML='<div style="background:var(--panel-solid,#fff);color:var(--ink,#2B2530);width:360px;max-width:92vw;border-radius:16px;padding:22px;font-family:Nunito,system-ui,sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.3)">'
+    +'<div style="font-weight:800;font-size:18px;margin-bottom:6px">Код доступу HR</div>'
+    +'<div style="color:var(--muted,#8A7F86);font-size:14px;line-height:1.5;margin-bottom:14px">Режим редагування захищено спільним кодом. Введіть його — він збережеться у цьому браузері та використовуватиметься під час збереження.</div>'
+    +'<input id="asTokenInput" type="password" placeholder="Код доступу" style="width:100%;padding:10px;border:1px solid var(--line,#ddd);border-radius:10px;font:inherit;box-sizing:border-box">'
+    +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">'
+    +'<button id="asTokenCancel" style="padding:9px 14px;border:1px solid var(--line,#ddd);background:transparent;border-radius:10px;font:inherit;cursor:pointer">Скасувати</button>'
+    +'<button id="asTokenSave" style="padding:9px 14px;border:none;background:var(--red,#E2001A);color:#fff;border-radius:10px;font:inherit;cursor:pointer">Зберегти код</button>'
+    +'</div></div>';
+  document.body.appendChild(wrap);
+  wrap.querySelector('#asTokenCancel').onclick=()=>{wrap.style.display='none';};
+  wrap.querySelector('#asTokenSave').onclick=()=>{const v=wrap.querySelector('#asTokenInput').value.trim(); if(!v){if(window.toast)toast('Введіть код');return;} localStorage.setItem(LS_TOKEN,v); wrap.style.display='none'; if(window.toast)toast('Код збережено'); saveLayout();};
+  wrap.querySelector('#asTokenInput').addEventListener('keydown',e=>{if(e.key==='Enter') wrap.querySelector('#asTokenSave').click();});
+}
+function openTokenModal(){ensureTokenModal(); const w=document.querySelector('#asTokenModal'); w.querySelector('#asTokenInput').value=getToken(); w.style.display='flex'; setTimeout(()=>w.querySelector('#asTokenInput').focus(),30);}
+const uid=()=> 'u'+(uidc++)+'_'+Date.now().toString(36);
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const app=$('#app');
+
+/* ---------- three setup ---------- */
+const canvas=$('#c');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(Math.min(3,devicePixelRatio*1.5));
+renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.NoToneMapping; renderer.toneMappingExposure=1;
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(32,1,.1,300);
+const controls=new OrbitControls(camera,canvas);
+controls.enableDamping=true; controls.dampingFactor=.08; controls.maxPolarAngle=1.3; controls.minDistance=5; controls.maxDistance=170; controls.screenSpacePanning=false; controls.enablePan=true; controls.panSpeed=1.1;
+const CENTER=new THREE.Vector3(OW/2,0,OD/2);
+const hemi=new THREE.HemisphereLight(0xffffff,0xc9b8a8,.55); scene.add(hemi);
+scene.add(new THREE.AmbientLight(0xffffff,.22));
+const sun=new THREE.DirectionalLight(0xfff3e4,1.0); sun.position.set(OW/2+18,30,OD/2+8); sun.target.position.copy(CENTER); scene.add(sun,sun.target);
+sun.castShadow=true; sun.shadow.mapSize.set(4096,4096); sun.shadow.bias=-.0015; sun.shadow.normalBias=.08; sun.shadow.radius=3;
+Object.assign(sun.shadow.camera,{left:-26,right:26,top:26,bottom:-26,near:5,far:120});
+
+scene.environment=null;
+const matCache={};
+const mat=(c,o={})=>{const k=c+JSON.stringify(o); return matCache[k]||(matCache[k]=new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.85,metalness:0},o)));};
+function rshape(w,d,r){const s=new THREE.Shape(),x=-w/2,y=-d/2;r=Math.max(.001,Math.min(r,w/2-.001,d/2-.001));
+  s.moveTo(x+r,y);s.lineTo(x+w-r,y);s.quadraticCurveTo(x+w,y,x+w,y+r);s.lineTo(x+w,y+d-r);s.quadraticCurveTo(x+w,y+d,x+w-r,y+d);s.lineTo(x+r,y+d);s.quadraticCurveTo(x,y+d,x,y+d-r);s.lineTo(x,y+r);s.quadraticCurveTo(x,y,x+r,y);return s;}
+function rbox(w,h,d,r,m,bev=.025){const b=Math.min(bev,h/3,w/4,d/4);
+  const g=new THREE.ExtrudeGeometry(rshape(w-2*b,d-2*b,Math.max(.001,r-b)),{depth:Math.max(.001,h-2*b),bevelEnabled:true,bevelThickness:b,bevelSize:b,bevelSegments:3,curveSegments:5});
+  g.rotateX(-Math.PI/2); g.translate(0,b,0); const me=new THREE.Mesh(g,m); me.castShadow=true; me.receiveShadow=true; return me;}
+const P=(o,x,y,z)=>{o.position.set(x,y,z);return o;};
+
+/* office */
+const office=new THREE.Group(); scene.add(office);
+const baseMat=new THREE.MeshBasicMaterial({color:'#E5D9C8',toneMapped:false});
+const wallMat=mat('#EDE7DF',{roughness:1});
+for(const [x0,z0,x1,z1] of WALLS){const len=Math.hypot(x1-x0,z1-z0)+.18; const w=rbox(len,WALL_H,.18,.07,wallMat,.03); w.rotation.y=-Math.atan2(z1-z0,x1-x0); w.position.set((x0+x1)/2,0,(z0+z1)/2); office.add(w);}
+// floor grid as mipmapped texture (no line shimmer at grazing angles)
+const gridTex=(()=>{const c=document.createElement('canvas'); c.width=c.height=256; const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,256,256); x.fillStyle='rgba(0,0,0,.10)'; x.fillRect(0,0,256,3); x.fillRect(0,0,3,256); const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.anisotropy=renderer.capabilities.getMaxAnisotropy(); t.minFilter=THREE.LinearMipmapLinearFilter; t.colorSpace=THREE.SRGBColorSpace; return t;})();
+const floorMats={}; const floorMeshes=[];
+for(const r of ROOMS){const m=new THREE.MeshBasicMaterial({color:'#F4EBE1',map:gridTex,toneMapped:false}); floorMats[r.id]=m;
+  const polys=r.polys||r.rects.map(([x0,z0,x1,z1])=>[[x0,z0],[x1,z0],[x1,z1],[x0,z1]]);
+  for(const poly of polys){const sh=new THREE.Shape(poly.map(([x,z])=>new THREE.Vector2(x,-z))); const g=new THREE.ShapeGeometry(sh); g.rotateX(-Math.PI/2); const f=new THREE.Mesh(g,m); f.receiveShadow=true; f.userData.room=r.id; office.add(f); floorMeshes.push(f);}}
+// entrance mat
+const doormat=rbox(1.6,.04,.8,.2,mat('#E2001A',{roughness:.8}),.01); doormat.position.set(3*S,0,.6); doormat.receiveShadow=false; office.add(doormat);
+// transparent shadow catcher over the unlit floor (soft shadows without lighting the floor color)
+const shadowCatcher=new THREE.Mesh(new THREE.PlaneGeometry(OW+2,OD+2).rotateX(-Math.PI/2),new THREE.ShadowMaterial({opacity:.22})); shadowCatcher.position.set(OW/2,.006,OD/2); shadowCatcher.receiveShadow=true; shadowCatcher.renderOrder=1; office.add(shadowCatcher);
+const furnRoot=new THREE.Group(); scene.add(furnRoot);
+const grid={set visible(v){for(const k in floorMats){floorMats[k].map=v?gridTex:null; floorMats[k].needsUpdate=true;}}}; const gridMat={color:{set(){}}};
+const avRoot=new THREE.Group(); scene.add(avRoot);
+const rectRoot=new THREE.Group(); scene.add(rectRoot);
+const fxRoot=new THREE.Group(); scene.add(fxRoot);
+
+/* ---------- furniture builders ---------- */
+const C={wood:'#E9C79C',white:'#ECE8E3',dark:'#4B4652',red:'#E2001A',green:'#6FBF73',pot:'#D98F6C',coral:'#EF8A80',steel:'#C9CDD2',blue:'#7A8BA8',cream:'#F3EBDD',fridge:'#DFE7EE',book1:'#5B76E6',book2:'#F2C036',book3:'#5DBE7C',screen:'#2E2B36',fabric:'#B9C3D6'};
+function mkChair(color=C.blue){const g=new THREE.Group();
+  g.add(P(rbox(.46,.09,.46,.1,mat(color)),0,.42,0)); g.add(P(rbox(.46,.42,.07,.06,mat(color)),0,.5,-.2));
+  g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,.4,10),mat(C.dark)),0,.22,0)); g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.23,.23,.04,20),mat(C.dark)),0,.02,0));
+  g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}}); return g;}
+const B={
+  desk(){const g=new THREE.Group(); g.add(P(rbox(1.5,.07,.75,.05,mat(C.wood)),0,.7,-.25)); g.add(P(rbox(.08,.7,.7,.02,mat(C.white)),-.68,0,-.25)); g.add(P(rbox(.08,.7,.7,.02,mat(C.white)),.68,0,-.25));
+    g.add(P(rbox(.5,.04,.35,.03,mat(C.white)),.3,.77,-.25)); const ch=mkChair(); ch.rotation.y=Math.PI; ch.position.set(0,0,.55); g.add(ch); return g;},
+  doubleDesk(){const g=new THREE.Group(); for(const s of [-1,1]){g.add(P(rbox(1.5,.07,.75,.05,mat(C.wood)),0,.7,.4*s)); g.add(P(rbox(.08,.7,.7,.02,mat(C.white)),-.68,0,.4*s)); g.add(P(rbox(.08,.7,.7,.02,mat(C.white)),.68,0,.4*s)); const ch=mkChair(); ch.rotation.y=s>0?Math.PI:0; ch.position.set(0,0,1.1*s); g.add(ch);}
+    g.add(P(rbox(1.5,.5,.06,.03,mat(C.fabric)),0,.72,0)); return g;},
+  chair(){return mkChair(C.coral);},
+  monitor(){const g=new THREE.Group(); g.add(P(rbox(.56,.35,.04,.03,mat(C.screen)),0,.14,0)); g.add(P(rbox(.06,.14,.06,.01,mat(C.dark)),0,.0,.03)); g.add(P(rbox(.3,.02,.18,.05,mat(C.dark)),0,0,.04)); return g;},
+  partition(){const g=new THREE.Group(); g.add(P(rbox(1.6,1.3,.09,.07,mat(C.fabric)),0,.1,0)); g.add(P(rbox(1.66,.1,.18,.04,mat(C.steel)),0,0,0)); return g;},
+  lockers(){const g=new THREE.Group(); g.add(P(rbox(1.2,1.8,.5,.04,mat('#8FA7C4')),0,0,0)); for(const x of [-.4,0,.4]){g.add(P(rbox(.34,1.7,.02,.02,mat('#A3B8D1')),x,.05,.25)); g.add(P(rbox(.04,.12,.03,.01,mat(C.steel)),x+.12,.9,.27));} return g;},
+  meeting(){const g=new THREE.Group(); g.add(P(rbox(2.3,.07,1.15,.3,mat(C.wood)),0,.7,0)); for(const [x,z] of [[-.9,-.4],[.9,-.4],[-.9,.4],[.9,.4]]) g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.04,.04,.7,10),mat(C.dark)),x,.35,z));
+    for(const s of FURN.meeting.seats){const ch=mkChair(); ch.rotation.y=s.ry; ch.position.set(s.x,0,s.z); g.add(ch);} return g;},
+  roundTable(){const g=new THREE.Group(); g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.7,.7,.06,32),mat(C.wood)),0,.72,0)); g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,.7,10),mat(C.dark)),0,.35,0)); g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,.04,24),mat(C.dark)),0,.02,0));
+    for(const s of FURN.roundTable.seats){const ch=mkChair(); ch.rotation.y=s.ry; ch.position.set(s.x,0,s.z); g.add(ch);} return g;},
+  board(){const g=new THREE.Group(); g.add(P(rbox(1.6,1,.06,.05,mat(C.white)),0,.85,0)); g.add(P(rbox(1.66,.05,.1,.02,mat(C.steel)),0,.82,0)); for(const x of [-.7,.7]){g.add(P(rbox(.05,.85,.05,.01,mat(C.steel)),x,0,0)); g.add(P(rbox(.05,.04,.4,.02,mat(C.steel)),x,0,0));}
+    g.add(P(rbox(.5,.05,.02,.01,mat(C.red)),-.3,1.5,.035)); g.add(P(rbox(.7,.05,.02,.01,mat(C.blue)),-.2,1.35,.035)); return g;},
+  tv(){const g=new THREE.Group(); g.add(P(rbox(1.4,.8,.06,.03,mat(C.screen)),0,.9,0)); g.add(P(rbox(.08,.9,.08,.02,mat(C.dark)),0,0,-.05)); g.add(P(rbox(.7,.04,.4,.05,mat(C.dark)),0,0,-.05)); g.add(P(rbox(1.2,.55,.01,.01,mat('#5B76E6')),0,1.02,.035)); return g;},
+  counter(){const g=new THREE.Group(); g.add(P(rbox(1.8,.86,.6,.05,mat(C.cream)),0,0,0)); g.add(P(rbox(1.86,.05,.66,.04,mat(C.steel)),0,.86,0)); g.add(P(rbox(.5,.02,.36,.06,mat('#9AA3AA')),-.45,.9,0));
+    const f=new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,.25,8),mat(C.steel)); f.position.set(-.45,1.02,-.2); g.add(f); return g;},
+  fridge(){const g=new THREE.Group(); g.add(P(rbox(.7,1.8,.7,.08,mat(C.fridge)),0,0,0)); g.add(P(rbox(.04,.5,.04,.01,mat(C.steel)),.25,1.0,.36)); g.add(P(rbox(.04,.4,.04,.01,mat(C.steel)),.25,.4,.36)); return g;},
+  cooler(){const g=new THREE.Group(); g.add(P(rbox(.36,.95,.36,.06,mat(C.white)),0,0,0)); const b=new THREE.Mesh(new THREE.CylinderGeometry(.13,.15,.4,16),new THREE.MeshStandardMaterial({color:'#8FD3F4',transparent:true,opacity:.75,roughness:.2})); b.position.set(0,1.16,0); g.add(b); g.add(P(rbox(.16,.06,.06,.02,mat('#3EA8C9')),0,.6,.19)); return g;},
+  barTable(){const g=new THREE.Group(); g.add(P(rbox(1.2,.06,.6,.1,mat(C.wood)),0,1.05,0)); g.add(P(rbox(.1,1.05,.1,.02,mat(C.dark)),0,0,0)); g.add(P(rbox(.7,.04,.4,.04,mat(C.dark)),0,0,0));
+    for(const x of [-.3,.3]){g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,.05,16),mat(C.coral)),x,.7,.55)); g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,.7,8),mat(C.dark)),x,.35,.55)); g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.15,.15,.03,16),mat(C.dark)),x,.015,.55));} return g;},
+  reception(){const g=new THREE.Group(); g.add(P(rbox(2.2,1.05,.7,.12,mat(C.red)),0,0,.2)); g.add(P(rbox(2.3,.06,.8,.14,mat(C.white)),0,1.05,.2)); g.add(P(rbox(1.6,.72,.5,.04,mat(C.wood)),0,0,-.35));
+    const ch=mkChair(); ch.position.set(0,0,-.6); g.add(ch); return g;},
+  sofa(){const g=new THREE.Group(); g.add(P(rbox(1.8,.42,.8,.12,mat(C.coral)),0,0,0)); g.add(P(rbox(1.8,.42,.22,.09,mat(C.coral)),0,.4,-.3)); g.add(P(rbox(.22,.6,.8,.09,mat(C.coral)),-.8,0,0)); g.add(P(rbox(.22,.6,.8,.09,mat(C.coral)),.8,0,0)); return g;},
+  armchair(){const g=new THREE.Group(); const m=mat('#7FB7A4'); g.add(P(rbox(.85,.42,.8,.12,m),0,0,0)); g.add(P(rbox(.85,.45,.22,.09,m),0,.4,-.3)); g.add(P(rbox(.2,.6,.8,.09,m),-.33,0,0)); g.add(P(rbox(.2,.6,.8,.09,m),.33,0,0)); return g;},
+  bench(){const g=new THREE.Group(); g.add(P(rbox(1.8,.1,.5,.06,mat(C.fabric)),0,.38,0)); for(const x of [-.75,.75]) g.add(P(rbox(.06,.38,.44,.02,mat(C.steel)),x,0,0)); return g;},
+  coffeeTable(){const g=new THREE.Group(); g.add(P(rbox(.9,.05,.5,.1,mat(C.wood)),0,.38,0)); for(const [x,z] of [[-.38,-.18],[.38,-.18],[-.38,.18],[.38,.18]]) g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,.38,8),mat(C.dark)),x,.19,z)); return g;},
+  shelf(){const g=new THREE.Group(); g.add(P(rbox(1,1.8,.35,.04,mat(C.wood)),0,0,0)); for(const y of [.45,.9,1.35]) g.add(P(rbox(.9,.03,.3,.01,mat(C.cream)),0,y,.02));
+    let x=-.38; for(const c of [C.book1,C.book2,C.book3,C.red,C.book1,C.book3]){g.add(P(rbox(.08,.28,.22,.01,mat(c)),x,.48,.03)); x+=.11;} x=-.38; for(const c of [C.book2,C.red,C.book3,C.book1]){g.add(P(rbox(.09,.24,.22,.01,mat(c)),x,.93,.03)); x+=.12;} return g;},
+  rack(){const g=new THREE.Group(); for(const x of [-.85,.85]) for(const z of [-.27,.27]) g.add(P(rbox(.05,2,.05,.01,mat(C.steel)),x,0,z)); for(const y of [.05,.7,1.35]) g.add(P(rbox(1.75,.04,.6,.01,mat(C.steel)),0,y,0));
+    for(const [x,y,w] of [[-.5,.09,.5],[.2,.09,.6],[-.4,.74,.7],[.45,.74,.4],[0,1.39,.55]]) g.add(P(rbox(w,.42,.45,.02,mat('#D8B98A')),x,y,0)); return g;},
+  printer(){const g=new THREE.Group(); g.add(P(rbox(.7,.7,.55,.04,mat(C.cream)),0,0,0)); g.add(P(rbox(.6,.4,.5,.06,mat(C.white)),0,.7,0)); g.add(P(rbox(.3,.02,.2,.02,mat(C.screen)),.1,1.1,.1)); g.add(P(rbox(.45,.03,.3,.02,mat(C.steel)),-.02,1.1,-.1)); return g;},
+  plant(){const g=new THREE.Group(); g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.2,.15,.38,16),mat(C.pot)),0,.19,0)); for(const [x,y,z,r] of [[0,.7,0,.3],[-.18,.55,.1,.2],[.17,.6,-.1,.22]]){const s=new THREE.Mesh(new THREE.SphereGeometry(r,16,12),mat(C.green)); s.position.set(x,y,z); g.add(s);} return g;},
+  lamp(){const g=new THREE.Group(); g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,.03,20),mat(C.dark)),0,.015,0)); g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,1.5,8),mat(C.dark)),0,.75,0)); g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.22,.16,.3,20,1,true),new THREE.MeshStandardMaterial({color:'#F6D389',side:THREE.DoubleSide,emissive:'#F6D389',emissiveIntensity:.35})),0,1.55,0)); return g;},
+  deskPC(){const g=B.desk(); const mon=B.monitor(); mon.position.set(-.12,.77,-.3); g.add(mon); g.add(P(rbox(.45,.02,.16,.02,mat(C.dark)),.12,.775,-.05)); g.add(P(rbox(.16,.4,.42,.03,mat('#3a3742')),.62,.2,-.28)); return g;},
+  pod4(){const g=new THREE.Group(); for(const sx of [-1,1]) for(const s of [-1,1]){const x=sx*.8; g.add(P(rbox(1.35,.07,.7,.05,mat(C.wood)),x,.7,s*.4)); const mon=B.monitor(); mon.position.set(x,.74,s*.18); mon.rotation.y=s>0?0:Math.PI; g.add(mon); const ch=mkChair(); ch.rotation.y=s>0?Math.PI:0; ch.position.set(x,0,s*1.05); g.add(ch);} g.add(P(rbox(3.0,.5,.06,.03,mat(C.fabric)),0,.72,0)); g.add(P(rbox(.06,.5,1.5,.03,mat(C.fabric)),0,.72,0)); return g;},
+  standingDesk(){const g=new THREE.Group(); g.add(P(rbox(1.3,.06,.65,.05,mat(C.wood)),0,1.05,0)); for(const x of [-.55,.55]) g.add(P(rbox(.08,1.05,.5,.02,mat(C.steel)),x,0,0)); const mon=B.monitor(); mon.position.set(0,1.09,-.12); g.add(mon); return g;},
+  drawerCab(){const g=new THREE.Group(); g.add(P(rbox(.55,.62,.5,.04,mat('#C9B79C')),0,0,0)); for(const y of [.14,.34,.54]){g.add(P(rbox(.5,.16,.02,.02,mat(C.cream)),0,y,.25)); g.add(P(rbox(.14,.03,.03,.01,mat(C.steel)),0,y,.27));} return g;},
+  phoneBooth(){const g=new THREE.Group(); const w=mat('#6E7A8F'); g.add(P(rbox(1.2,2.0,.1,.05,w),0,0,-.55)); g.add(P(rbox(.1,2.0,1.1,.05,w),-.55,0,0)); g.add(P(rbox(.1,2.0,1.1,.05,w),.55,0,0)); g.add(P(rbox(1.2,.12,1.2,.05,w),0,1.95,0)); g.add(P(rbox(.9,.04,.35,.03,mat(C.wood)),0,.75,-.3)); const glass=new THREE.Mesh(new THREE.BoxGeometry(1.0,1.6,.04),new THREE.MeshStandardMaterial({color:'#CFE6F2',transparent:true,opacity:.28,roughness:.1})); glass.position.set(0,1.0,.55); g.add(glass); const ch=mkChair(); ch.rotation.y=Math.PI; ch.position.set(0,0,.1); g.add(ch); return g;},
+  flipchart(){const g=new THREE.Group(); g.add(P(rbox(.8,1.1,.04,.03,mat(C.white)),0,1.2,0)); g.add(P(rbox(.86,.06,.06,.02,mat(C.steel)),0,1.75,0)); for(const x of [-.35,.35]) g.add(P(rbox(.05,1.2,.05,.01,mat(C.steel)),x,0,0)); g.add(P(rbox(.05,.05,.5,.02,mat(C.steel)),0,0,.1)); g.add(P(rbox(.45,.05,.02,.01,mat(C.red)),-.05,1.35,.03)); g.add(P(rbox(.3,.05,.02,.01,mat(C.blue)),0,1.2,.03)); return g;},
+  diningTable(){const g=new THREE.Group(); g.add(P(rbox(1.8,.06,.9,.08,mat(C.wood)),0,.72,0)); for(const [x,z] of [[-.75,-.32],[.75,-.32],[-.75,.32],[.75,.32]]) g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.04,.04,.72,10),mat(C.dark)),x,.36,z)); for(const s of FURN.diningTable.seats){const ch=mkChair(); ch.rotation.y=s.ry; ch.position.set(s.x,0,s.z); g.add(ch);} return g;},
+  stool(){const g=new THREE.Group(); g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.2,.2,.06,16),mat(C.coral)),0,.5,0)); for(const a of [0,1,2]){const an=a/3*Math.PI*2; g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,.5,8),mat(C.dark)),Math.cos(an)*.15,.25,Math.sin(an)*.15));} return g;},
+  coffeeMachine(){const g=new THREE.Group(); g.add(P(rbox(.5,.86,.45,.04,mat(C.cream)),0,0,0)); g.add(P(rbox(.44,.5,.4,.05,mat('#3a3742')),0,1.15,0)); g.add(P(rbox(.3,.02,.25,.02,mat(C.steel)),0,.88,.05)); g.add(P(rbox(.2,.14,.02,.02,mat('#5B76E6')),0,1.2,.21)); g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.1,10),mat(C.steel)),0,.98,.14)); return g;},
+  microwave(){const g=new THREE.Group(); g.add(P(rbox(.55,.34,.42,.04,mat(C.white)),0,.17,0)); g.add(P(rbox(.36,.24,.02,.02,mat('#2E2B36')),-.06,.17,.22)); g.add(P(rbox(.1,.24,.03,.02,mat(C.steel)),.2,.17,.21)); g.add(P(rbox(.06,.06,.02,.01,mat('#5DBE7C')),.2,.24,.22)); return g;},
+  vending(){const g=new THREE.Group(); g.add(P(rbox(.9,1.9,.7,.06,mat('#C0392B')),0,0,0)); g.add(P(rbox(.56,1.4,.03,.02,new THREE.MeshStandardMaterial({color:'#2E2B36',transparent:true,opacity:.5})),-.12,1.05,.35)); for(let r=0;r<4;r++)for(let c=0;c<3;c++) g.add(P(rbox(.12,.16,.02,.02,mat([C.book2,C.green,C.coral,C.blue][(r+c)%4])),-.28+c*.16,.6+r*.28,.36)); g.add(P(rbox(.26,.5,.05,.03,mat('#8a1f14')),.28,.55,.36)); return g;},
+  beanbag(){const g=new THREE.Group(); const m=mat('#F2C036'); const b=new THREE.Mesh(new THREE.SphereGeometry(.5,20,16),m); b.scale.set(1,.7,1); b.position.y=.34; b.castShadow=true; g.add(b); const t=new THREE.Mesh(new THREE.SphereGeometry(.32,16,12),m); t.scale.set(1,.5,1); t.position.set(0,.55,-.16); t.castShadow=true; g.add(t); return g;},
+  pouf(){const g=new THREE.Group(); const b=new THREE.Mesh(new THREE.CylinderGeometry(.35,.38,.4,20),mat('#7FB7A4')); b.position.y=.2; b.castShadow=true; g.add(b); return g;},
+  coatRack(){const g=new THREE.Group(); g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,1.8,10),mat(C.dark)),0,.9,0)); g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.25,.25,.04,16),mat(C.dark)),0,.02,0)); for(const a of [0,1,2,3]){const an=a/4*Math.PI*2; g.add(P(new THREE.Mesh(new THREE.SphereGeometry(.04,8,8),mat(C.steel)),Math.cos(an)*.18,1.7,Math.sin(an)*.18));} g.add(P(rbox(.4,.6,.12,.06,mat(C.blue)),-.12,1.1,.08)); return g;},
+  foosball(){const g=new THREE.Group(); g.add(P(rbox(1.4,.14,.8,.05,mat('#2f7d46')),0,.78,0)); g.add(P(rbox(1.44,.5,.84,.06,mat(C.wood)),0,.4,0)); for(const x of [-.6,-.2,.2,.6]) g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,1.0,8).rotateZ(Math.PI/2),mat(C.steel)),x,.95,0)); for(const [x,z] of [[-.65,-.42],[.65,-.42],[-.65,.42],[.65,.42]]) g.add(P(rbox(.1,.4,.1,.02,mat(C.dark)),x,0,z)); return g;},
+  filingCab(){const g=new THREE.Group(); g.add(P(rbox(.6,1.3,.55,.04,mat('#9AA6B2')),0,0,0)); for(const y of [.28,.65,1.02]){g.add(P(rbox(.52,.32,.02,.02,mat('#AEB9C4')),0,y,.28)); g.add(P(rbox(.16,.03,.03,.01,mat(C.steel)),0,y,.3));} return g;},
+  safe(){const g=new THREE.Group(); g.add(P(rbox(.6,.7,.6,.05,mat('#4B4652')),0,0,0)); g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,.06,20).rotateX(Math.PI/2),mat(C.steel)),.12,.35,.31)); g.add(P(rbox(.22,.03,.03,.01,mat(C.steel)),.12,.35,.33)); g.add(P(rbox(.3,.1,.02,.02,mat(C.dark)),-.1,.5,.31)); return g;},
+  serverRack(){const g=new THREE.Group(); g.add(P(rbox(.7,2.0,.9,.04,mat('#2b2933')),0,0,0)); for(let i=0;i<8;i++){g.add(P(rbox(.6,.16,.02,.01,mat('#3a3742')),0,.32+i*.2,.44)); g.add(P(new THREE.Mesh(new THREE.CircleGeometry(.02,8),new THREE.MeshStandardMaterial({color:i%2?'#5DBE7C':'#3EA8C9',emissive:i%2?'#5DBE7C':'#3EA8C9',emissiveIntensity:.6,toneMapped:false})),.22,.32+i*.2,.46));} return g;},
+  bigPlant(){const g=new THREE.Group(); g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.28,.22,.55,16),mat('#B5714E')),0,.27,0)); const lm=mat('#4FA167'); for(const [x,y,z,r] of [[0,1.05,0,.42],[-.28,.82,.12,.3],[.26,.92,-.1,.34],[.1,1.3,.1,.28]]){const s=new THREE.Mesh(new THREE.SphereGeometry(r,16,12),lm); s.position.set(x,y,z); s.castShadow=true; g.add(s);} return g;},
+  wallClock(){const g=new THREE.Group(); g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.3,.3,.06,24).rotateX(Math.PI/2),mat(C.white)),0,1.6,0)); g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.26,.26,.02,24).rotateX(Math.PI/2),mat('#EFE9E2')),0,1.6,.04)); g.add(P(rbox(.02,.18,.01,.005,mat(C.dark)),0,1.66,.06)); g.add(P(rbox(.13,.02,.01,.005,mat(C.red)),.05,1.6,.06)); return g;},
+  picture(){const g=new THREE.Group(); g.add(P(rbox(.7,.5,.04,.02,mat('#C9B79C')),0,1.5,0)); g.add(P(rbox(.58,.38,.02,.01,mat('#7FB7D6')),0,1.5,.03)); g.add(P(rbox(.3,.2,.02,.005,mat('#F2C036')),-.1,1.45,.04)); return g;},
+  fan(){const g=new THREE.Group(); g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.16,.2,.04,16),mat(C.dark)),0,.02,0)); g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,1.0,8),mat(C.steel)),0,.5,0)); const head=new THREE.Mesh(new THREE.CylinderGeometry(.25,.25,.1,20).rotateX(Math.PI/2),new THREE.MeshStandardMaterial({color:'#DDE3EA',transparent:true,opacity:.7})); head.position.set(0,1.0,0); g.add(head); g.add(P(new THREE.Mesh(new THREE.SphereGeometry(.06,10,10),mat(C.blue)),0,1.0,.03)); return g;},
+  trashBin(){const g=new THREE.Group(); g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.16,.13,.45,16),mat('#9AA6B2')),0,.22,0)); g.add(P(new THREE.Mesh(new THREE.CylinderGeometry(.17,.17,.03,16),mat('#7E8A96')),0,.45,0)); return g;},
+  rug(){const g=new THREE.Group(); g.add(P(rbox(2.4,.02,1.6,.3,mat('#F1B7BC'),.005),0,0,0)); g.add(P(rbox(1.9,.021,1.1,.2,mat('#F7D2D5'),.005),0,0,0)); return g;}
+};
+// measure each model once: footprint = exact bbox rounded up to .25m, re-centered on bbox center
+(function measure(){for(const t in FURN){const g=B[t](); const b=new THREE.Box3().setFromObject(g); const s=b.getSize(new THREE.Vector3()), c=b.getCenter(new THREE.Vector3()); const d=FURN[t]; d.w=Math.max(.25,Math.round(s.x*4)/4); d.d=Math.max(.25,Math.round(s.z*4)/4); d.off={x:c.x,z:c.z}; if(d.seats) d.seats=d.seats.map(q=>({...q,x:q.x-c.x,z:q.z-c.z}));}})();
+function buildFurn(type){const g=new THREE.Group(); const inner=B[type](); inner.position.set(-FURN[type].off.x,0,-FURN[type].off.z); g.add(inner); g.userData.type=type; return g;}
+
+/* ---------- avatars (GLB stickman) ---------- */
+const MODELS={sit:'assets/models/sit.glb',stand:'assets/models/stand.glb',walk:'assets/models/walk.glb'}; const modelBuf={}; const gltfLoader=new GLTFLoader(); const MODEL_H=1.7, AV_SCALE=.88; const mixers=new Set();
+const modelsReady=Promise.all(Object.keys(MODELS).map(async k=>{modelBuf[k]=await (await fetch(MODELS[k])).arrayBuffer();})).catch(()=>{});
+function loadPose(g,pose){const key=pose===true?'sit':pose===false?'stand':pose; if(g.userData.poseKey===key) return; g.userData.poseKey=key; g.userData.tagY=(key==='sit'?1.15:MODEL_H)*AV_SCALE;
+  if(g.userData.inner){g.remove(g.userData.inner); g.userData.inner.traverse(o=>{if(o.isMesh){o.geometry.dispose(); o.material.dispose();}}); g.userData.inner=null;}
+  if(g.userData.mixer){g.userData.mixer.stopAllAction(); mixers.delete(g.userData.mixer); g.userData.mixer=null;}
+  const shirt=g.userData.shirt, op=g.userData.opacity??1;
+  modelsReady.then(()=>{if(!modelBuf[key]||g.userData.disposed||g.userData.poseKey!==key) return; gltfLoader.parse(modelBuf[key].slice(0),'',gltf=>{if(g.userData.disposed||g.userData.poseKey!==key) return; const m=gltf.scene; m.scale.setScalar(AV_SCALE);
+    m.traverse(o=>{if(o.isMesh){o.castShadow=true; o.receiveShadow=false; o.frustumCulled=false; o.material=new THREE.MeshStandardMaterial({color:shirt,roughness:.75}); if(op<1){o.material.transparent=true;o.material.opacity=op;o.material.depthWrite=false;}}});
+    g.add(m); g.userData.inner=m; if(gltf.animations.length){const mx=new THREE.AnimationMixer(m); const a=mx.clipAction(gltf.animations[0]); a.time=Math.random()*a.getClip().duration; a.play(); g.userData.mixer=mx; mixers.add(mx);}});});}
+function buildAvatar(style,shirt,seated,withGem){const g=new THREE.Group(); g.userData.shirt=shirt; g.userData.opacity=1; loadPose(g,seated);
+  if(withGem){const gem=new THREE.Mesh(new THREE.OctahedronGeometry(.14,0),new THREE.MeshStandardMaterial({color:'#4CAF6E',emissive:'#4CAF6E',emissiveIntensity:1.2,roughness:.2,metalness:.1,toneMapped:false})); gem.scale.set(.9,1.7,.9); g.userData.gem=gem; g.add(gem);}
+  return g;}
+function disposeAvatar(g){g.userData.disposed=true; if(g.userData.mixer){g.userData.mixer.stopAllAction(); mixers.delete(g.userData.mixer);}}
+function setOpacity(g,a){g.userData.opacity=a; g.traverse(o=>{if(o.isMesh&&o!==g.userData.gem){o.material.transparent=a<1;o.material.opacity=a;o.material.depthWrite=a>=1;}});}
+
+/* ---------- geometry helpers ---------- */
+const fp=(f)=>{const def=FURN[f.type]; const odd=f.rot%2; return {w:odd?def.d:def.w,d:odd?def.w:def.d};};
+const roomRects=()=>ROOMS.flatMap(r=>r.rects.map(rc=>({rc,room:r.id})));
+function roomAt(x,z){for(const {rc,room} of roomRects()){if(x>=rc[0]&&x<=rc[2]&&z>=rc[1]&&z<=rc[3]) return room;} return null;}
+function fits(f){const {w,d}=fp(f); const x0=f.x-w/2,z0=f.z-d/2,x1=f.x+w/2,z1=f.z+d/2; const e=.01;
+  const inRoom=roomRects().some(({rc})=>x0>=rc[0]-e&&z0>=rc[1]-e&&x1<=rc[2]+e&&z1<=rc[3]+e); if(!inRoom) return false;
+  if(FURN[f.type].onDesk||FURN[f.type].underlay) return true;
+  return !state.furniture.some(o=>{if(o.uid===f.uid||FURN[o.type].onDesk||FURN[o.type].underlay) return false; const p=fp(o); return Math.abs(o.x-f.x)<(p.w+w)/2-e&&Math.abs(o.z-f.z)<(p.d+d)/2-e;});}
+function deskUnder(f){return state.furniture.find(o=>['desk','doubleDesk','meeting','roundTable','reception','counter','barTable'].includes(o.type)&&(()=>{const p=fp(o);return Math.abs(o.x-f.x)<p.w/2&&Math.abs(o.z-f.z)<p.d/2;})());}
+function seatWorld(f,i){const s=FURN[f.type].seats[i]; const a=f.rot*Math.PI/2; const c=Math.cos(a),sn=Math.sin(a); return {x:f.x+s.x*c+s.z*sn, z:f.z-s.x*sn+s.z*c, y:s.y, ry:a+s.ry};}
+const seatTaken=(fu,i)=>state.employees.some(e=>e.seat&&e.seat.f===fu&&e.seat.i===i);
+function roomName(id){const r=ROOMS.find(r=>r.id===id); if(!r) return ''; const z=state.zones[id]; return z?(z.name||ZONES[z.type].n):(r.label||('Кімната '+r.n));}
+function roomCenter(r){const rc=r.rects[0]; return new THREE.Vector3((rc[0]+rc[2])/2,0,(rc[1]+rc[3])/2);}
+
+/* ---------- scene sync ---------- */
+const furnObjs={}, avObjs={}, rectObjs={};
+function syncFurniture(){const live=new Set();
+  for(const f of state.furniture){live.add(f.uid); let g=furnObjs[f.uid]; if(!g){g=buildFurn(f.type); g.userData.uid=f.uid; furnRoot.add(g); furnObjs[f.uid]=g;}
+    g.position.set(f.x,FURN[f.type].onDesk&&deskUnder(f)?(deskUnder(f).type==='counter'?.9:.75):0.02,f.z); g.rotation.y=f.rot*Math.PI/2;}
+  for(const k in furnObjs) if(!live.has(k)){furnRoot.remove(furnObjs[k]); delete furnObjs[k];}}
+function syncAvatars(){const live=new Set();
+  for(const e of state.employees){if(!e.seat) continue; const f=state.furniture.find(x=>x.uid===e.seat.f); if(!f){e.seat=null;continue;} live.add(e.id);
+    let g=avObjs[e.id]; const key=e.color; if(g&&g.userData.key!==key){avRoot.remove(g); disposeAvatar(g); g=null;}
+    if(!g){g=buildAvatar(settings.avatar,e.color,true,true); g.userData.key=key; g.userData.emp=e.id; avRoot.add(g); avObjs[e.id]=g;}
+    const s=seatWorld(f,e.seat.i); const r=g.userData.roam; if(!(r&&r.phase&&r.phase!=='sitting')){g.position.set(s.x,.02,s.z); g.rotation.y=s.ry; loadPose(g,true);}}
+  for(const k in avObjs) if(!live.has(k)){avRoot.remove(avObjs[k]); disposeAvatar(avObjs[k]); delete avObjs[k];}
+  refreshAvatarLook();}
+function syncZones(){const th=THEMES[settings.theme];
+  for(const r of ROOMS){const base=new THREE.Color(r.corridor?th.cor:th.floor); const z=state.zones[r.id]; if(z) base.lerp(new THREE.Color(ZONES[z.type].c),th.zone); floorMats[r.id].color.copy(base);}
+  const live=new Set(); for(const rz of state.rects){live.add(rz.uid); let m=rectObjs[rz.uid]; if(!m){m=new THREE.Mesh(new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({transparent:true,opacity:.6,roughness:1})); rectRoot.add(m); rectObjs[rz.uid]=m;}
+    m.material.color.set(ZONES[rz.type].c); m.position.set((rz.x0+rz.x1)/2,.012,(rz.z0+rz.z1)/2); m.scale.set(Math.max(.01,rz.x1-rz.x0),1,Math.max(.01,rz.z1-rz.z0));}
+  for(const k in rectObjs) if(!live.has(k)){rectRoot.remove(rectObjs[k]); delete rectObjs[k];}}
+function applyTheme(){const th=THEMES[settings.theme]; app.dataset.ui=th.ui; app.style.background=th.bg; scene.background=new THREE.Color(th.bg); baseMat.color.set(th.base); wallMat.color.set(th.wall); gridMat.color.set(th.ui==='dark'?'#ffffff':'#000000');
+  hemi.intensity=th.ui==='dark'?.35:.55; sun.intensity=th.ui==='dark'?.7:1.0; baseMat.color.set(th.ui==='dark'?'#26242E':'#E5D9C8'); syncZones();}
+function syncAll(){syncFurniture(); syncAvatars(); syncZones(); renderPeople(); renderLabels(true);}
+
+/* ---------- labels (HTML overlays) ---------- */
+const labelsEl=$('#labels'); const roomLabelEls={}, tagEls={}; let hlEmp=null, filterDept=null, hoverEmp=null;
+function renderLabels(rebuild){
+  for(const r of ROOMS){let el=roomLabelEls[r.id]; if(!el){el=document.createElement('div'); el.className='rl'; el.dataset.room=r.id; el.addEventListener('click',()=>{if(mode==='builder'&&tab==='zones') openZonePop({room:r.id});}); labelsEl.appendChild(el); roomLabelEls[r.id]=el;}
+    const z=state.zones[r.id]; el.classList.toggle('empty',!z); el.innerHTML=(z?`<i style="background:${ZONES[z.type].c}"></i>`:'')+roomName(r.id); el.style.display=(r.corridor&&!z)?'none':'';}
+  const live=new Set(); for(const e of state.employees){if(!e.seat) continue; live.add(e.id); let el=tagEls[e.id]; if(!el){el=document.createElement('div'); el.className='tag'; el.dataset.emp=e.id; el.addEventListener('click',ev=>{ev.stopPropagation(); if(mode==='viewer') focusEmployee(e.id,true);}); labelsEl.appendChild(el); tagEls[e.id]=el;}
+    el.innerHTML=`<div class="b"><i style="background:${e.color}"></i><span class="n">${esc(e.name)}</span><span class="d">${esc(e.position||e.dept)}</span></div>`;}
+  for(const k in tagEls) if(!live.has(k)){tagEls[k].remove(); delete tagEls[k];}
+  for(const rz of state.rects){let el=roomLabelEls['rz'+rz.uid]; if(!el){el=document.createElement('div'); el.className='rl'; labelsEl.appendChild(el); roomLabelEls['rz'+rz.uid]=el; el.addEventListener('click',()=>{if(mode==='builder'&&tab==='zones') openZonePop({rect:rz.uid});});}
+    el.innerHTML=`<i style="background:${ZONES[rz.type].c}"></i>${esc(rz.name||ZONES[rz.type].n)}`;}
+  for(const k in roomLabelEls) if(k.startsWith('rz')&&!state.rects.some(r=>'rz'+r.uid===k)){roomLabelEls[k].remove(); delete roomLabelEls[k];}}
+const _v=new THREE.Vector3();
+function project(x,y,z){_v.set(x,y,z).project(camera); return {x:(_v.x+1)/2*innerWidth,y:(1-_v.y)/2*innerHeight,ok:_v.z<1};}
+function updateLabels(){
+  for(const r of ROOMS){const el=roomLabelEls[r.id]; if(!el) continue; const c=roomCenter(r); const p=project(c.x,.2,c.z); el.style.left=p.x+'px'; el.style.top=p.y+'px'; el.style.opacity=p.ok?1:0;}
+  for(const rz of state.rects){const el=roomLabelEls['rz'+rz.uid]; if(!el) continue; const p=project((rz.x0+rz.x1)/2,.2,(rz.z0+rz.z1)/2); el.style.left=p.x+'px'; el.style.top=p.y+'px';}
+  for(const e of state.employees){const el=tagEls[e.id], g=avObjs[e.id]; if(!el||!g) continue; const p=project(g.position.x,g.position.y+g.userData.tagY+.85,g.position.z); el.style.left=p.x+'px'; el.style.top=p.y+'px'; const show=(hoverEmp===e.id||hlEmp===e.id); el.style.opacity=(p.ok&&show)?1:0; el.style.pointerEvents=show?'auto':'none';
+    el.classList.toggle('hi',hlEmp===e.id); el.classList.toggle('dim',!!filterDept&&e.dept!==filterDept&&hlEmp!==e.id);}
+  if(selected&&furnObjs[selected]){const g=furnObjs[selected]; const p=project(g.position.x,1.3,g.position.z); const ib=$('#itemBar'); ib.style.left=(p.x-ib.offsetWidth/2)+'px'; ib.style.top=(p.y-ib.offsetHeight-8)+'px';}
+}
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- camera fly ---------- */
+let fly=null;
+function flyTo(target,offset,ms=1000){fly={t0:performance.now(),ms,p0:camera.position.clone(),t0v:controls.target.clone(),p1:target.clone().add(offset),t1:target.clone()};}
+const OVERVIEW=new THREE.Vector3(.5,.72,.6).normalize().multiplyScalar(33*S);
+camera.position.copy(CENTER).add(OVERVIEW); controls.target.copy(CENTER);
+/* keyboard panning: WASD / arrows move the view across the floor (drag with right mouse also pans) */
+const panKeys=new Set();
+const PAN_MAP={arrowup:'f',w:'f','ц':'f',arrowdown:'b',s:'b','і':'b','ы':'b',arrowleft:'l',a:'l','ф':'l',arrowright:'r',d:'r','в':'r'};
+addEventListener('keydown',e=>{if(e.target instanceof Element&&e.target.matches('input,textarea'))return; const m=PAN_MAP[e.key.toLowerCase()]; if(m){panKeys.add(m); if(e.key.startsWith('Arrow'))e.preventDefault();}});
+addEventListener('keyup',e=>{const m=PAN_MAP[e.key.toLowerCase()]; if(m)panKeys.delete(m);});
+addEventListener('blur',()=>panKeys.clear());
+function panFromKeys(dt){if(fly||!panKeys.size)return; const fwd=new THREE.Vector3().subVectors(controls.target,camera.position); fwd.y=0; if(fwd.lengthSq()<1e-4)return; fwd.normalize(); const right=new THREE.Vector3().crossVectors(fwd,new THREE.Vector3(0,1,0)).normalize(); const mv=new THREE.Vector3(); if(panKeys.has('f'))mv.add(fwd); if(panKeys.has('b'))mv.sub(fwd); if(panKeys.has('r'))mv.add(right); if(panKeys.has('l'))mv.sub(right); if(mv.lengthSq()===0)return; const sp=Math.min(60,Math.max(6,camera.position.distanceTo(controls.target)*.9))*dt; mv.normalize().multiplyScalar(sp); camera.position.add(mv); controls.target.add(mv);}
+
+/* ---------- interaction ---------- */
+const ray=new THREE.Raycaster(); const ptr=new THREE.Vector2(); const plane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
+let drag=null; // {kind:'furn'|'emp'|'rect', ...}
+let selected=null; let ghost=null, plate=null; let downPos=null;
+const snap=v=>Math.round(v*4)/4;
+function setPtr(e){ptr.x=(e.clientX/innerWidth)*2-1; ptr.y=-(e.clientY/innerHeight)*2+1; ray.setFromCamera(ptr,camera);}
+function floorHit(){const v=new THREE.Vector3(); return ray.ray.intersectPlane(plane,v)?v:null;}
+function furnHit(){const h=ray.intersectObjects(furnRoot.children,true)[0]; if(!h) return null; let o=h.object; while(o.parent&&o.parent!==furnRoot) o=o.parent; return {uid:o.userData.uid,point:h.point};}
+function avHit(){const h=ray.intersectObjects(avRoot.children,true)[0]; if(!h) return null; let o=h.object; while(o.parent&&o.parent!==avRoot) o=o.parent; return o.userData.emp;}
+function mkPlate(w,d){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:'#4CAF6E',transparent:true,opacity:.35,depthWrite:false})); m.position.y=.03; return m;}
+function startFurnDrag(type,existing){cancelDrag(); const f=existing||{uid:uid(),type,x:-99,z:-99,rot:0}; drag={kind:'furn',f,fromExisting:!!existing,over:false};
+  ghost=buildFurn(type); setOpacity(ghost,.65); ghost.visible=false; scene.add(ghost); const {w,d}=fp(f); plate=mkPlate(w,d); plate.visible=false; scene.add(plate); controls.enabled=false; hideItemBar(); canvas.style.cursor='grabbing';}
+function startEmpDrag(id){cancelDrag(); const e=state.employees.find(x=>x.id===id); drag={kind:'emp',id,seat:null}; ghost=buildAvatar(settings.avatar,e.color,false); setOpacity(ghost,.7); ghost.visible=false; scene.add(ghost); plate=mkPlate(.9,.9); plate.visible=false; scene.add(plate); controls.enabled=false; canvas.style.cursor='grabbing';}
+function cancelDrag(){if(ghost){scene.remove(ghost); disposeAvatar(ghost); ghost=null;} if(plate){scene.remove(plate); plate=null;} if(drag&&drag.kind==='rect'&&drag.mesh) scene.remove(drag.mesh); if(drag&&drag.kind==='furn'&&drag.fromExisting&&furnObjs[drag.f.uid]) furnObjs[drag.f.uid].visible=true; drag=null; controls.enabled=true; canvas.style.cursor='';}
+function updateDrag(e){setPtr(e); const hit=floorHit(); if(!hit) return;
+  if(drag.kind==='furn'){const f=drag.f; f.x=snap(hit.x); f.z=snap(hit.z); const ok=fits(f); ghost.visible=plate.visible=true; ghost.position.set(f.x,FURN[f.type].onDesk&&deskUnder(f)?.75:.02,f.z); ghost.rotation.y=f.rot*Math.PI/2; const {w,d}=fp(f); plate.scale.set(w,1,d); plate.position.set(f.x,.03,f.z); plate.material.color.set(ok?'#4CAF6E':'#E2001A'); drag.ok=ok; drag.over=true;}
+  else if(drag.kind==='emp'){const fh=furnHit(); drag.seat=null; ghost.visible=true; plate.visible=false;
+    if(fh){const f=state.furniture.find(x=>x.uid===fh.uid); const seats=FURN[f.type].seats||[]; let best=null,bd=9;
+      seats.forEach((s,i)=>{if(seatTaken(f.uid,i)) return; const sw=seatWorld(f,i); const dd=Math.hypot(sw.x-fh.point.x,sw.z-fh.point.z); if(dd<bd){bd=dd;best={f,i,sw};}});
+      if(best){drag.seat={f:best.f.uid,i:best.i}; ghost.position.set(best.sw.x,.02,best.sw.z); ghost.rotation.y=best.sw.ry; plate.visible=true; plate.position.set(best.sw.x,.03,best.sw.z); plate.material.color.set('#4CAF6E'); return;}}
+    ghost.position.set(hit.x,.02,hit.z); ghost.rotation.y=Math.atan2(camera.position.x-hit.x,camera.position.z-hit.z);}
+  else if(drag.kind==='rect'){drag.x1=snap(hit.x); drag.z1=snap(hit.z); const x0=Math.min(drag.x0,drag.x1),x1=Math.max(drag.x0,drag.x1),z0=Math.min(drag.z0,drag.z1),z1=Math.max(drag.z0,drag.z1); drag.mesh.position.set((x0+x1)/2,.015,(z0+z1)/2); drag.mesh.scale.set(Math.max(.01,x1-x0),1,Math.max(.01,z1-z0));}}
+function finishDrag(e){if(!drag) return; const d=drag;
+  if(d.kind==='furn'){if(d.over&&d.ok){pushUndo(); if(d.fromExisting){const o=state.furniture.find(x=>x.uid===d.f.uid); Object.assign(o,{x:d.f.x,z:d.f.z,rot:d.f.rot});} else state.furniture.push(d.f); markDirty(); cancelDrag(); syncFurniture(); syncAvatars(); if(!d.fromExisting) hideWelcome();}
+    else if(d.over||d.fromExisting){if(!d.over&&d.fromExisting){cancelDrag();return;} toast('Тут не поміститься — оберіть вільне місце в кімнаті'); /* keep dragging as sticky */ drag.sticky=true; canvas.style.cursor='grabbing';}
+    else {drag.sticky=true;} return;}
+  if(d.kind==='emp'){if(d.seat){pushUndo(); const emp=state.employees.find(x=>x.id===d.id); emp.seat=d.seat; markDirty(); cancelDrag(); syncAvatars(); renderPeople(); renderLabels(); toast(`${emp.name} — тепер за столом у «${roomName(roomAt(seatWorld(state.furniture.find(f=>f.uid===d.seat.f),d.seat.i).x,seatWorld(state.furniture.find(f=>f.uid===d.seat.f),d.seat.i).z))}»`);}
+    else cancelDrag(); return;}
+  if(d.kind==='rect'){const x0=Math.min(d.x0,d.x1),x1=Math.max(d.x0,d.x1),z0=Math.min(d.z0,d.z1),z1=Math.max(d.z0,d.z1); scene.remove(d.mesh); drag=null; controls.enabled=true;
+    if(x1-x0>=.5&&z1-z0>=.5){pushUndo(); const rz={uid:uid(),x0,z0,x1,z1,type:'open',name:''}; state.rects.push(rz); markDirty(); syncZones(); renderLabels(); openZonePop({rect:rz.uid});}}}
+
+canvas.addEventListener('pointerdown',e=>{if(e.button!==0) return; downPos={x:e.clientX,y:e.clientY}; setPtr(e);
+  if(drag&&drag.kind==='furn'&&drag.sticky){updateDrag(e); drag.sticky=false; finishDrag(e); if(!drag) return; drag.sticky=true; return;}
+  if(mode==='builder'&&tab==='zones'&&settings.zoning==='rect'&&!drag){const hit=floorHit(); if(hit&&roomAt(hit.x,hit.z)){const m=new THREE.Mesh(new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:'#5B76E6',transparent:true,opacity:.35,depthWrite:false})); scene.add(m); drag={kind:'rect',x0:snap(hit.x),z0:snap(hit.z),x1:snap(hit.x),z1:snap(hit.z),mesh:m}; controls.enabled=false;}}});
+canvas.addEventListener('pointermove',e=>{if(drag){updateDrag(e); return;} setPtr(e); const aid=avHit(); hoverEmp=aid; if(mode!=='builder'){canvas.style.cursor=aid?'pointer':''; return;} canvas.style.cursor=aid?'pointer':((tab==='furniture'&&furnHit())?'pointer':'');});
+canvas.addEventListener('pointerleave',()=>{hoverEmp=null;});
+canvas.addEventListener('pointerup',e=>{const moved=downPos&&Math.hypot(e.clientX-downPos.x,e.clientY-downPos.y)>5; downPos=null;
+  if(drag&&drag.kind==='rect'){finishDrag(e); return;}
+  if(drag&&drag.kind==='furn'&&drag.sticky) return;
+  if(moved) return; setPtr(e); closePops();
+  if(mode==='viewer'){const id=avHit(); if(id) focusEmployee(id,true); return;}
+  const aid=avHit(); if(aid){const emp=state.employees.find(x=>x.id===aid); if(emp){showCard(emp); return;}}
+  if(tab==='zones'&&settings.zoning==='click'){const h=ray.intersectObjects(floorMeshes)[0]; if(h) openZonePop({room:h.object.userData.room}); return;}
+  const fh=furnHit(); if(fh&&tab!=='zones') select(fh.uid); else select(null);});
+document.addEventListener('pointermove',e=>{if(drag&&(drag.kind==='furn'||drag.kind==='emp')&&!drag.sticky&&e.target!==canvas){/* over UI: hide ghost */ if(ghost){ghost.visible=false;} if(plate) plate.visible=false; if(drag.kind==='furn') drag.over=false;}});
+document.addEventListener('pointerup',e=>{if(!drag) return; if(drag.kind==='rect') return; if(drag.sticky) return; if(e.target===canvas){updateDrag(e); finishDrag(e);} else {if(drag.kind==='furn'&&!drag.fromExisting){drag.sticky=true; canvas.style.cursor='grabbing';} else finishDrag(e);}});
+window.addEventListener('keydown',e=>{if(e.target instanceof Element&&e.target.matches('input,textarea')) return; const k=e.key.toLowerCase();
+  if(k==='escape'){cancelDrag(); select(null); closePops(); return;}
+  if(k==='r'||k==='к'){if(drag&&drag.kind==='furn'){drag.f.rot=(drag.f.rot+1)%4;} else if(selected) rotateSel(); return;}
+  if((k==='delete'||k==='backspace')&&selected){delSel(); return;}
+  if((e.ctrlKey||e.metaKey)&&k==='z'){e.preventDefault(); undo();}});
+
+function select(id){selected=id; const ib=$('#itemBar'); ib.classList.toggle('open',!!id); for(const k in furnObjs) furnObjs[k].traverse(o=>{if(o.isMesh&&o.material.emissive) o.material.emissive.set(0);}); if(id&&furnObjs[id]) furnObjs[id].traverse(o=>{if(o.isMesh&&o.material.emissive){o.material=o.material.clone(); o.material.emissive.set('#E2001A'); o.material.emissiveIntensity=.12;}});}
+function hideItemBar(){$('#itemBar').classList.remove('open');}
+function rotateSel(){const f=state.furniture.find(x=>x.uid===selected); if(!f) return; pushUndo(); f.rot=(f.rot+1)%4; if(!fits(f)){f.rot=(f.rot+3)%4; undoStack.pop(); toast('Так не поміститься'); return;} markDirty(); syncFurniture(); syncAvatars();}
+function delSel(){const f=state.furniture.find(x=>x.uid===selected); if(!f) return; pushUndo(); state.furniture=state.furniture.filter(x=>x!==f); state.employees.forEach(e=>{if(e.seat&&e.seat.f===f.uid) e.seat=null;}); select(null); markDirty(); syncAll();}
+$('#rotBtn').onclick=rotateSel; $('#delBtn').onclick=delSel;
+$('#moveBtn').onclick=()=>{const f=state.furniture.find(x=>x.uid===selected); if(!f) return; select(null); furnObjs[f.uid].visible=false; startFurnDrag(f.type,{...f}); drag.sticky=true;};
+
+/* dock drags */
+function bindDrag(el,onStart){let sp=null; el.addEventListener('pointerdown',e=>{if(e.button!==0) return; sp={x:e.clientX,y:e.clientY,started:false}; const mv=ev=>{if(!sp.started&&Math.hypot(ev.clientX-sp.x,ev.clientY-sp.y)>6){sp.started=true; onStart('drag');} if(sp.started&&drag&&ev.target===canvas) updateDrag(ev);};
+  const up=ev=>{document.removeEventListener('pointermove',mv); document.removeEventListener('pointerup',up); if(!sp.started) onStart('click'); sp=null;}; document.addEventListener('pointermove',mv); document.addEventListener('pointerup',up);});}
+
+/* ---------- undo / save ---------- */
+function pushUndo(){undoStack.push(JSON.stringify(state)); if(undoStack.length>60) undoStack.shift(); $('#undoBtn').disabled=false;}
+function undo(){if(!undoStack.length) return; cancelDrag(); select(null); state=JSON.parse(undoStack.pop()); $('#undoBtn').disabled=!undoStack.length; markDirty(); syncAll();}
+function markDirty(){dirty=true; const s=$('#status'); s.classList.remove('saved'); s.querySelector('span').textContent='Є незбережені зміни';}
+$('#saveBtn').onclick=()=>{ saveLayout(); };
+let toastT; function toast(msg){const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2400);}
+
+/* ---------- catalog ---------- */
+function makeThumbs(){const r=new THREE.WebGLRenderer({alpha:true,antialias:true,preserveDrawingBuffer:true}); r.setSize(168,168); r.setClearColor(0,0); r.toneMapping=THREE.NeutralToneMapping; const sc=new THREE.Scene(); sc.add(new THREE.HemisphereLight(0xffffff,0xc9b8a8,1.1)); const dl=new THREE.DirectionalLight(0xffffff,1.6); dl.position.set(3,5,4); sc.add(dl);
+  const cam=new THREE.OrthographicCamera(-1,1,1,-1,.1,50); const out={};
+  for(const t in FURN){const g=buildFurn(t); sc.add(g); const box=new THREE.Box3().setFromObject(g); const c=box.getCenter(new THREE.Vector3()); const s=box.getSize(new THREE.Vector3()); const m=Math.max(s.x,s.y,s.z)*.72; cam.left=-m;cam.right=m;cam.top=m;cam.bottom=-m; cam.updateProjectionMatrix(); cam.position.copy(c).add(new THREE.Vector3(1,.9,1).normalize().multiplyScalar(10)); cam.lookAt(c); r.render(sc,cam); out[t]=r.domElement.toDataURL(); sc.remove(g);}
+  r.dispose(); r.forceContextLoss(); return out;}
+const thumbs=makeThumbs();
+const catEl=$('#cat'); let catFilter='all';
+function renderCat(){catEl.innerHTML=''; for(const t in FURN){if(catFilter!=='all'&&FURN[t].cat!==catFilter) continue; const el=document.createElement('div'); el.className='item'; el.innerHTML=`<img src="${thumbs[t]}" alt=""><span>${FURN[t].n}</span><small>${FURN[t].seats?FURN[t].seats.length+(FURN[t].seats.length===1?' місце':' місць'):FURN[t].w+'×'+FURN[t].d+' м'}</small>`; catEl.appendChild(el);
+  bindDrag(el,how=>{startFurnDrag(t); if(how==='click'){drag.sticky=true; toast(`Клікніть на підлогу, щоб поставити «${FURN[t].n}»`);}});}}
+function renderCatFilter(){const f=$('#catFilter'); f.innerHTML=`<button class="chipb" data-c="all" aria-pressed="${catFilter==='all'}">Усі</button>`+Object.keys(CATS).map(k=>`<button class="chipb" data-c="${k}" aria-pressed="${catFilter===k}">${CATS[k]}</button>`).join('');
+  f.querySelectorAll('button').forEach(b=>b.onclick=()=>{catFilter=b.dataset.c; renderCatFilter(); renderCat();});}
+renderCatFilter(); renderCat();
+const zl=$('#zonesList'); for(const k in ZONES){const el=document.createElement('div'); el.className='zt'; el.innerHTML=`<i style="background:${ZONES[k].c}"></i>${ZONES[k].n}`; zl.appendChild(el);}
+
+/* tabs */
+$$('#tabs button[role="tab"]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab; app.dataset.tab=tab; app.dataset.dock='open'; $$('#tabs button[role="tab"]').forEach(x=>x.setAttribute('aria-selected',x===b)); $$('.pane').forEach(p=>p.classList.toggle('on',p.dataset.pane===tab)); select(null); closePops(); cancelDrag(); updateZoneHint();});
+$('#collapseBtn').onclick=()=>{app.dataset.dock=app.dataset.dock==='closed'?'open':'closed';};
+function updateZoneHint(){$('#zoneHint').textContent=settings.zoning==='rect'?'Проведіть прямокутник по підлозі, щоб створити зону':'Натисніть на кімнату в офісі, щоб призначити зону';}
+
+/* ---------- zone popover ---------- */
+let popTarget=null;
+function openZonePop(t){popTarget=t; const pop=$('#zonePop'); const isRoom=!!t.room; const cur=isRoom?state.zones[t.room]:state.rects.find(r=>r.uid===t.rect); const title=isRoom?('Кімната '+(ROOMS.find(r=>r.id===t.room).n||'')+(ROOMS.find(r=>r.id===t.room).corridor?' · Коридор':'')):'Зона на підлозі';
+  pop.innerHTML=`<h4>${title}</h4><label>Тип зони</label><div class="grid">${Object.keys(ZONES).map(k=>`<button data-z="${k}" aria-pressed="${cur&&cur.type===k}"><i style="background:${ZONES[k].c}"></i>${ZONES[k].n}</button>`).join('')}</div><label>Назва (необов'язково)</label><input class="field" id="zName" placeholder="Напр. Логістика" value="${esc(cur?cur.name:'')}"><div class="row"><button class="tbtn txt" id="zClear">Прибрати зону</button><button class="tbtn red" id="zDone">Готово</button></div>`;
+  pop.classList.add('open'); let p; if(isRoom){const c=roomCenter(ROOMS.find(r=>r.id===t.room)); p=project(c.x,.2,c.z);} else {const rz=cur; p=project((rz.x0+rz.x1)/2,.2,(rz.z0+rz.z1)/2);}
+  pop.style.left=Math.min(innerWidth-300,Math.max(10,p.x+20))+'px'; pop.style.top=Math.min(innerHeight-360,Math.max(90,p.y-40))+'px';
+  const apply=(type,name)=>{pushUndo(); if(isRoom){if(type) state.zones[t.room]={type,name}; else delete state.zones[t.room];} else {const rz=state.rects.find(r=>r.uid===t.rect); if(type){rz.type=type;rz.name=name;} else state.rects=state.rects.filter(r=>r!==rz);} markDirty(); syncZones(); renderLabels(); hideWelcome();};
+  pop.querySelectorAll('[data-z]').forEach(b=>b.onclick=()=>{pop.querySelectorAll('[data-z]').forEach(x=>x.setAttribute('aria-pressed',x===b)); apply(b.dataset.z,$('#zName').value.trim()); if(b.dataset.z==='custom') $('#zName').focus();});
+  $('#zName').oninput=e=>{const sel=pop.querySelector('[data-z][aria-pressed="true"]'); if(sel) apply(sel.dataset.z,e.target.value.trim());};
+  $('#zClear').onclick=()=>{apply(null); closePops();}; $('#zDone').onclick=closePops;}
+function closePops(){$('#zonePop').classList.remove('open'); $('#settings').classList.remove('open'); $('#empcard').classList.remove('open'); $('#sugg').classList.remove('open');}
+
+/* ---------- employees ---------- */
+const initials=n=>n.trim().split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+function statusBtns(cur){return Object.keys(STATUS).map(k=>`<button type="button" class="optbtn" data-s="${k}" aria-pressed="${cur===k}"><i style="background:${STATUS[k].c}"></i>${STATUS[k].n}</button>`).join('');}
+function moodBtns(cur){return Object.keys(MOODS).map(k=>`<button type="button" class="moodbtn" data-m="${k}" title="${MOODS[k].n}" aria-pressed="${cur===k}">${MOODS[k].e}</button>`).join('');}
+const avHTML=(e,cls='av')=>`<div class="${cls}" style="background:${e.photo?`url(${e.photo})`:e.color}">${e.photo?'':initials(e.name)}</div>`;
+function renderPeople(){const holder=$('#people'); holder.innerHTML=''; $('#empCount').textContent=state.employees.length;
+  for(const e of state.employees){const el=document.createElement('div'); el.className='emp'; let where='Без місця'; if(e.seat){const f=state.furniture.find(x=>x.uid===e.seat.f); if(f){const sw=seatWorld(f,e.seat.i); where=roomName(roomAt(sw.x,sw.z))||'В офісі';}}
+    const st=STATUS[statusOf(e)], md=MOODS[e.mood]||MOODS.good;
+    el.innerHTML=`${avHTML(e)}<div class="txt"><div class="nm">${esc(e.name)}</div><div class="dp">${esc(e.dept)}${e.position?' · '+esc(e.position):''}</div><div class="st ${e.seat?'seated':''}"><span class="mood">${md.e}</span><i style="background:${st.c}"></i>${esc(e.seat?where:'Без місця')}</div></div>${e.seat?'<button class="x" title="Зняти з місця">×</button>':''}`;
+    const x=el.querySelector('.x'); if(x) x.onclick=ev=>{ev.stopPropagation(); pushUndo(); e.seat=null; markDirty(); syncAvatars(); renderPeople(); renderLabels();};
+    bindDrag(el,how=>{if(how==='drag'){if(e.seat){/* re-seating: free current seat during drag */} startEmpDrag(e.id);} else if(e.seat) focusEmployee(e.id,false);});
+    holder.appendChild(el);}
+  const add=document.createElement('button'); add.className='addemp'; add.innerHTML='<b>+</b>Додати співробітника'; add.onclick=()=>openModal(); holder.appendChild(add);
+  const dl=$('#deptList'); fillDeptList();
+  renderFilters();}
+
+/* modal */
+const backdrop=$('#backdrop'); let fColor=DEPT_COLORS[0], fPhoto=null, fStatus='office', fMood='good', editingId=null;
+const pRenderer=new THREE.WebGLRenderer({canvas:$('#pc'),alpha:true,antialias:true}); pRenderer.setClearColor(0,0); pRenderer.toneMapping=THREE.NeutralToneMapping; 
+const pScene=new THREE.Scene(); pScene.add(new THREE.HemisphereLight(0xffffff,0xc9b8a8,1)); const pl=new THREE.DirectionalLight(0xfff3e4,1.8); pl.position.set(2,4,3); pl.castShadow=true; pScene.add(pl);
+const pCam=new THREE.PerspectiveCamera(30,480/560,.1,20); pCam.position.set(0,1.1,4.6); pCam.lookAt(0,.8,0);
+const pFloor=new THREE.Mesh(new THREE.CircleGeometry(.9,32).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({color:'#ffffff',roughness:1,transparent:true,opacity:.6})); pFloor.receiveShadow=true; pScene.add(pFloor);
+let pAv=null; function refreshPreview(){if(pAv){pScene.remove(pAv); disposeAvatar(pAv);} pAv=buildAvatar(settings.avatar,fColor,false); pScene.add(pAv); const t=$('#ptag'); t.querySelector('i').style.background=fColor; t.querySelector('.n').textContent=$('#fName').value.trim()||'Ім'+"'"+'я'; t.querySelector('.d').textContent=$('#fDept').value.trim()||'Відділ';}
+function renderSwatches(){const dept=$('#fDept').value.trim(); if(dept&&state.depts[dept]&&!editingId) fColor=state.depts[dept];
+  $('#swatches').innerHTML=DEPT_COLORS.map(c=>`<button type="button" data-c="${c}" style="background:${c}" aria-pressed="${c===fColor}"></button>`).join('');
+  $$('#swatches button').forEach(b=>b.onclick=()=>{fColor=b.dataset.c; renderSwatches(); refreshPreview();}); $('#fAv').style.background=fPhoto?`url(${fPhoto})`:fColor; $('#fAv').style.backgroundSize='cover'; $('#fAv').style.color='#fff'; $('#fAv').textContent=fPhoto?'':(initials($('#fName').value)||'?'); refreshPreview();}
+function renderStatusMood(){$('#fStatus').innerHTML=statusBtns(fStatus); $('#fMood').innerHTML=moodBtns(fMood);
+  $$('#fStatus .optbtn').forEach(b=>b.onclick=()=>{fStatus=b.dataset.s; $$('#fStatus .optbtn').forEach(x=>x.setAttribute('aria-pressed',x===b));});
+  $$('#fMood .moodbtn').forEach(b=>b.onclick=()=>{fMood=b.dataset.m; $$('#fMood .moodbtn').forEach(x=>x.setAttribute('aria-pressed',x===b));});}
+function openModal(edit){editingId=(edit&&edit.id)||null; backdrop.classList.add('open'); $('#empForm').reset();
+  if(editingId){$('#fName').value=edit.name; $('#fDept').value=edit.dept; $('#fPos').value=edit.position||''; $('#fMail').value=edit.email||''; $('#fPhone').value=edit.phone||''; $('#fExt').value=edit.ext||''; fPhoto=edit.photo||null; $('#fPhotoName').textContent=fPhoto?'фото завантажено':"необов'язково"; fColor=edit.color; fStatus=statusOf(edit); fMood=edit.mood||'good'; $('#empTitle').textContent='Редагувати співробітника'; $('#empSub').textContent='Змініть дані, статус або настрій.'; $('#empSubmit').textContent='Зберегти';}
+  else {fPhoto=null; $('#fPhotoName').textContent="необов'язково"; fColor=DEPT_COLORS[state.employees.length%DEPT_COLORS.length]; fStatus='office'; fMood='good'; $('#empTitle').textContent='Новий співробітник'; $('#empSub').textContent="Після додавання перетягніть картку на вільне місце."; $('#empSubmit').textContent='Додати';}
+  renderSwatches(); renderStatusMood(); fillDeptList(); setTimeout(()=>$('#fName').focus(),50);}
+function closeModal(){backdrop.classList.remove('open');}
+$('#cancelEmp').onclick=closeModal; backdrop.addEventListener('pointerdown',e=>{if(e.target===backdrop) closeModal();});
+$('#fName').oninput=renderSwatches; $('#fDept').oninput=renderSwatches;
+$('#fPhoto').onchange=e=>{const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{fPhoto=rd.result; $('#fPhotoName').textContent=f.name; renderSwatches();}; rd.readAsDataURL(f);};
+$('#empForm').onsubmit=ev=>{ev.preventDefault(); const name=$('#fName').value.trim(), dept=$('#fDept').value.trim(); if(!name||!dept) return; pushUndo(); state.depts[dept]=fColor; const color=fColor;
+  const data={name,dept,position:$('#fPos').value.trim(),email:$('#fMail').value.trim(),phone:$('#fPhone').value.trim(),ext:$('#fExt').value.trim(),color,photo:fPhoto,status:fStatus,mood:fMood};
+  if(editingId){const emp=state.employees.find(x=>x.id===editingId); Object.assign(emp,data); editingId=null; markDirty(); closeModal(); syncAvatars(); renderPeople(); renderLabels(); toast(`${name} — оновлено`); return;}
+  state.employees.push(Object.assign({id:uid(),seat:null},data)); markDirty(); closeModal(); renderPeople(); toast(`${name} — додано. Перетягніть на вільне місце`); hideWelcome();
+  if(tab!=='people') $('#tabPeople').click();};
+
+/* ---------- viewer ---------- */
+function focusEmployee(id,card){const e=state.employees.find(x=>x.id===id); const g=avObjs[id]; if(!e||!g){toast(`${e?e.name:'Співробітник'} ще не має місця`); return;} hlEmp=id; app.classList.add('hl'); const t=g.position.clone(); t.y=.9;
+  const dir=new THREE.Vector3(.35,.62,.7).normalize().multiplyScalar(mode==='viewer'?8.5:10); flyTo(t,dir,1100); if(mode==='viewer') showHighlight(g); if(card) setTimeout(()=>showCard(e),700);}
+let hlRing=null,hlArrow=null;
+function showHighlight(g){clearHighlight(); const p=g.position;
+  if(settings.hl!=='arrow'){hlRing=new THREE.Mesh(new THREE.RingGeometry(.55,.85,40).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:'#E2001A',transparent:true,opacity:.7,side:THREE.DoubleSide,depthWrite:false})); hlRing.position.set(p.x,.04,p.z); fxRoot.add(hlRing);
+    const glow=new THREE.Mesh(new THREE.CircleGeometry(1.1,40).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:'#E2001A',transparent:true,opacity:.18,depthWrite:false})); glow.position.set(p.x,.035,p.z); fxRoot.add(glow);}
+  if(settings.hl!=='glow'){hlArrow=new THREE.Mesh(new THREE.ConeGeometry(.22,.5,20),new THREE.MeshStandardMaterial({color:'#E2001A',roughness:.5})); hlArrow.rotation.x=Math.PI; hlArrow.position.set(p.x,p.y+g.userData.tagY+1.1,p.z); hlArrow.castShadow=true; fxRoot.add(hlArrow);}}
+function clearHighlight(){while(fxRoot.children.length) fxRoot.remove(fxRoot.children[0]); hlRing=hlArrow=null;}
+function showCard(e){const c=$('#empcard'); const f=e.seat&&state.furniture.find(x=>x.uid===e.seat.f); let where='Без місця'; if(f){const sw=seatWorld(f,e.seat.i); where=roomName(roomAt(sw.x,sw.z))||'В офісі';}
+  const st=STATUS[statusOf(e)], md=MOODS[e.mood]||MOODS.good;
+  c.innerHTML=`<div class="top">${avHTML(e)}<div><div class="nm" style="font-size:16px">${esc(e.name)}</div><div class="dp">${esc(e.dept)}${e.position?' · '+esc(e.position):''}</div></div></div>`+
+    `<div class="badges"><span class="pill" style="color:${st.c}">${st.icon} ${st.n}</span><span class="pill">${md.e} ${md.n}</span><span class="pill">📍 ${esc(where)}</span></div>`+
+    `<dl>${e.email?`<dt>Email</dt><dd>${esc(e.email)}</dd>`:''}${e.phone?`<dt>Телефон</dt><dd>${esc(e.phone)}</dd>`:''}${e.ext?`<dt>Роб. номер</dt><dd>${esc(e.ext)}</dd>`:''}</dl>`+
+    `<div class="fsec-t">Де зараз</div><div class="optrow" id="cardStatus">${statusBtns(statusOf(e))}</div>`+
+    `<div class="fsec-t">Настрій</div><div class="moodrow" id="cardMood">${moodBtns(e.mood||'good')}</div>`+
+    `<div class="row"><button class="tbtn" id="cardEdit">Редагувати</button><button class="tbtn txt" id="cardClose">Закрити</button></div>`;
+  c.classList.add('open'); c.style.left='16px'; c.style.top='auto'; c.style.bottom='24px';
+  c.querySelectorAll('#cardStatus .optbtn').forEach(b=>b.onclick=()=>{pushUndo(); e.status=b.dataset.s; markDirty(); refreshAvatarLook(); renderPeople(); showCard(e);});
+  c.querySelectorAll('#cardMood .moodbtn').forEach(b=>b.onclick=()=>{pushUndo(); e.mood=b.dataset.m; markDirty(); renderPeople(); showCard(e);});
+  $('#cardEdit').onclick=()=>{c.classList.remove('open'); app.classList.remove('hl'); openModal(e);};
+  $('#cardClose').onclick=()=>{c.classList.remove('open'); app.classList.remove('hl');};}
+// search
+const q=$('#q'), sugg=$('#sugg'); let sIdx=0;
+function suggest(){const v=q.value.trim().toLowerCase(); if(!v){sugg.classList.remove('open'); return;} const list=state.employees.filter(e=>e.name.toLowerCase().includes(v)||e.dept.toLowerCase().includes(v)).slice(0,8);
+  sugg.innerHTML=list.length?list.map((e,i)=>`<button data-id="${e.id}" class="${i===sIdx?'act':''}">${avHTML(e)}<div><div class="nm">${esc(e.name)}</div><div class="dp">${esc(e.dept)}${e.seat?'':' · без місця'}</div></div></button>`).join(''):'<button disabled><div class="dp">Нікого не знайдено</div></button>';
+  sugg.classList.add('open'); sugg.querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>pick(b.dataset.id));}
+function pick(id){const e=state.employees.find(x=>x.id===id); q.value=e.name; sugg.classList.remove('open'); hideVIntro(); focusEmployee(id,true);}
+q.addEventListener('input',()=>{sIdx=0; suggest();});
+q.addEventListener('keydown',e=>{const items=sugg.querySelectorAll('[data-id]'); if(e.key==='ArrowDown'){sIdx=Math.min(items.length-1,sIdx+1); suggest();} else if(e.key==='ArrowUp'){sIdx=Math.max(0,sIdx-1); suggest();} else if(e.key==='Enter'){e.preventDefault(); if(items[sIdx]) pick(items[sIdx].dataset.id);} else if(e.key==='Escape') sugg.classList.remove('open');});
+q.addEventListener('focus',suggest);
+function renderFilters(){const f=$('#filters'); const depts=Object.keys(state.depts); f.innerHTML=depts.length?`<button class="chipb" data-d="" aria-pressed="${!filterDept}">Усі відділи</button>`+depts.map(d=>`<button class="chipb" data-d="${esc(d)}" aria-pressed="${filterDept===d}"><i style="background:${state.depts[d]}"></i>${esc(d)}</button>`).join(''):'';
+  f.querySelectorAll('button').forEach(b=>b.onclick=()=>{filterDept=b.dataset.d||null; app.classList.remove('hl'); clearHighlight(); hlEmp=null; renderFilters(); applyFilter();});}
+function statusOf(e){return STATUS[e.status]?e.status:'office';}
+function refreshAvatarLook(){for(const e of state.employees){const g=avObjs[e.id]; if(!g) continue; const st=statusOf(e); let op=1; if(filterDept&&e.dept!==filterDept&&mode==='viewer') op=.22; setOpacity(g,op); if(g.userData.gem){const c=STATUS[st].c; g.userData.gem.material.color.set(c); g.userData.gem.material.emissive.set(c);}}}
+function applyFilter(){refreshAvatarLook();}
+function seatOfEmp(e){if(!e.seat) return null; const f=state.furniture.find(x=>x.uid===e.seat.f); return f?seatWorld(f,e.seat.i):null;}
+function pointBlocked(x,z){return state.furniture.some(o=>{if(FURN[o.type].underlay||FURN[o.type].onDesk) return false; const p=fp(o); return Math.abs(o.x-x)<p.w/2+.28&&Math.abs(o.z-z)<p.d/2+.28;});}
+function pickRoamTarget(home){const rid=roomAt(home.x,home.z); const R=ROOMS.find(r=>r.id===rid); const rects=(R&&R.rects.length)?R.rects:[[home.x-1,home.z-1,home.x+1,home.z+1]];
+  for(let i=0;i<14;i++){const rc=rects[Math.floor(Math.random()*rects.length)]; const m=.6; const x=rc[0]+m+Math.random()*Math.max(.1,rc[2]-rc[0]-2*m); const z=rc[1]+m+Math.random()*Math.max(.1,rc[3]-rc[1]-2*m); if(!pointBlocked(x,z)) return {x,z};}
+  return {x:home.x,z:home.z};}
+function updateRoam(dt){const on=settings.move==='on';
+  for(const e of state.employees){const g=avObjs[e.id]; if(!g) continue; const home=seatOfEmp(e); if(!home) continue;
+    const canRoam=on&&statusOf(e)==='office'; let r=g.userData.roam;
+    if(!canRoam){ if(r){ g.position.set(home.x,.02,home.z); g.rotation.y=home.ry; loadPose(g,true); g.userData.roam=null; } continue; }
+    if(!r){ r=g.userData.roam={phase:'sitting',t:3+Math.random()*7}; }
+    if(r.phase==='sitting'){ r.t-=dt; if(r.t<=0){ loadPose(g,'walk'); r.phase='out'; r.target=pickRoamTarget(home); r.speed=1.0+Math.random()*.5; } }
+    else if(r.phase==='pause'){ r.t-=dt;
+      let near=null,nd=2.4; for(const o of state.employees){if(o.id===e.id)continue; const og=avObjs[o.id],or=og&&og.userData.roam; if(!og||!or||(or.phase!=='pause'&&or.phase!=='out'&&or.phase!=='back'))continue; const dd=Math.hypot(og.position.x-g.position.x,og.position.z-g.position.z); if(dd<nd){nd=dd;near=og;}}
+      if(near){g.rotation.y=Math.atan2(near.position.x-g.position.x,near.position.z-g.position.z); if(r.t<1.2)r.t=1.2;}
+      if(r.t<=0){ loadPose(g,'walk'); r.phase='back'; } }
+    else if(r.phase==='out'||r.phase==='back'){ const tgt=r.phase==='out'?r.target:home; const dx=tgt.x-g.position.x, dz=tgt.z-g.position.z; const d=Math.hypot(dx,dz);
+      if(d<.06){ g.position.set(r.phase==='out'?g.position.x:home.x,.02,r.phase==='out'?g.position.z:home.z); if(g.userData.inner)g.userData.inner.rotation.z=0;
+        if(r.phase==='out'){ r.phase='pause'; r.t=2+Math.random()*4; loadPose(g,'stand'); } else { g.rotation.y=home.ry; loadPose(g,true); r.phase='sitting'; r.t=4+Math.random()*8; } }
+      else { const step=Math.min(d,r.speed*dt); const nx=g.position.x+dx/d*step, nz=g.position.z+dz/d*step;
+        if(r.phase==='out'&&pointBlocked(nx,nz)){ r.target=pickRoamTarget(home); }
+        else { g.position.x=nx; g.position.z=nz; g.position.y=.02; g.rotation.y=Math.atan2(dx,dz); if(g.userData.poseKey!=='walk')loadPose(g,'walk'); } } } }}
+$('#shareBtn').onclick=async()=>{const url=location.href.split('?')[0]+'?mode=viewer'; try{await navigator.clipboard.writeText(url);}catch(e){} toast('Посилання для співробітників скопійовано');};
+
+/* ---------- mode ---------- */
+function setMode(m){if(m===mode) return; mode=m; app.dataset.mode=m; grid.visible=m==='builder'; $$('#modeSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===m)); cancelDrag(); select(null); closePops(); clearHighlight(); hlEmp=null; app.classList.remove('hl');
+  const pill=$('#modePill'); pill.textContent=m==='viewer'?'Режим перегляду — знайдіть своє місце':'Режим будівника'; pill.classList.add('show'); setTimeout(()=>pill.classList.remove('show'),1600);
+  flyTo(CENTER,OVERVIEW.clone().multiplyScalar(m==='viewer'?.95:1),900);
+  if(m==='viewer'){renderFilters(); if(state.employees.some(e=>e.seat)) showVIntro(); } else {hideVIntro(); filterDept=null;} applyFilter();}
+$$('#modeSeg button').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+function showVIntro(){const vi=$('#vintro'); vi.style.display=''; $('#vsearchHolder').appendChild($('#search'));}
+function hideVIntro(){const vi=$('#vintro'); if(vi.style.display==='none') return; vi.style.display='none'; const hdr=$('#hdr'); hdr.insertBefore($('#search'),hdr.querySelectorAll('.spacer')[1]);}
+$('#skipIntro').onclick=hideVIntro;
+function hideWelcome(){$('#welcome').style.display='none';}
+$('#startBtn').onclick=hideWelcome;
+
+/* ---------- settings ---------- */
+function applySettings(){app.dataset.layout=settings.layout; $$('#settings .opt').forEach(o=>o.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===settings[o.dataset.set])));
+  if(settings.layout==='sides') $('#dock2').appendChild($('#panePeople')); else $('#dock').appendChild($('#panePeople'));
+  if(settings.layout==='sides'){$('#panePeople').classList.add('on'); if(tab==='people') $$('#tabs button[role="tab"]')[0].click();} else $('#panePeople').classList.toggle('on',tab==='people');
+  applyTheme(); syncAvatars(); updateZoneHint(); if(backdrop.classList.contains('open')) refreshPreview(); localStorage.setItem(LS_SET,JSON.stringify(settings));}
+$$('#settings .opt').forEach(o=>o.querySelectorAll('button').forEach(b=>b.onclick=()=>{settings[o.dataset.set]=b.dataset.v; applySettings();}));
+$('#gear').onclick=e=>{e.stopPropagation(); const s=$('#settings'); const open=s.classList.contains('open'); closePops(); if(!open) s.classList.add('open');};
+$('#resetBtn').onclick=()=>{pushUndo(); state={furniture:[],zones:{},rects:[],employees:[],depts:{}}; markDirty(); syncAll(); closePops(); toast('Офіс очищено');};
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('.pop,#gear,#search,.rl')) closePops();});
+
+/* ---------- init ---------- */
+const params=new URLSearchParams(location.search);
+applySettings(); syncAll();
+if(params.get('mode')==='viewer'){mode='viewer'; grid.visible=false; app.dataset.mode='viewer'; $$('#modeSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m==='viewer'));}
+initLoad().then(okServer=>{
+  syncAll();
+  setSyncStatus(okServer?'Синхронізовано з сервером':'Локальні дані (офлайн)', true);
+  if(mode==='viewer'){renderFilters(); if(state.employees.some(e=>e.seat)) showVIntro();}
+  else if(!state.furniture.length&&!Object.keys(state.zones).length) $('#welcome').style.display='';
+});
+
+function resize(){renderer.setSize(innerWidth,innerHeight); camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();} addEventListener('resize',resize); resize();
+const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2; let lastT=0;
+function loop(now){requestAnimationFrame(loop); const dt=Math.min(.05,(now-lastT)/1000); lastT=now; for(const mx of mixers) mx.update(dt);
+  updateRoam(dt); for(const id in avObjs){const g=avObjs[id],gm=g.userData.gem; if(gm){gm.rotation.y+=dt*1.8; gm.position.set(0,g.userData.tagY+.55+Math.sin(now/500)*.05,0);}}
+  if(fly){const k=Math.min(1,(now-fly.t0)/fly.ms), e=ease(k); camera.position.lerpVectors(fly.p0,fly.p1,e); controls.target.lerpVectors(fly.t0v,fly.t1,e); if(k>=1) fly=null;}
+  panFromKeys(dt); controls.update();
+  if(hlRing){const s=1+Math.sin(now/300)*.08; hlRing.scale.set(s,1,s);} if(hlArrow){hlArrow.position.y=hlArrow.userData.y0??(hlArrow.userData.y0=hlArrow.position.y); hlArrow.position.y+=Math.abs(Math.sin(now/350))*.35;}
+  renderer.render(scene,camera); updateLabels();
+  if(backdrop.classList.contains('open')&&pAv){pRenderer.render(pScene,pCam); const pv=$('#preview').getBoundingClientRect(), cr=$('#pc').getBoundingClientRect(); const v=new THREE.Vector3(0,pAv.userData.tagY+.1,0).project(pCam); const t=$('#ptag'); t.style.left=(cr.left-pv.left+(v.x+1)/2*cr.width)+'px'; t.style.top=(cr.top-pv.top+(1-v.y)/2*cr.height)+'px';}}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
