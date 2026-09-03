@@ -448,7 +448,7 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 
 /* ---------- data ---------- */
 const S=2.25; // office scale: sketch units → meters
-const CS=2.5; // content scale: furniture + people are drawn CS× larger so they read well in the big office
+const CS=1.5; // content scale: furniture + people are drawn CS× larger so they read well in the big office
 const OW=14*S, OD=30*S, WALL_H=1.1;
 const sc=a=>a.map(v=>Array.isArray(v)?sc(v):v*S);
 const ROOMS=[
