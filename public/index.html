@@ -137,6 +137,16 @@ kbd{font:700 11px Nunito;background:var(--chip);border:1px solid var(--line);bor
 .pop .grid button{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:var(--chip);font-weight:700;font-size:12px;text-align:left;border:1.5px solid transparent}
 .pop .grid button[aria-pressed="true"]{border-color:var(--ink)}
 .pop .grid i{width:14px;height:14px;border-radius:5px;display:block;flex:none}
+/* compact zone popover: dropdowns + colour picker */
+#zonePop{width:250px}
+.pop .zrow{display:flex;align-items:center;gap:8px;margin:9px 0}
+.pop .zrow>label{width:52px;flex:none;font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.02em;margin:0}
+.pop .zsel{flex:1;min-width:0;height:34px;border-radius:9px;border:1.5px solid var(--line);background:var(--panel-solid);padding:0 8px;font-weight:700;font-size:13px;color:var(--ink)}
+.pop .zrow .field{flex:1;height:34px;width:auto}
+.pop .zsws{flex:1;display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.pop .zsw{width:20px;height:20px;border-radius:6px;border:2px solid transparent;flex:none;padding:0}
+.pop .zsw[aria-pressed="true"]{border-color:var(--ink)}
+.pop .zcol{width:26px;height:24px;border:1px solid var(--line);border-radius:6px;background:none;padding:0;cursor:pointer;flex:none}
 .pop .zdepts{display:flex;flex-wrap:wrap;gap:5px}
 .pop .zdept{display:flex;align-items:center;gap:6px;padding:6px 9px;border-radius:9px;background:var(--chip);font-weight:700;font-size:11.5px;text-align:left;border:1.5px solid transparent;line-height:1.15}
 .pop .zdept[aria-pressed="true"]{border-color:var(--ink)}
@@ -458,13 +468,15 @@ const MOODS={great:{n:'Чудовий',e:'😄'},good:{n:'Гарний',e:'🙂'
 const CATS={work:'Робочі місця',meeting:'Переговорні',kitchen:'Кухня',reception:'Рецепція і відпочинок',storage:'Склад і техніка',decor:'Декор'};
 const DEPTS=['Закупівлі','Логістика','IT','Бухгалтерія','Юридичний','HR','Продажі','Маркетинг','Адміністрація','Керівництво','Склад','Підтримка','Виробництво','Сервіс'];
 // Ready-made department / personal-office labels for tagging a room's zone (пункт 6).
-// {name, type} → type picks the base ZONES colour; personal cabinets use 'office'.
+// Each gets its OWN distinct colour so departments read differently on the plan.
 const ZONE_DEPT_PRESETS=[
-  {name:'Закупівлі / Логістика',type:'open'},{name:'IT',type:'open'},
-  {name:'Бухгалтерія / Фінанси',type:'open'},{name:'Юристи',type:'office'},
-  {name:'Продажі',type:'open'},{name:'HR',type:'open'},
-  {name:'Кабінет Ольги Валентинівни',type:'office'},{name:'Кабінет Руслана Станіславовича',type:'office'}
+  {name:'Закупівлі / Логістика',type:'open',c:'#F2A65A'},{name:'IT',type:'open',c:'#5BC0EB'},
+  {name:'Бухгалтерія / Фінанси',type:'open',c:'#7BC96F'},{name:'Юристи',type:'office',c:'#C08CE6'},
+  {name:'Продажі',type:'open',c:'#F45B69'},{name:'HR',type:'open',c:'#F6C744'},
+  {name:'Кабінет Ольги Валентинівни',type:'office',c:'#E888B4'},{name:'Кабінет Руслана Станіславовича',type:'office',c:'#6C8AE4'}
 ];
+// palette for the colour picker in the zone popover
+const ZONE_PALETTE=['#9FD9B0','#A9C4F5','#F6D389','#F5A9B0','#CFC2AD','#A6DDEB','#D2B7F0','#F5C08A','#F2A65A','#5BC0EB','#7BC96F','#F45B69'];
 function fillDeptList(){const seen=new Set(), out=[]; for(const d of [...DEPTS,...Object.keys(state.depts)]){if(d&&!seen.has(d)){seen.add(d); out.push(d);}} const dl=$('#deptList'); if(dl) dl.innerHTML=out.map(d=>`<option value="${esc(d)}">`).join('');}
 const FURN={
   desk:{n:'Стіл',cat:'work',seats:[{x:0,z:.55,ry:Math.PI,y:.45}]},
@@ -588,9 +600,11 @@ const canvas=$('#c');
 const c2=$('#c2'); const ctx2=c2.getContext('2d');
 const view2={ox:OW/2,oz:OD/2,scale:20};
 const activeCanvas=()=>view==='2d'?c2:canvas;
-function w2s(x,z){return {x:(x-view2.ox)*view2.scale+innerWidth/2, y:(z-view2.oz)*view2.scale+innerHeight/2};}
-function s2w(px,py){return {x:(px-innerWidth/2)/view2.scale+view2.ox, z:(py-innerHeight/2)/view2.scale+view2.oz};}
-function fit2d(){const padX=120,padY=200; view2.scale=Math.max(4,Math.min((innerWidth-padX)/OW,(innerHeight-padY)/OD)); view2.ox=OW/2; view2.oz=OD/2; dirty2d=true;}
+// 2D is rotated 90°: world Z (office length) runs horizontally, world X (width) vertically → landscape plan
+function w2s(x,z){return {x:(z-view2.oz)*view2.scale+innerWidth/2, y:(x-view2.ox)*view2.scale+innerHeight/2};}
+function s2w(px,py){return {x:(py-innerHeight/2)/view2.scale+view2.ox, z:(px-innerWidth/2)/view2.scale+view2.oz};}
+function fit2d(){const padX=140,padY=200; view2.scale=Math.max(4,Math.min((innerWidth-padX)/OD,(innerHeight-padY)/OW)); view2.ox=OW/2; view2.oz=OD/2; dirty2d=true;}
+function pan2FromKeys(dt){if(!panKeys.size) return; const sp=520*dt/view2.scale; if(panKeys.has('f')) view2.ox-=sp; if(panKeys.has('b')) view2.ox+=sp; if(panKeys.has('l')) view2.oz-=sp; if(panKeys.has('r')) view2.oz+=sp; dirty2d=true;}
 function resize2(){const dpr=Math.min(2,devicePixelRatio||1); c2.width=Math.round(innerWidth*dpr); c2.height=Math.round(innerHeight*dpr); c2.style.width=innerWidth+'px'; c2.style.height=innerHeight+'px'; ctx2.setTransform(dpr,0,0,dpr,0,0); dirty2d=true;}
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
 renderer.setPixelRatio(Math.min(3,devicePixelRatio*1.5));
@@ -762,10 +776,12 @@ function syncAvatars(){dirty2d=true; const live=new Set();
     const s=seatWorld(f,e.seat.i); const r=g.userData.roam; if(!(r&&r.phase&&r.phase!=='sitting')){g.position.set(s.x,.02,s.z); g.rotation.y=s.ry; loadPose(g,true);}}
   for(const k in avObjs) if(!live.has(k)){avRoot.remove(avObjs[k]); disposeAvatar(avObjs[k]); delete avObjs[k];}
   if(view!=='2d') refreshAvatarLook();}
+// a zone's fill colour: an explicit custom colour wins over the type's default palette colour
+function zoneColor(z){return (z&&z.color)||(z&&ZONES[z.type]?ZONES[z.type].c:'#CFC2AD');}
 function syncZones(){dirty2d=true; if(view==='2d') return; const th=THEMES[settings.theme];
-  for(const r of ROOMS){const base=new THREE.Color(r.corridor?th.cor:th.floor); const z=state.zones[r.id]; if(z) base.lerp(new THREE.Color(ZONES[z.type].c),th.zone); floorMats[r.id].color.copy(base);}
+  for(const r of ROOMS){const base=new THREE.Color(r.corridor?th.cor:th.floor); const z=state.zones[r.id]; if(z) base.lerp(new THREE.Color(zoneColor(z)),th.zone); floorMats[r.id].color.copy(base);}
   const live=new Set(); for(const rz of state.rects){live.add(rz.uid); let m=rectObjs[rz.uid]; if(!m){m=new THREE.Mesh(new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({transparent:true,opacity:.6,roughness:1})); rectRoot.add(m); rectObjs[rz.uid]=m;}
-    m.material.color.set(ZONES[rz.type].c); m.position.set((rz.x0+rz.x1)/2,.012,(rz.z0+rz.z1)/2); m.scale.set(Math.max(.01,rz.x1-rz.x0),1,Math.max(.01,rz.z1-rz.z0));}
+    m.material.color.set(zoneColor(rz)); m.position.set((rz.x0+rz.x1)/2,.012,(rz.z0+rz.z1)/2); m.scale.set(Math.max(.01,rz.x1-rz.x0),1,Math.max(.01,rz.z1-rz.z0));}
   for(const k in rectObjs) if(!live.has(k)){rectRoot.remove(rectObjs[k]); delete rectObjs[k];}}
 function applyTheme(){const th=THEMES[settings.theme]; app.dataset.ui=th.ui; app.style.background=th.bg; scene.background=new THREE.Color(th.bg); baseMat.color.set(th.base); wallMat.color.set(th.wall); gridMat.color.set(th.ui==='dark'?'#ffffff':'#000000');
   hemi.intensity=th.ui==='dark'?.35:.55; sun.intensity=th.ui==='dark'?.7:1.0; baseMat.color.set(th.ui==='dark'?'#26242E':'#E5D9C8'); syncZones();}
@@ -775,12 +791,12 @@ function syncAll(){syncFurniture(); syncAvatars(); syncZones(); renderPeople(); 
 const labelsEl=$('#labels'); const roomLabelEls={}, tagEls={}; let hlEmp=null, filterDept=null, hoverEmp=null;
 function renderLabels(rebuild){
   for(const r of ROOMS){let el=roomLabelEls[r.id]; if(!el){el=document.createElement('div'); el.className='rl'; el.dataset.room=r.id; el.addEventListener('click',()=>{if(mode==='builder'&&tab==='zones') openZonePop({room:r.id});}); labelsEl.appendChild(el); roomLabelEls[r.id]=el;}
-    const z=state.zones[r.id]; el.classList.toggle('empty',!z); el.innerHTML=(z?`<i style="background:${ZONES[z.type].c}"></i>`:'')+roomName(r.id); el.style.display=(r.corridor&&!z)?'none':'';}
+    const z=state.zones[r.id]; el.classList.toggle('empty',!z); el.innerHTML=(z?`<i style="background:${zoneColor(z)}"></i>`:'')+roomName(r.id); el.style.display=(r.corridor&&!z)?'none':'';}
   const live=new Set(); for(const e of state.employees){if(!e.seat) continue; live.add(e.id); let el=tagEls[e.id]; if(!el){el=document.createElement('div'); el.className='tag'; el.dataset.emp=e.id; el.addEventListener('click',ev=>{ev.stopPropagation(); if(mode==='viewer') focusEmployee(e.id,true);}); labelsEl.appendChild(el); tagEls[e.id]=el;}
     el.innerHTML=`<div class="b"><i style="background:${e.color}"></i><span class="n">${esc(e.name)}</span><span class="d">${esc(e.position||e.dept)}</span></div>`;}
   for(const k in tagEls) if(!live.has(k)){tagEls[k].remove(); delete tagEls[k];}
   for(const rz of state.rects){let el=roomLabelEls['rz'+rz.uid]; if(!el){el=document.createElement('div'); el.className='rl'; labelsEl.appendChild(el); roomLabelEls['rz'+rz.uid]=el; el.addEventListener('click',()=>{if(mode==='builder'&&tab==='zones') openZonePop({rect:rz.uid});});}
-    el.innerHTML=`<i style="background:${ZONES[rz.type].c}"></i>${esc(rz.name||ZONES[rz.type].n)}`;}
+    el.innerHTML=`<i style="background:${zoneColor(rz)}"></i>${esc(rz.name||ZONES[rz.type].n)}`;}
   for(const k in roomLabelEls) if(k.startsWith('rz')&&!state.rects.some(r=>'rz'+r.uid===k)){roomLabelEls[k].remove(); delete roomLabelEls[k];}}
 const _v=new THREE.Vector3();
 function project(x,y,z){if(view==='2d'){const s=w2s(x,z); return {x:s.x,y:s.y-(y||0)*view2.scale*.35,ok:true};} _v.set(x,y,z).project(camera); return {x:(_v.x+1)/2*innerWidth,y:(1-_v.y)/2*innerHeight,ok:_v.z<1};}
@@ -788,7 +804,7 @@ function updateLabels(){
   for(const r of ROOMS){const el=roomLabelEls[r.id]; if(!el) continue; const c=roomCenter(r); const p=project(c.x,.2,c.z); el.style.left=p.x+'px'; el.style.top=p.y+'px'; el.style.opacity=p.ok?1:0;}
   for(const rz of state.rects){const el=roomLabelEls['rz'+rz.uid]; if(!el) continue; const p=project((rz.x0+rz.x1)/2,.2,(rz.z0+rz.z1)/2); el.style.left=p.x+'px'; el.style.top=p.y+'px';}
   for(const e of state.employees){const el=tagEls[e.id]; if(!el) continue; const g=avObjs[e.id]; let wx,wy,wz,ty;
-    if(g){wx=g.position.x;wy=g.position.y;wz=g.position.z;ty=g.userData.tagY;} else {const sw=seatOfEmp(e); if(!sw){el.style.opacity=0;continue;} wx=sw.x;wy=.02;wz=sw.z;ty=1.0;}
+    if(g){wx=g.position.x;wy=g.position.y;wz=g.position.z;ty=g.userData.tagY;} else {const sw=empPos(e); if(!sw){el.style.opacity=0;continue;} wx=sw.x;wy=.02;wz=sw.z;ty=1.0;}
     const p=project(wx,wy+ty+.85,wz); el.style.left=p.x+'px'; el.style.top=p.y+'px'; const show=(hoverEmp===e.id||hlEmp===e.id); el.style.opacity=(p.ok&&show)?1:0; el.style.pointerEvents=show?'auto':'none';
     el.classList.toggle('hi',hlEmp===e.id); el.classList.toggle('dim',!!filterDept&&e.dept!==filterDept&&hlEmp!==e.id);}
   if(selected){const g=furnObjs[selected]; let px,pz; if(g){px=g.position.x;pz=g.position.z;} else {const f=state.furniture.find(x=>x.uid===selected); if(f){px=f.x;pz=f.z;}} if(px!=null){const p=project(px,1.3,pz); const ib=$('#itemBar'); ib.style.left=(p.x-ib.offsetWidth/2)+'px'; ib.style.top=(p.y-ib.offsetHeight-8)+'px';}}
@@ -908,18 +924,31 @@ function updateZoneHint(){$('#zoneHint').textContent=settings.zoning==='rect'?'�
 
 /* ---------- zone popover ---------- */
 let popTarget=null;
-function openZonePop(t){popTarget=t; const pop=$('#zonePop'); const isRoom=!!t.room; const cur=isRoom?state.zones[t.room]:state.rects.find(r=>r.uid===t.rect); const title=isRoom?('Кімната '+(ROOMS.find(r=>r.id===t.room).n||'')+(ROOMS.find(r=>r.id===t.room).corridor?' · Коридор':'')):'Зона на підлозі';
-  pop.innerHTML=`<h4>${title}</h4><label>Тип зони</label><div class="grid">${Object.keys(ZONES).map(k=>`<button data-z="${k}" aria-pressed="${cur&&cur.type===k}"><i style="background:${ZONES[k].c}"></i>${ZONES[k].n}</button>`).join('')}</div>`
-    +`<label>Відділ / кабінет</label><div class="zdepts">${ZONE_DEPT_PRESETS.map((d,i)=>`<button class="zdept" data-di="${i}" aria-pressed="${cur&&cur.name===d.name}"><i style="background:${ZONES[d.type].c}"></i>${esc(d.name)}</button>`).join('')}</div>`
-    +`<label>Назва (необов'язково)</label><input class="field" id="zName" placeholder="Напр. Логістика" value="${esc(cur?cur.name:'')}"><div class="row"><button class="tbtn txt" id="zClear">Прибрати зону</button><button class="tbtn red" id="zDone">Готово</button></div>`;
-  pop.classList.add('open'); let p; if(isRoom){const c=roomCenter(ROOMS.find(r=>r.id===t.room)); p=project(c.x,.2,c.z);} else {const rz=cur; p=project((rz.x0+rz.x1)/2,.2,(rz.z0+rz.z1)/2);}
-  pop.style.left=Math.min(innerWidth-300,Math.max(10,p.x+20))+'px'; pop.style.top=Math.min(innerHeight-360,Math.max(90,p.y-40))+'px';
-  const apply=(type,name)=>{pushUndo(); if(isRoom){if(type) state.zones[t.room]={type,name}; else delete state.zones[t.room];} else {const rz=state.rects.find(r=>r.uid===t.rect); if(type){rz.type=type;rz.name=name;} else state.rects=state.rects.filter(r=>r!==rz);} markDirty(); syncZones(); renderLabels(); hideWelcome();};
-  pop.querySelectorAll('[data-z]').forEach(b=>b.onclick=()=>{pop.querySelectorAll('[data-z]').forEach(x=>x.setAttribute('aria-pressed',x===b)); apply(b.dataset.z,$('#zName').value.trim()); if(b.dataset.z==='custom') $('#zName').focus();});
-  // department / office presets: set both zone type (colour) and its label at once
-  pop.querySelectorAll('.zdept').forEach(b=>b.onclick=()=>{const d=ZONE_DEPT_PRESETS[+b.dataset.di]; pop.querySelectorAll('.zdept').forEach(x=>x.setAttribute('aria-pressed',x===b)); pop.querySelectorAll('[data-z]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.z===d.type)); $('#zName').value=d.name; apply(d.type,d.name);});
-  $('#zName').oninput=e=>{const sel=pop.querySelector('[data-z][aria-pressed="true"]'); pop.querySelectorAll('.zdept').forEach(x=>x.setAttribute('aria-pressed',x.textContent.trim()===e.target.value.trim())); if(sel) apply(sel.dataset.z,e.target.value.trim());};
-  $('#zClear').onclick=()=>{apply(null); closePops();}; $('#zDone').onclick=closePops;}
+function openZonePop(t){popTarget=t; const pop=$('#zonePop'); const isRoom=!!t.room; const cur=isRoom?state.zones[t.room]:state.rects.find(r=>r.uid===t.rect);
+  const roomObj=isRoom?ROOMS.find(r=>r.id===t.room):null; const title=isRoom?('Кімната '+(roomObj.n||'')+(roomObj.corridor?' · Коридор':'')):'Зона на підлозі';
+  let curType=cur?cur.type:'open', curName=cur?(cur.name||''):'', curColor=cur&&cur.color?cur.color:null;
+  const typeOpts=Object.keys(ZONES).map(k=>`<option value="${k}" ${k===curType?'selected':''}>${ZONES[k].n}</option>`).join('');
+  const deptOpts=`<option value="">— свій варіант —</option>`+ZONE_DEPT_PRESETS.map((d,i)=>`<option value="${i}" ${cur&&cur.name===d.name?'selected':''}>${esc(d.name)}</option>`).join('');
+  const swatches=ZONE_PALETTE.map(c=>`<button type="button" class="zsw" data-c="${c}" style="background:${c}"></button>`).join('');
+  pop.innerHTML=`<h4>${title}</h4>`
+    +`<div class="zrow"><label>Тип</label><select class="zsel" id="zType">${typeOpts}</select></div>`
+    +`<div class="zrow"><label>Відділ</label><select class="zsel" id="zDept">${deptOpts}</select></div>`
+    +`<div class="zrow"><label>Назва</label><input class="field" id="zName" placeholder="напр. Логістика" value="${esc(curName)}"></div>`
+    +`<div class="zrow"><label>Колір</label><div class="zsws" id="zSw">${swatches}<input type="color" id="zColor" class="zcol"></div></div>`
+    +`<div class="row"><button class="tbtn txt" id="zClear">Прибрати</button><button class="tbtn red" id="zDone">Готово</button></div>`;
+  pop.classList.add('open'); let p; if(isRoom){const c=roomCenter(roomObj); p=project(c.x,.2,c.z);} else {p=project((cur.x0+cur.x1)/2,.2,(cur.z0+cur.z1)/2);}
+  pop.style.left=Math.min(innerWidth-260,Math.max(10,p.x+16))+'px'; pop.style.top=Math.min(innerHeight-300,Math.max(80,p.y-30))+'px';
+  const markSw=()=>{const eff=(curColor||ZONES[curType].c).toLowerCase(); pop.querySelectorAll('.zsw').forEach(b=>b.setAttribute('aria-pressed',b.dataset.c.toLowerCase()===eff)); const ci=$('#zColor'); if(ci&&/^#[0-9a-f]{6}$/i.test(curColor||ZONES[curType].c)) ci.value=curColor||ZONES[curType].c;};
+  const apply=()=>{pushUndo(); if(isRoom){const d={type:curType,name:curName}; if(curColor) d.color=curColor; state.zones[t.room]=d;}
+    else {const rz=state.rects.find(r=>r.uid===t.rect); rz.type=curType; rz.name=curName; if(curColor) rz.color=curColor; else delete rz.color;}
+    markDirty(); syncZones(); renderLabels(); hideWelcome(); markSw();};
+  $('#zType').onchange=e=>{curType=e.target.value; $('#zDept').value=''; apply();};
+  $('#zDept').onchange=e=>{const v=e.target.value; if(v!==''){const d=ZONE_DEPT_PRESETS[+v]; curType=d.type; curName=d.name; curColor=d.c; $('#zType').value=curType; $('#zName').value=curName;} apply();};
+  $('#zName').oninput=e=>{curName=e.target.value.trim(); apply();};
+  pop.querySelectorAll('.zsw').forEach(b=>b.onclick=()=>{curColor=b.dataset.c; apply();});
+  $('#zColor').oninput=e=>{curColor=e.target.value; apply();};
+  $('#zClear').onclick=()=>{pushUndo(); if(isRoom) delete state.zones[t.room]; else state.rects=state.rects.filter(r=>r.uid!==t.rect); markDirty(); syncZones(); renderLabels(); closePops();};
+  $('#zDone').onclick=closePops; markSw();}
 function closePops(){$('#zonePop').classList.remove('open'); $('#settings').classList.remove('open'); $('#empcard').classList.remove('open'); $('#sugg').classList.remove('open');}
 
 /* ---------- employees ---------- */
@@ -1005,25 +1034,51 @@ function refreshAvatarLook(){for(const e of state.employees){const g=avObjs[e.id
 function applyFilter(){refreshAvatarLook();}
 function seatOfEmp(e){if(!e.seat) return null; const f=state.furniture.find(x=>x.uid===e.seat.f); return f?seatWorld(f,e.seat.i):null;}
 function pointBlocked(x,z){return state.furniture.some(o=>{if(FURN[o.type].underlay||FURN[o.type].onDesk) return false; const p=fp(o); return Math.abs(o.x-x)<p.w/2+.28&&Math.abs(o.z-z)<p.d/2+.28;});}
-function pickRoamTarget(home){const rid=roomAt(home.x,home.z); const R=ROOMS.find(r=>r.id===rid); const rects=(R&&R.rects.length)?R.rects:[[home.x-1,home.z-1,home.x+1,home.z+1]];
-  for(let i=0;i<14;i++){const rc=rects[Math.floor(Math.random()*rects.length)]; const m=.6; const x=rc[0]+m+Math.random()*Math.max(.1,rc[2]-rc[0]-2*m); const z=rc[1]+m+Math.random()*Math.max(.1,rc[3]-rc[1]-2*m); if(!pointBlocked(x,z)) return {x,z};}
-  return {x:home.x,z:home.z};}
-function updateRoam(dt){const on=settings.move==='on';
-  for(const e of state.employees){const g=avObjs[e.id]; if(!g) continue; const home=seatOfEmp(e); if(!home) continue;
-    const canRoam=on&&statusOf(e)==='office'; let r=g.userData.roam;
-    if(!canRoam){ if(r){ g.position.set(home.x,.02,home.z); g.rotation.y=home.ry; loadPose(g,true); g.userData.roam=null; } continue; }
-    if(!r){ r=g.userData.roam={phase:'sitting',t:3+Math.random()*7}; }
-    if(r.phase==='sitting'){ r.t-=dt; if(r.t<=0){ loadPose(g,'walk'); r.phase='out'; r.target=pickRoamTarget(home); r.speed=1.0+Math.random()*.5; } }
-    else if(r.phase==='pause'){ r.t-=dt;
-      let near=null,nd=2.4; for(const o of state.employees){if(o.id===e.id)continue; const og=avObjs[o.id],or=og&&og.userData.roam; if(!og||!or||(or.phase!=='pause'&&or.phase!=='out'&&or.phase!=='back'))continue; const dd=Math.hypot(og.position.x-g.position.x,og.position.z-g.position.z); if(dd<nd){nd=dd;near=og;}}
-      if(near){g.rotation.y=Math.atan2(near.position.x-g.position.x,near.position.z-g.position.z); if(r.t<1.2)r.t=1.2;}
-      if(r.t<=0){ loadPose(g,'walk'); r.phase='back'; } }
-    else if(r.phase==='out'||r.phase==='back'){ const tgt=r.phase==='out'?r.target:home; const dx=tgt.x-g.position.x, dz=tgt.z-g.position.z; const d=Math.hypot(dx,dz);
-      if(d<.06){ g.position.set(r.phase==='out'?g.position.x:home.x,.02,r.phase==='out'?g.position.z:home.z); if(g.userData.inner)g.userData.inner.rotation.z=0;
-        if(r.phase==='out'){ r.phase='pause'; r.t=2+Math.random()*4; loadPose(g,'stand'); } else { g.rotation.y=home.ry; loadPose(g,true); r.phase='sitting'; r.t=4+Math.random()*8; } }
-      else { const step=Math.min(d,r.speed*dt); const nx=g.position.x+dx/d*step, nz=g.position.z+dz/d*step;
-        if(r.phase==='out'&&pointBlocked(nx,nz)){ r.target=pickRoamTarget(home); }
-        else { g.position.x=nx; g.position.z=nz; g.position.y=.02; g.rotation.y=Math.atan2(dx,dz); if(g.userData.poseKey!=='walk')loadPose(g,'walk'); } } } }}
+// ── Office-wide roaming (renderer-agnostic): a per-employee ephemeral position EP ──
+const EP={}; // {x,z,ry,pose,roam} keyed by employee id; not persisted
+function empPos(e){const ep=EP[e.id]; return ep?{x:ep.x,z:ep.z}:seatOfEmp(e);}
+function distSeg(px,pz,x0,z0,x1,z1){const dx=x1-x0,dz=z1-z0,L=dx*dx+dz*dz; let t=L?((px-x0)*dx+(pz-z0)*dz)/L:0; t=Math.max(0,Math.min(1,t)); return Math.hypot(px-(x0+t*dx),pz-(z0+t*dz));}
+function nearWall(x,z){for(const w of WALLS){if(distSeg(x,z,w[0],w[1],w[2],w[3])<.24) return true;} return false;}
+const CORRIDOR_X=15.75; // world x-centre of the central corridor (sketch x 6..8)
+// Door gaps per room: sample each room's vertical edges; gaps in the wall (nearWall false) are doorways.
+let DOORS=null;
+function computeDoors(){const d={};
+  for(const r of ROOMS){ if(r.corridor) continue;
+    for(const rc of r.rects){ for(const ex of [rc[0],rc[2]]){ let run=null; const gaps=[];
+      for(let z=rc[1]+.15; z<=rc[3]-.15; z+=.12){ if(!nearWall(ex,z)){ run=run||{a:z,b:z}; run.b=z; } else if(run){ gaps.push(run); run=null; } }
+      if(run) gaps.push(run);
+      for(const g of gaps){ if(g.b-g.a>.5){ (d[r.id]=d[r.id]||[]).push({x:ex, z:(g.a+g.b)/2}); } }
+    }}
+  }
+  return d;
+}
+function nearestDoor(rid,pt){const list=DOORS[rid]; if(!list||!list.length) return null; let best=null,bd=1e9; for(const dr of list){const dd=Math.hypot(dr.x-pt.x,dr.z-pt.z); if(dd<bd){bd=dd;best=dr;}} return best;}
+// pick a free point anywhere in the office (any room or corridor) → whole-territory wandering
+function pickRoamTarget(home){for(let i=0;i<28;i++){const R=ROOMS[Math.floor(Math.random()*ROOMS.length)]; const rc=R.rects[Math.floor(Math.random()*R.rects.length)]; const m=.7; const x=rc[0]+m+Math.random()*Math.max(.1,rc[2]-rc[0]-2*m); const z=rc[1]+m+Math.random()*Math.max(.1,rc[3]-rc[1]-2*m); if(!pointBlocked(x,z)&&!nearWall(x,z)) return {x,z};} return {x:home.x,z:home.z};}
+// route from → to as waypoints: exit the origin room's door, cross the corridor, enter the target room's door
+function buildPath(from,to){const rf=roomAt(from.x,from.z), rt=roomAt(to.x,to.z); if(rf===rt) return [to];
+  const path=[]; const df=rf&&nearestDoor(rf,from); if(df){ path.push(df); path.push({x:CORRIDOR_X,z:df.z}); }
+  const dt=rt&&nearestDoor(rt,to); if(dt){ path.push({x:CORRIDOR_X,z:dt.z}); path.push(dt); }
+  path.push(to); return path;}
+// steer toward target, sliding along walls. Two passes: first avoid walls+furniture; if boxed
+// in (e.g. sitting inside a desk footprint) avoid only walls so the avatar can always step out.
+function stepAvoid(ep,tgt,step){const base=Math.atan2(tgt.x-ep.x,tgt.z-ep.z); const offs=[0,.4,-.4,.8,-.8,1.3,-1.3,2.0,-2.0,Math.PI];
+  for(const strict of [true,false]) for(const off of offs){const a=base+off,nx=ep.x+Math.sin(a)*step,nz=ep.z+Math.cos(a)*step; if(!nearWall(nx,nz)&&(!strict||!pointBlocked(nx,nz))){ep.x=nx;ep.z=nz;ep.ry=a;return true;}}
+  return false;}
+function roamArrive(ep,r,home,out){ if(out){r.phase='pause'; r.t=2+Math.random()*4; ep.pose='stand';} else {ep.x=home.x; ep.z=home.z; ep.ry=home.ry; ep.pose='sit'; r.phase='sitting'; r.t=4+Math.random()*8;} }
+function updateRoam(dt){const on=settings.move==='on'; if(!DOORS) DOORS=computeDoors();
+  for(const e of state.employees){const home=seatOfEmp(e); if(!home){delete EP[e.id]; continue;}
+    let ep=EP[e.id]; if(!ep) ep=EP[e.id]={x:home.x,z:home.z,ry:home.ry,pose:'sit'};
+    const canRoam=on&&statusOf(e)==='office'; let r=ep.roam;
+    if(!canRoam){ep.x=home.x; ep.z=home.z; ep.ry=home.ry; ep.pose='sit'; ep.roam=null; continue;}
+    if(!r){r=ep.roam={phase:'sitting',t:2+Math.random()*6};}
+    if(r.phase==='sitting'){ep.pose='sit'; r.t-=dt; if(r.t<=0){r.phase='out'; r.speed=1.0+Math.random()*.6; r.path=buildPath(ep,pickRoamTarget(home)); r.wi=0; r.stuck=0;}}
+    else if(r.phase==='pause'){ep.pose='stand'; r.t-=dt; if(r.t<=0){r.phase='back'; r.path=buildPath(ep,home); r.wi=0; r.stuck=0;}}
+    else { const out=r.phase==='out'; const path=r.path&&r.path.length?r.path:[out?home:home]; let wp=path[Math.min(r.wi,path.length-1)];
+      const d=Math.hypot(wp.x-ep.x,wp.z-ep.z); ep.pose='walk';
+      if(d<.35){ r.wi++; r.stuck=0; if(r.wi>=path.length){ roamArrive(ep,r,home,out); } }
+      else { const ok=stepAvoid(ep,wp,Math.min(d,r.speed*dt)); if(ok){r.stuck=0;} else { r.stuck=(r.stuck||0)+1; if(r.stuck>18){ r.wi++; r.stuck=0; if(r.wi>=path.length) roamArrive(ep,r,home,out); } } } }
+  }}
 $('#shareBtn').onclick=async()=>{const url=location.href.split('?')[0]+'?mode=viewer'; try{await navigator.clipboard.writeText(url);}catch(e){} toast('Посилання «тільки перегляд» скопійовано');};
 
 /* ---------- mode ---------- */
@@ -1069,10 +1124,15 @@ function drawEmp2D(e,wx,wz,S2,forceColor){if(!e) return; ctx2.save(); const p=w2
 function draw2D(){dirty2d=false; const th=THEMES[settings.theme]; const W=innerWidth,H=innerHeight,S2=view2.scale;
   ctx2.setTransform(Math.min(2,devicePixelRatio||1),0,0,Math.min(2,devicePixelRatio||1),0,0);
   ctx2.clearRect(0,0,W,H); ctx2.fillStyle=th.bg; ctx2.fillRect(0,0,W,H); ctx2.textAlign='center'; ctx2.textBaseline='middle';
-  for(const r of ROOMS){const base=new THREE.Color(r.corridor?th.cor:th.floor); const z=state.zones[r.id]; if(z) base.lerp(new THREE.Color(ZONES[z.type].c),th.zone);
+  for(const r of ROOMS){const base=new THREE.Color(r.corridor?th.cor:th.floor); const z=state.zones[r.id]; if(z) base.lerp(new THREE.Color(zoneColor(z)),th.zone);
     ctx2.fillStyle='#'+base.getHexString(); const polys=r.polys||r.rects.map(([x0,z0,x1,z1])=>[[x0,z0],[x1,z0],[x1,z1],[x0,z1]]);
     for(const poly of polys){ctx2.beginPath(); poly.forEach(([x,z],i)=>{const p=w2s(x,z); i?ctx2.lineTo(p.x,p.y):ctx2.moveTo(p.x,p.y);}); ctx2.closePath(); ctx2.fill();}}
-  for(const rz of state.rects){const a=w2s(rz.x0,rz.z0),b=w2s(rz.x1,rz.z1); ctx2.save(); ctx2.globalAlpha=.5; ctx2.fillStyle=ZONES[rz.type].c; ctx2.fillRect(Math.min(a.x,b.x),Math.min(a.y,b.y),Math.abs(b.x-a.x),Math.abs(b.y-a.y)); ctx2.restore();}
+  // floor grid (разметка)
+  ctx2.save(); ctx2.strokeStyle=th.ui==='dark'?'rgba(255,255,255,.055)':'rgba(60,40,30,.075)'; ctx2.lineWidth=1;
+  for(let x=0;x<=OW+.01;x+=1){const a=w2s(x,0),b=w2s(x,OD); ctx2.beginPath(); ctx2.moveTo(a.x,a.y); ctx2.lineTo(b.x,b.y); ctx2.stroke();}
+  for(let z=0;z<=OD+.01;z+=1){const a=w2s(0,z),b=w2s(OW,z); ctx2.beginPath(); ctx2.moveTo(a.x,a.y); ctx2.lineTo(b.x,b.y); ctx2.stroke();}
+  ctx2.restore();
+  for(const rz of state.rects){const a=w2s(rz.x0,rz.z0),b=w2s(rz.x1,rz.z1); ctx2.save(); ctx2.globalAlpha=.5; ctx2.fillStyle=zoneColor(rz); ctx2.fillRect(Math.min(a.x,b.x),Math.min(a.y,b.y),Math.abs(b.x-a.x),Math.abs(b.y-a.y)); ctx2.restore();}
   const dm=w2s(3*S,.6); ctx2.save(); ctx2.globalAlpha=.85; ctx2.fillStyle='#E2001A'; ctx2.fillRect(dm.x-.8*S2,dm.y-.4*S2,1.6*S2,.8*S2); ctx2.restore();
   ctx2.strokeStyle=th.ui==='dark'?'#6b6675':'#b3a48f'; ctx2.lineWidth=Math.max(2,.16*S2); ctx2.lineCap='round';
   for(const [x0,z0,x1,z1] of WALLS){const a=w2s(x0,z0),b=w2s(x1,z1); ctx2.beginPath(); ctx2.moveTo(a.x,a.y); ctx2.lineTo(b.x,b.y); ctx2.stroke();}
@@ -1080,11 +1140,11 @@ function draw2D(){dirty2d=false; const th=THEMES[settings.theme]; const W=innerW
   for(const f of list){if(drag&&drag.kind==='furn'&&drag.fromExisting&&drag.f.uid===f.uid) continue; draw2DFurn(f,CAT_COLORS[FURN[f.type].cat]||'#c9bdaa',S2,selected===f.uid,false);}
   if(drag&&drag.kind==='furn'&&drag.over){ctx2.save(); ctx2.globalAlpha=.72; draw2DFurn(drag.f,drag.ok?'#8fd6a3':'#f2a29a',S2,false,true); ctx2.restore();}
   if(drag&&drag.kind==='rect'){const a=w2s(drag.x0,drag.z0),b=w2s(drag.x1,drag.z1),X=Math.min(a.x,b.x),Y=Math.min(a.y,b.y),Wd=Math.abs(b.x-a.x),Hd=Math.abs(b.y-a.y); ctx2.save(); ctx2.globalAlpha=.4; ctx2.fillStyle='#5B76E6'; ctx2.fillRect(X,Y,Wd,Hd); ctx2.restore(); ctx2.strokeStyle='#5B76E6'; ctx2.lineWidth=2; ctx2.strokeRect(X,Y,Wd,Hd);}
-  for(const e of state.employees){if(drag&&drag.kind==='emp'&&drag.id===e.id) continue; const s=seatOfEmp(e); if(!s) continue; drawEmp2D(e,s.x,s.z,S2);}
+  for(const e of state.employees){if(drag&&drag.kind==='emp'&&drag.id===e.id) continue; const s=empPos(e); if(!s) continue; drawEmp2D(e,s.x,s.z,S2);}
   if(drag&&drag.kind==='emp'){const gx=drag.gx??view2.ox,gz=drag.gz??view2.oz; ctx2.save(); ctx2.globalAlpha=.8; drawEmp2D(state.employees.find(x=>x.id===drag.id),gx,gz,S2,drag.seat?'#4CAF6E':null); ctx2.restore();}}
 /* 2D hit-testing */
 function furnHit2(wx,wz){for(let i=state.furniture.length-1;i>=0;i--){const f=state.furniture[i]; if(FURN[f.type].underlay) continue; const {w,d}=fp(f); if(Math.abs(wx-f.x)<=w/2+.05&&Math.abs(wz-f.z)<=d/2+.05) return f.uid;} return null;}
-function avAt2(wx,wz){let best=null,bd=1e9; const rr=Math.max(.32,(Math.max(8,view2.scale*.26))/view2.scale); for(const e of state.employees){const s=seatOfEmp(e); if(!s) continue; const dd=Math.hypot(s.x-wx,s.z-wz); if(dd<rr&&dd<bd){bd=dd;best=e.id;}} return best;}
+function avAt2(wx,wz){let best=null,bd=1e9; const rr=Math.max(.32,(Math.max(8,view2.scale*.26))/view2.scale); for(const e of state.employees){const s=empPos(e); if(!s) continue; const dd=Math.hypot(s.x-wx,s.z-wz); if(dd<rr&&dd<bd){bd=dd;best=e.id;}} return best;}
 /* 2D focus tween */
 let fly2=null;
 function fly2To(x,z,scale){fly2={t0:performance.now(),ms:700,ox0:view2.ox,oz0:view2.oz,s0:view2.scale,ox1:x,oz1:z,s1:scale};}
@@ -1096,7 +1156,7 @@ c2.addEventListener('pointerdown',e=>{if(e.button===2){pan2={x:e.clientX,y:e.cli
   if(mode==='builder'&&tab==='zones'&&settings.zoning==='rect'&&!drag){const w=s2w(e.clientX,e.clientY); if(roomAt(w.x,w.z)){drag={kind:'rect',x0:snap(w.x),z0:snap(w.z),x1:snap(w.x),z1:snap(w.z)}; dirty2d=true; return;}}
   if(!drag){pan2={x:e.clientX,y:e.clientY,ox:view2.ox,oz:view2.oz};}});
 c2.addEventListener('pointermove',e=>{if(drag){updateDrag(e); return;}
-  if(pan2){view2.ox=pan2.ox-(e.clientX-pan2.x)/view2.scale; view2.oz=pan2.oz-(e.clientY-pan2.y)/view2.scale; dirty2d=true; return;}
+  if(pan2){view2.oz=pan2.oz-(e.clientX-pan2.x)/view2.scale; view2.ox=pan2.ox-(e.clientY-pan2.y)/view2.scale; dirty2d=true; return;}
   const w=s2w(e.clientX,e.clientY); const aid=avAt2(w.x,w.z); if(aid!==hoverEmp){hoverEmp=aid;} c2.style.cursor=aid?'pointer':(mode==='builder'&&tab==='furniture'&&furnHit2(w.x,w.z)?'pointer':'grab');});
 c2.addEventListener('pointerup',e=>{const moved=downPos&&Math.hypot(e.clientX-downPos.x,e.clientY-downPos.y)>5; pan2=null; downPos=null;
   if(drag&&drag.kind==='rect'){finishDrag(e); return;}
@@ -1124,10 +1184,10 @@ initLoad().then(okServer=>{
 function resize(){renderer.setSize(innerWidth,innerHeight); camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); resize2();} addEventListener('resize',resize); fit2d(); resize();
 const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2; let lastT=0;
 function loop(now){requestAnimationFrame(loop); const dt=Math.min(.05,(now-lastT)/1000); lastT=now;
-  if(view==='2d'){ update2DFocus(now); if(dirty2d||drag||fly2||pan2) draw2D(); }
+  if(view==='2d'){ updateRoam(dt); pan2FromKeys(dt); update2DFocus(now); if(dirty2d||drag||fly2||pan2||panKeys.size||settings.move==='on') draw2D(); }
   else {
     for(const mx of mixers) mx.update(dt);
-    updateRoam(dt); for(const id in avObjs){const g=avObjs[id],gm=g.userData.gem,ms=g.userData.moodSprite; const bob=Math.sin(now/500)*.05; if(gm){gm.rotation.y+=dt*1.8; gm.position.set(0,g.userData.tagY+.45+bob,0);} if(ms) ms.position.set(0,g.userData.tagY+.95+bob,0);}
+    updateRoam(dt); for(const id in avObjs){const g=avObjs[id]; const ep=EP[id]; if(ep){g.position.set(ep.x,.02,ep.z); g.rotation.y=ep.ry; loadPose(g,ep.pose==='sit'?true:ep.pose==='stand'?false:'walk');} const gm=g.userData.gem,ms=g.userData.moodSprite; const bob=Math.sin(now/500)*.05; if(gm){gm.rotation.y+=dt*1.8; gm.position.set(0,g.userData.tagY+.45+bob,0);} if(ms) ms.position.set(0,g.userData.tagY+.95+bob,0);}
     if(fly){const k=Math.min(1,(now-fly.t0)/fly.ms), e=ease(k); camera.position.lerpVectors(fly.p0,fly.p1,e); controls.target.lerpVectors(fly.t0v,fly.t1,e); if(k>=1) fly=null;}
     panFromKeys(dt); controls.update();
     if(hlRing){const s=1+Math.sin(now/300)*.08; hlRing.scale.set(s,1,s);} if(hlArrow){hlArrow.position.y=hlArrow.userData.y0??(hlArrow.userData.y0=hlArrow.position.y); hlArrow.position.y+=Math.abs(Math.sin(now/350))*.35;}
