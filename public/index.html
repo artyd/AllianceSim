@@ -130,7 +130,13 @@ kbd{font:700 11px Nunito;background:var(--chip);border:1px solid var(--line);bor
 #app[data-layout="sides"][data-mode="viewer"] #dock2{transform:translateX(120%)}
 /* pops */
 .pop{position:absolute;z-index:8;padding:14px;width:280px;display:none}
-#zonePop{max-height:calc(100vh - 110px);overflow:auto}
+#zonePop{max-height:calc(100vh - 110px);overflow-y:auto;overflow-x:hidden}
+/* 2D view controls: rotate 90° / mirror — visible only in 2D mode */
+#view2ctl{position:absolute;left:16px;bottom:18px;z-index:6;display:flex;gap:4px;padding:6px}
+#app:not([data-view="2d"]) #view2ctl{display:none}
+#view2ctl button{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:var(--chip);transition:background .15s}
+#view2ctl button:hover{background:var(--red-soft)}
+#view2ctl svg{width:16px;height:16px;fill:var(--ink)}
 .pop.open{display:block}
 .pop h4{margin:0 0 10px;font-size:15px;font-weight:800}
 .pop .grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
@@ -325,6 +331,11 @@ kbd{font:700 11px Nunito;background:var(--chip);border:1px solid var(--line);bor
 </div>
 <div id="dock2" class="card"><h4>Співробітники</h4></div>
 
+<div id="view2ctl" class="card">
+  <button id="v2rotL" title="Повернути ліворуч на 90°"><svg viewBox="0 0 512 512"><path d="M125.7 160l50.3 0c17.7 0 32 14.3 32 32s-14.3 32-32 32L48 224c-17.7 0-32-14.3-32-32L16 64c0-17.7 14.3-32 32-32s32 14.3 32 32l0 51.2L97.6 97.6c87.5-87.5 229.3-87.5 316.8 0s87.5 229.3 0 316.8s-229.3 87.5-316.8 0c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0c62.5 62.5 163.8 62.5 226.3 0s62.5-163.8 0-226.3s-163.8-62.5-226.3 0L125.7 160z"/></svg></button>
+  <button id="v2rotR" title="Повернути праворуч на 90°"><svg viewBox="0 0 512 512" style="transform:scaleX(-1)"><path d="M125.7 160l50.3 0c17.7 0 32 14.3 32 32s-14.3 32-32 32L48 224c-17.7 0-32-14.3-32-32L16 64c0-17.7 14.3-32 32-32s32 14.3 32 32l0 51.2L97.6 97.6c87.5-87.5 229.3-87.5 316.8 0s87.5 229.3 0 316.8s-229.3 87.5-316.8 0c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0c62.5 62.5 163.8 62.5 226.3 0s62.5-163.8 0-226.3s-163.8-62.5-226.3 0L125.7 160z"/></svg></button>
+  <button id="v2flip" title="Дзеркально (перевернути)"><svg viewBox="0 0 512 512"><path d="M32 96l64 0 0 320-64 0c-12.9 0-24.6-7.8-29.6-19.8s-2.2-25.7 6.9-34.9l96-96c6.2-6.2 6.2-16.4 0-22.6l-96-96c-9.2-9.2-11.9-22.9-6.9-34.9S19.1 96 32 96zm448 0c12.9 0 24.6 7.8 29.6 19.8s2.2 25.7-6.9 34.9l-96 96c-6.2 6.2-6.2 16.4 0 22.6l96 96c9.2 9.2 11.9 22.9 6.9 34.9s-16.7 19.8-29.6 19.8l-64 0 0-320 64 0zM224 32c17.7 0 32 14.3 32 32l0 384c0 17.7-14.3 32-32 32s-32-14.3-32-32l0-384c0-17.7 14.3-32 32-32z"/></svg></button>
+</div>
 <div id="zonePop" class="pop card"></div>
 <div id="itemBar" class="card">
   <button id="rotBtn"><svg viewBox="0 0 512 512"><path d="M142.9 142.9c-17.5 17.5-30.1 38-37.8 59.8c-5.9 16.7-24.2 25.4-40.8 19.5s-25.4-24.2-19.5-40.8C55.6 150.7 73.2 122 97.6 97.6c87.2-87.2 228.3-87.5 315.8-1L455 55c6.9-6.9 17.2-8.9 26.2-5.2s14.8 12.5 14.8 22.2l0 128c0 13.3-10.7 24-24 24l-8.4 0c0 0 0 0 0 0L344 224c-9.7 0-18.5-5.8-22.2-14.8s-1.7-19.3 5.2-26.2l41.1-41.1c-62.6-61.5-163.1-61.2-225.3 1zM16 312c0-13.3 10.7-24 24-24l7.6 0 .7 0L168 288c9.7 0 18.5 5.8 22.2 14.8s1.7 19.3-5.2 26.2l-41.1 41.1c62.6 61.5 163.1 61.2 225.3-1c17.5-17.5 30.1-38 37.8-59.8c5.9-16.7 24.2-25.4 40.8-19.5s25.4 24.2 19.5 40.8c-10.8 30.6-28.4 59.3-52.9 83.8c-87.2 87.2-228.3 87.5-315.8 1L57 457c-6.9 6.9-17.2 8.9-26.2 5.2S16 449.7 16 440l0-119.6 0-.7 0-7.6z"/></svg>Повернути</button>
@@ -598,13 +609,17 @@ const app=$('#app');
 const canvas=$('#c');
 /* ---------- 2D top-down camera (light Canvas renderer, пункт 1) ---------- */
 const c2=$('#c2'); const ctx2=c2.getContext('2d');
-const view2={ox:OW/2,oz:OD/2,scale:20};
+// rot ∈ {0,1,2,3} → 0/90/180/270°; flip mirrors the plan. Default rot=1 → office reads landscape.
+const ROTC=[1,0,-1,0], ROTS=[0,1,0,-1];
+const view2={ox:OW/2,oz:OD/2,scale:20,rot:3,flip:-1};
 const activeCanvas=()=>view==='2d'?c2:canvas;
-// 2D is rotated 90°: world Z (office length) runs horizontally, world X (width) vertically → landscape plan
-function w2s(x,z){return {x:(z-view2.oz)*view2.scale+innerWidth/2, y:(x-view2.ox)*view2.scale+innerHeight/2};}
-function s2w(px,py){return {x:(py-innerHeight/2)/view2.scale+view2.ox, z:(px-innerWidth/2)/view2.scale+view2.oz};}
-function fit2d(){const padX=140,padY=200; view2.scale=Math.max(4,Math.min((innerWidth-padX)/OD,(innerHeight-padY)/OW)); view2.ox=OW/2; view2.oz=OD/2; dirty2d=true;}
-function pan2FromKeys(dt){if(!panKeys.size) return; const sp=520*dt/view2.scale; if(panKeys.has('f')) view2.ox-=sp; if(panKeys.has('b')) view2.ox+=sp; if(panKeys.has('l')) view2.oz-=sp; if(panKeys.has('r')) view2.oz+=sp; dirty2d=true;}
+function w2s(x,z){const vx=(x-view2.ox)*view2.scale*view2.flip, vz=(z-view2.oz)*view2.scale; const c=ROTC[view2.rot], s=ROTS[view2.rot]; return {x:innerWidth/2+vx*c-vz*s, y:innerHeight/2+vx*s+vz*c};}
+function s2w(px,py){const ax=px-innerWidth/2, ay=py-innerHeight/2; const c=ROTC[view2.rot], s=ROTS[view2.rot]; const vx=ax*c+ay*s, vz=-ax*s+ay*c; return {x:view2.ox+vx/(view2.scale*view2.flip), z:view2.oz+vz/view2.scale};}
+function fit2d(){const padX=140,padY=200; const horiz=view2.rot%2===1; const sX=horiz?OD:OW, sY=horiz?OW:OD; view2.scale=Math.max(4,Math.min((innerWidth-padX)/sX,(innerHeight-padY)/sY)); view2.ox=OW/2; view2.oz=OD/2; dirty2d=true;}
+function rotateView(dir){view2.rot=((view2.rot+dir)%4+4)%4; fit2d(); dirty2d=true;}
+function flipView(){view2.flip*=-1; dirty2d=true;}
+// pan in SCREEN space (keys stay intuitive after rotation): convert screen delta → world via inverse rotation
+function pan2FromKeys(dt){if(!panKeys.size) return; const px=520*dt; let sx=0,sy=0; if(panKeys.has('f'))sy-=px; if(panKeys.has('b'))sy+=px; if(panKeys.has('l'))sx-=px; if(panKeys.has('r'))sx+=px; const c=ROTC[view2.rot], s=ROTS[view2.rot]; view2.ox+=(sx*c+sy*s)/(view2.scale*view2.flip); view2.oz+=(-sx*s+sy*c)/view2.scale; dirty2d=true;}
 function resize2(){const dpr=Math.min(2,devicePixelRatio||1); c2.width=Math.round(innerWidth*dpr); c2.height=Math.round(innerHeight*dpr); c2.style.width=innerWidth+'px'; c2.style.height=innerHeight+'px'; ctx2.setTransform(dpr,0,0,dpr,0,0); dirty2d=true;}
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
 renderer.setPixelRatio(Math.min(3,devicePixelRatio*1.5));
@@ -1156,7 +1171,7 @@ c2.addEventListener('pointerdown',e=>{if(e.button===2){pan2={x:e.clientX,y:e.cli
   if(mode==='builder'&&tab==='zones'&&settings.zoning==='rect'&&!drag){const w=s2w(e.clientX,e.clientY); if(roomAt(w.x,w.z)){drag={kind:'rect',x0:snap(w.x),z0:snap(w.z),x1:snap(w.x),z1:snap(w.z)}; dirty2d=true; return;}}
   if(!drag){pan2={x:e.clientX,y:e.clientY,ox:view2.ox,oz:view2.oz};}});
 c2.addEventListener('pointermove',e=>{if(drag){updateDrag(e); return;}
-  if(pan2){view2.oz=pan2.oz-(e.clientX-pan2.x)/view2.scale; view2.ox=pan2.ox-(e.clientY-pan2.y)/view2.scale; dirty2d=true; return;}
+  if(pan2){const ax=e.clientX-pan2.x, ay=e.clientY-pan2.y, c=ROTC[view2.rot], s=ROTS[view2.rot]; view2.ox=pan2.ox-(ax*c+ay*s)/(view2.scale*view2.flip); view2.oz=pan2.oz-(-ax*s+ay*c)/view2.scale; dirty2d=true; return;}
   const w=s2w(e.clientX,e.clientY); const aid=avAt2(w.x,w.z); if(aid!==hoverEmp){hoverEmp=aid;} c2.style.cursor=aid?'pointer':(mode==='builder'&&tab==='furniture'&&furnHit2(w.x,w.z)?'pointer':'grab');});
 c2.addEventListener('pointerup',e=>{const moved=downPos&&Math.hypot(e.clientX-downPos.x,e.clientY-downPos.y)>5; pan2=null; downPos=null;
   if(drag&&drag.kind==='rect'){finishDrag(e); return;}
@@ -1169,6 +1184,7 @@ c2.addEventListener('pointerup',e=>{const moved=downPos&&Math.hypot(e.clientX-do
 c2.addEventListener('pointerleave',()=>{hoverEmp=null;});
 c2.addEventListener('contextmenu',e=>e.preventDefault());
 c2.addEventListener('wheel',e=>{e.preventDefault(); const w=s2w(e.clientX,e.clientY); view2.scale=Math.max(4,Math.min(120,view2.scale*Math.exp(-e.deltaY*.0012))); const w2=s2w(e.clientX,e.clientY); view2.ox+=w.x-w2.x; view2.oz+=w.z-w2.z; dirty2d=true;},{passive:false});
+$('#v2rotL').onclick=()=>rotateView(-1); $('#v2rotR').onclick=()=>rotateView(1); $('#v2flip').onclick=flipView;
 
 /* ---------- init ---------- */
 const params=new URLSearchParams(location.search);
