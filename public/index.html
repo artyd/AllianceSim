@@ -611,7 +611,8 @@ const canvas=$('#c');
 const c2=$('#c2'); const ctx2=c2.getContext('2d');
 // rot ∈ {0,1,2,3} → 0/90/180/270°; flip mirrors the plan. Default rot=1 → office reads landscape.
 const ROTC=[1,0,-1,0], ROTS=[0,1,0,-1];
-const view2={ox:OW/2,oz:OD/2,scale:20,rot:3,flip:-1};
+// default 2D orientation: entrance (by Кімната 1) sits in the TOP-RIGHT corner — the real floor-plan look
+const view2={ox:OW/2,oz:OD/2,scale:20,rot:1,flip:1};
 const activeCanvas=()=>view==='2d'?c2:canvas;
 function w2s(x,z){const vx=(x-view2.ox)*view2.scale*view2.flip, vz=(z-view2.oz)*view2.scale; const c=ROTC[view2.rot], s=ROTS[view2.rot]; return {x:innerWidth/2+vx*c-vz*s, y:innerHeight/2+vx*s+vz*c};}
 function s2w(px,py){const ax=px-innerWidth/2, ay=py-innerHeight/2; const c=ROTC[view2.rot], s=ROTS[view2.rot]; const vx=ax*c+ay*s, vz=-ax*s+ay*c; return {x:view2.ox+vx/(view2.scale*view2.flip), z:view2.oz+vz/view2.scale};}
