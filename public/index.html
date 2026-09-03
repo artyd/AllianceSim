@@ -448,6 +448,7 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 
 /* ---------- data ---------- */
 const S=2.25; // office scale: sketch units → meters
+const CS=2.5; // content scale: furniture + people are drawn CS× larger so they read well in the big office
 const OW=14*S, OD=30*S, WALL_H=1.1;
 const sc=a=>a.map(v=>Array.isArray(v)?sc(v):v*S);
 const ROOMS=[
@@ -739,11 +740,11 @@ const B={
   rug(){const g=new THREE.Group(); g.add(P(rbox(2.4,.02,1.6,.3,mat('#F1B7BC'),.005),0,0,0)); g.add(P(rbox(1.9,.021,1.1,.2,mat('#F7D2D5'),.005),0,0,0)); return g;}
 };
 // measure each model once: footprint = exact bbox rounded up to .25m, re-centered on bbox center
-(function measure(){for(const t in FURN){const g=B[t](); const b=new THREE.Box3().setFromObject(g); const s=b.getSize(new THREE.Vector3()), c=b.getCenter(new THREE.Vector3()); const d=FURN[t]; d.w=Math.max(.25,Math.round(s.x*4)/4); d.d=Math.max(.25,Math.round(s.z*4)/4); d.off={x:c.x,z:c.z}; if(d.seats) d.seats=d.seats.map(q=>({...q,x:q.x-c.x,z:q.z-c.z}));}})();
-function buildFurn(type){const g=new THREE.Group(); const inner=B[type](); inner.position.set(-FURN[type].off.x,0,-FURN[type].off.z); g.add(inner); g.userData.type=type; return g;}
+(function measure(){for(const t in FURN){const g=B[t](); const b=new THREE.Box3().setFromObject(g); const s=b.getSize(new THREE.Vector3()), c=b.getCenter(new THREE.Vector3()); const d=FURN[t]; d.w=Math.max(.25,Math.round(s.x*4)/4)*CS; d.d=Math.max(.25,Math.round(s.z*4)/4)*CS; d.off={x:c.x*CS,z:c.z*CS}; if(d.seats) d.seats=d.seats.map(q=>({...q,x:(q.x-c.x)*CS,z:(q.z-c.z)*CS}));}})();
+function buildFurn(type){const g=new THREE.Group(); const inner=B[type](); inner.scale.setScalar(CS); inner.position.set(-FURN[type].off.x,0,-FURN[type].off.z); g.add(inner); g.userData.type=type; return g;}
 
 /* ---------- avatars (GLB stickman) ---------- */
-const MODELS={sit:'assets/models/sit.glb',stand:'assets/models/stand.glb',walk:'assets/models/walk.glb'}; const modelBuf={}; const gltfLoader=new GLTFLoader(); const MODEL_H=1.7, AV_SCALE=.88; const mixers=new Set();
+const MODELS={sit:'assets/models/sit.glb',stand:'assets/models/stand.glb',walk:'assets/models/walk.glb'}; const modelBuf={}; const gltfLoader=new GLTFLoader(); const MODEL_H=1.7, AV_SCALE=.88*CS; const mixers=new Set();
 const modelsReady=Promise.all(Object.keys(MODELS).map(async k=>{modelBuf[k]=await (await fetch(MODELS[k])).arrayBuffer();})).catch(()=>{});
 function loadPose(g,pose){const key=pose===true?'sit':pose===false?'stand':pose; if(g.userData.poseKey===key) return; g.userData.poseKey=key; g.userData.tagY=(key==='sit'?1.15:MODEL_H)*AV_SCALE;
   if(g.userData.inner){g.remove(g.userData.inner); g.userData.inner.traverse(o=>{if(o.isMesh){o.geometry.dispose(); o.material.dispose();}}); g.userData.inner=null;}
@@ -785,7 +786,7 @@ function roomCenter(r){const rc=r.rects[0]; return new THREE.Vector3((rc[0]+rc[2
 const furnObjs={}, avObjs={}, rectObjs={};
 function syncFurniture(){dirty2d=true; if(view==='2d') return; const live=new Set();
   for(const f of state.furniture){live.add(f.uid); let g=furnObjs[f.uid]; if(!g){g=buildFurn(f.type); g.userData.uid=f.uid; furnRoot.add(g); furnObjs[f.uid]=g;}
-    g.position.set(f.x,FURN[f.type].onDesk&&deskUnder(f)?(deskUnder(f).type==='counter'?.9:.75):0.02,f.z); g.rotation.y=f.rot*Math.PI/2;}
+    g.position.set(f.x,FURN[f.type].onDesk&&deskUnder(f)?(deskUnder(f).type==='counter'?.9*CS:.75*CS):0.02,f.z); g.rotation.y=f.rot*Math.PI/2;}
   for(const k in furnObjs) if(!live.has(k)){furnRoot.remove(furnObjs[k]); delete furnObjs[k];}}
 function syncAvatars(){dirty2d=true; const live=new Set();
   for(const e of state.employees){ if(e.seat && !state.furniture.find(x=>x.uid===e.seat.f)) e.seat=null;
@@ -862,7 +863,7 @@ function startEmpDrag(id){cancelDrag(); const e=state.employees.find(x=>x.id===i
   if(view==='3d'){ghost=buildAvatar(settings.avatar,e.color,false); setOpacity(ghost,.7); ghost.visible=false; scene.add(ghost); plate=mkPlate(.9,.9); plate.visible=false; scene.add(plate); controls.enabled=false;} activeCanvas().style.cursor='grabbing'; dirty2d=true;}
 function cancelDrag(){if(ghost){scene.remove(ghost); disposeAvatar(ghost); ghost=null;} if(plate){scene.remove(plate); plate=null;} if(drag&&drag.kind==='rect'&&drag.mesh) scene.remove(drag.mesh); if(drag&&drag.kind==='furn'&&drag.fromExisting&&furnObjs[drag.f.uid]) furnObjs[drag.f.uid].visible=true; drag=null; controls.enabled=true; canvas.style.cursor=''; c2.style.cursor=''; dirty2d=true;}
 function updateDrag(e){ if(view==='2d') return updateDrag2(e); setPtr(e); const hit=floorHit(); if(!hit) return;
-  if(drag.kind==='furn'){const f=drag.f; f.x=snap(hit.x); f.z=snap(hit.z); const ok=fits(f); ghost.visible=plate.visible=true; ghost.position.set(f.x,FURN[f.type].onDesk&&deskUnder(f)?.75:.02,f.z); ghost.rotation.y=f.rot*Math.PI/2; const {w,d}=fp(f); plate.scale.set(w,1,d); plate.position.set(f.x,.03,f.z); plate.material.color.set(ok?'#4CAF6E':'#E2001A'); drag.ok=ok; drag.over=true;}
+  if(drag.kind==='furn'){const f=drag.f; f.x=snap(hit.x); f.z=snap(hit.z); const ok=fits(f); ghost.visible=plate.visible=true; ghost.position.set(f.x,FURN[f.type].onDesk&&deskUnder(f)?.75*CS:.02,f.z); ghost.rotation.y=f.rot*Math.PI/2; const {w,d}=fp(f); plate.scale.set(w,1,d); plate.position.set(f.x,.03,f.z); plate.material.color.set(ok?'#4CAF6E':'#E2001A'); drag.ok=ok; drag.over=true;}
   else if(drag.kind==='emp'){const fh=furnHit(); drag.seat=null; ghost.visible=true; plate.visible=false;
     if(fh){const f=state.furniture.find(x=>x.uid===fh.uid); const seats=FURN[f.type].seats||[]; let best=null,bd=9;
       seats.forEach((s,i)=>{if(seatTaken(f.uid,i)) return; const sw=seatWorld(f,i); const dd=Math.hypot(sw.x-fh.point.x,sw.z-fh.point.z); if(dd<bd){bd=dd;best={f,i,sw};}});
@@ -932,7 +933,7 @@ function makeThumbs(){const r=new THREE.WebGLRenderer({alpha:true,antialias:true
   r.dispose(); r.forceContextLoss(); return out;}
 const thumbs=makeThumbs();
 const catEl=$('#cat'); let catFilter='all';
-function renderCat(){catEl.innerHTML=''; for(const t in FURN){if(catFilter!=='all'&&FURN[t].cat!==catFilter) continue; const el=document.createElement('div'); el.className='item'; el.innerHTML=`<img src="${thumbs[t]}" alt=""><span>${FURN[t].n}</span><small>${FURN[t].seats?FURN[t].seats.length+(FURN[t].seats.length===1?' місце':' місць'):FURN[t].w+'×'+FURN[t].d+' м'}</small>`; catEl.appendChild(el);
+function renderCat(){catEl.innerHTML=''; for(const t in FURN){if(catFilter!=='all'&&FURN[t].cat!==catFilter) continue; const el=document.createElement('div'); el.className='item'; el.innerHTML=`<img src="${thumbs[t]}" alt=""><span>${FURN[t].n}</span><small>${FURN[t].seats?FURN[t].seats.length+(FURN[t].seats.length===1?' місце':' місць'):(FURN[t].w/CS).toFixed(2).replace(/\.?0+$/,'')+'×'+(FURN[t].d/CS).toFixed(2).replace(/\.?0+$/,'')+' м'}</small>`; catEl.appendChild(el);
   bindDrag(el,how=>{startFurnDrag(t); if(how==='click'){drag.sticky=true; toast(`Клікніть на підлогу, щоб поставити «${FURN[t].n}»`);}});}}
 function renderCatFilter(){const f=$('#catFilter'); f.innerHTML=`<button class="chipb" data-c="all" aria-pressed="${catFilter==='all'}">Усі</button>`+Object.keys(CATS).map(k=>`<button class="chipb" data-c="${k}" aria-pressed="${catFilter===k}">${CATS[k]}</button>`).join('');
   f.querySelectorAll('button').forEach(b=>b.onclick=()=>{catFilter=b.dataset.c; renderCatFilter(); renderCat();});}
@@ -1000,8 +1001,8 @@ function renderPeople(){const holder=$('#people'); holder.innerHTML=''; $('#empC
 const backdrop=$('#backdrop'); let fColor=DEPT_COLORS[0], fPhoto=null, fStatus='office', fMood='good', editingId=null;
 const pRenderer=new THREE.WebGLRenderer({canvas:$('#pc'),alpha:true,antialias:true}); pRenderer.setClearColor(0,0); pRenderer.toneMapping=THREE.NeutralToneMapping; 
 const pScene=new THREE.Scene(); pScene.add(new THREE.HemisphereLight(0xffffff,0xc9b8a8,1)); const pl=new THREE.DirectionalLight(0xfff3e4,1.8); pl.position.set(2,4,3); pl.castShadow=true; pScene.add(pl);
-const pCam=new THREE.PerspectiveCamera(30,480/560,.1,20); pCam.position.set(0,1.1,4.6); pCam.lookAt(0,.8,0);
-const pFloor=new THREE.Mesh(new THREE.CircleGeometry(.9,32).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({color:'#ffffff',roughness:1,transparent:true,opacity:.6})); pFloor.receiveShadow=true; pScene.add(pFloor);
+const pCam=new THREE.PerspectiveCamera(30,480/560,.1,20*CS); pCam.position.set(0,1.1*CS,4.6*CS); pCam.lookAt(0,.8*CS,0);
+const pFloor=new THREE.Mesh(new THREE.CircleGeometry(.9*CS,32).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({color:'#ffffff',roughness:1,transparent:true,opacity:.6})); pFloor.receiveShadow=true; pScene.add(pFloor);
 let pAv=null; function refreshPreview(){if(pAv){pScene.remove(pAv); disposeAvatar(pAv);} pAv=buildAvatar(settings.avatar,fColor,false); pScene.add(pAv); const t=$('#ptag'); t.querySelector('i').style.background=fColor; t.querySelector('.n').textContent=$('#fName').value.trim()||'Ім'+"'"+'я'; t.querySelector('.d').textContent=$('#fDept').value.trim()||'Відділ';}
 function renderSwatches(){const dept=$('#fDept').value.trim(); if(dept&&state.depts[dept]&&!editingId) fColor=state.depts[dept];
   $('#swatches').innerHTML=DEPT_COLORS.map(c=>`<button type="button" data-c="${c}" style="background:${c}" aria-pressed="${c===fColor}"></button>`).join('');
@@ -1155,7 +1156,7 @@ function draw2DFurn(f,color,S2,sel,ghost){const {w,d}=fp(f); const c=w2s(f.x,f.z
   if(pw>44&&!ghost){ctx2.fillStyle='rgba(43,37,48,.72)'; ctx2.font=`700 ${Math.max(9,Math.min(12,pw*.15))}px Nunito`; ctx2.fillText(FURN[f.type].n,0,seated?-pd/2+9:0);}
   ctx2.restore();}
 function drawEmp2D(e,wx,wz,S2,forceColor){if(!e) return; ctx2.save(); const p=w2s(wx,wz); if(filterDept&&e.dept!==filterDept&&mode==='viewer') ctx2.globalAlpha*=.28;
-  const rr=Math.max(7,S2*.26); ctx2.beginPath(); ctx2.arc(p.x,p.y,rr,0,Math.PI*2); ctx2.fillStyle=forceColor||e.color; ctx2.fill(); ctx2.lineWidth=2; ctx2.strokeStyle='#fff'; ctx2.stroke();
+  const rr=Math.max(8,S2*.26*CS); ctx2.beginPath(); ctx2.arc(p.x,p.y,rr,0,Math.PI*2); ctx2.fillStyle=forceColor||e.color; ctx2.fill(); ctx2.lineWidth=2; ctx2.strokeStyle='#fff'; ctx2.stroke();
   ctx2.fillStyle='#fff'; ctx2.font=`800 ${Math.round(rr*.82)}px Nunito`; ctx2.textAlign='center'; ctx2.textBaseline='middle'; ctx2.fillText(initials(e.name),p.x,p.y);
   ctx2.font=`${Math.round(rr*1.3)}px "Segoe UI Emoji","Noto Color Emoji",sans-serif`; ctx2.fillText((MOODS[e.mood]||MOODS.good).e,p.x,p.y-rr*1.8);
   if(hlEmp===e.id){ctx2.beginPath(); ctx2.arc(p.x,p.y,rr+6,0,Math.PI*2); ctx2.strokeStyle='#E2001A'; ctx2.lineWidth=3; ctx2.stroke();}
