@@ -108,8 +108,12 @@ kbd{font:700 11px Nunito;background:var(--chip);border:1px solid var(--line);bor
 .emp .txt{min-width:0;flex:1}.emp .txt div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .emp .st{font-size:11px;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:5px}
 .emp .st.seated{color:#2f8f52}
-.emp .x{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;font-size:14px;line-height:22px;text-align:center;color:var(--muted);display:none;background:var(--panel-solid)}
-.emp:hover .x{display:block}.emp .x:hover{color:var(--red)}
+.emp .empacts{position:absolute;top:6px;right:6px;display:none;gap:3px}
+.emp:hover .empacts{display:flex}
+.emp .empacts button{width:24px;height:24px;border-radius:7px;background:var(--panel-solid);display:grid;place-items:center;box-shadow:0 1px 3px rgba(60,40,30,.15)}
+.emp .empacts button svg{width:12px;height:12px;fill:var(--muted)}
+.emp .empacts button:hover svg{fill:var(--ink)}
+.emp .empacts button.del:hover svg{fill:var(--red)}
 .addemp{flex:none;width:150px;border-radius:14px;border:2px dashed var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-weight:800;font-size:13px;color:var(--red);padding:10px}
 .addemp:hover{background:var(--red-soft)}
 .addemp b{font-size:24px;line-height:1}
@@ -974,11 +978,18 @@ const initials=n=>n.trim().split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toU
 function statusBtns(cur){return Object.keys(STATUS).map(k=>`<button type="button" class="optbtn" data-s="${k}" aria-pressed="${cur===k}"><i style="background:${STATUS[k].c}"></i>${STATUS[k].n}</button>`).join('');}
 function moodBtns(cur){return Object.keys(MOODS).map(k=>`<button type="button" class="moodbtn" data-m="${k}" title="${MOODS[k].n}" aria-pressed="${cur===k}">${MOODS[k].e}</button>`).join('');}
 const avHTML=(e,cls='av')=>`<div class="${cls}" style="background:${e.photo?`url(${e.photo})`:e.color}">${e.photo?'':initials(e.name)}</div>`;
+const ICO_EDIT='<svg viewBox="0 0 512 512"><path d="M362.7 19.3L314.3 67.7 444.3 197.7l48.4-48.4c25-25 25-65.5 0-90.5L453.3 19.3c-25-25-65.5-25-90.5 0zm-71 71L58.6 323.5c-10.4 10.4-18 23.3-22.2 37.4L1 481.2C-1.5 489.7 .8 498.8 7 505s15.3 8.5 23.7 6.1l120.3-35.4c14.1-4.2 27-11.8 37.4-22.2L421.7 220.3 291.7 90.3z"/></svg>';
+const ICO_UNBIND='<svg viewBox="0 0 512 512"><path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z"/></svg>';
+const ICO_TRASH='<svg viewBox="0 0 448 512"><path d="M135.2 17.7L128 32 32 32C14.3 32 0 46.3 0 64S14.3 96 32 96l384 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-96 0-7.2-14.3C307.4 6.8 296.3 0 284.2 0L163.8 0c-12.1 0-23.2 6.8-28.6 17.7zM416 128L32 128 53.2 467c1.6 25.3 22.6 45 47.9 45l245.8 0c25.3 0 46.3-19.7 47.9-45L416 128z"/></svg>';
 function renderPeople(){const holder=$('#people'); holder.innerHTML=''; $('#empCount').textContent=state.employees.length;
   for(const e of state.employees){const el=document.createElement('div'); el.className='emp'; let loc; if(e.seat){const f=state.furniture.find(x=>x.uid===e.seat.f); loc=f?(roomName(roomAt(seatWorld(f,e.seat.i).x,seatWorld(f,e.seat.i).z))||'В офісі'):'Без місця';} else loc=statusOf(e)==='office'?'Ходить офісом':'Не в офісі';
     const st=STATUS[statusOf(e)], md=MOODS[e.mood]||MOODS.good;
-    el.innerHTML=`${avHTML(e)}<div class="txt"><div class="nm">${esc(e.name)}</div><div class="dp">${esc(e.dept)}${e.position?' · '+esc(e.position):''}</div><div class="st ${e.seat?'seated':''}"><span class="mood">${md.e}</span><i style="background:${st.c}"></i>${esc(loc)}</div></div>${e.seat?'<button class="x" title="Зняти з місця (буде вільно ходити)">×</button>':''}`;
-    const x=el.querySelector('.x'); if(x) x.onclick=ev=>{ev.stopPropagation(); pushUndo(); e.seat=null; markDirty(); syncAvatars(); renderPeople(); renderLabels(); toast(`${e.name} — тепер вільно ходить офісом`);};
+    el.innerHTML=`${avHTML(e)}<div class="txt"><div class="nm">${esc(e.name)}</div><div class="dp">${esc(e.dept)}${e.position?' · '+esc(e.position):''}</div><div class="st ${e.seat?'seated':''}"><span class="mood">${md.e}</span><i style="background:${st.c}"></i>${esc(loc)}</div></div>`
+      +`<div class="empacts"><button class="edit" title="Редагувати">${ICO_EDIT}</button>${e.seat?`<button class="unbind" title="Відв'язати від місця">${ICO_UNBIND}</button>`:''}<button class="del" title="Видалити працівника">${ICO_TRASH}</button></div>`;
+    const acts=el.querySelector('.empacts'); acts.addEventListener('pointerdown',ev=>ev.stopPropagation());
+    el.querySelector('.edit').onclick=ev=>{ev.stopPropagation(); openModal(e);};
+    const ub=el.querySelector('.unbind'); if(ub) ub.onclick=ev=>{ev.stopPropagation(); pushUndo(); e.seat=null; markDirty(); syncAvatars(); renderPeople(); renderLabels(); toast(`${e.name} — відв'язано, тепер вільно ходить`);};
+    el.querySelector('.del').onclick=ev=>{ev.stopPropagation(); pushUndo(); state.employees=state.employees.filter(x=>x!==e); delete EP[e.id]; markDirty(); syncAvatars(); renderPeople(); renderLabels(); toast(`${e.name} — видалено`);};
     bindDrag(el,how=>{if(how==='drag'){startEmpDrag(e.id);} else focusEmployee(e.id,false);});
     holder.appendChild(el);}
   const add=document.createElement('button'); add.className='addemp'; add.innerHTML='<b>+</b>Додати співробітника'; add.onclick=()=>openModal(); holder.appendChild(add);
@@ -1056,7 +1067,7 @@ function pointBlocked(x,z){return state.furniture.some(o=>{if(FURN[o.type].under
 const EP={}; // {x,z,ry,pose,roam} keyed by employee id; not persisted
 function empPos(e){const ep=EP[e.id]; return ep?{x:ep.x,z:ep.z}:seatOfEmp(e);}
 function distSeg(px,pz,x0,z0,x1,z1){const dx=x1-x0,dz=z1-z0,L=dx*dx+dz*dz; let t=L?((px-x0)*dx+(pz-z0)*dz)/L:0; t=Math.max(0,Math.min(1,t)); return Math.hypot(px-(x0+t*dx),pz-(z0+t*dz));}
-function nearWall(x,z){for(const w of WALLS){if(distSeg(x,z,w[0],w[1],w[2],w[3])<.24) return true;} return false;}
+function nearWall(x,z){for(const w of WALLS){if(distSeg(x,z,w[0],w[1],w[2],w[3])<.2) return true;} return false;}
 const CORRIDOR_X=15.75; // world x-centre of the central corridor (sketch x 6..8)
 // Door gaps per room: sample each room's vertical edges; gaps in the wall (nearWall false) are doorways.
 let DOORS=null;
@@ -1095,12 +1106,17 @@ function updateRoam(dt){const on=settings.move==='on'; if(!DOORS) DOORS=computeD
     let ep=EP[e.id]; if(!ep){ const sp=seat||spawnPoint(); ep=EP[e.id]={x:sp.x,z:sp.z,ry:seat?seat.ry:0,pose:seat?'sit':'stand'}; }
     if(seat && !on){ ep.x=seat.x; ep.z=seat.z; ep.ry=seat.ry; ep.pose='sit'; ep.roam=null; continue; } // seated + static → stay put
     const hasHome=!!seat; let r=ep.roam; if(!r){r=ep.roam={phase:'sitting',t:1+Math.random()*5};}
-    if(r.phase==='sitting'){ep.pose=hasHome?'sit':'stand'; r.t-=dt; if(r.t<=0){r.phase='out'; r.speed=1.0+Math.random()*.6; r.path=buildPath(ep,pickRoamTarget(seat||ep)); r.wi=0; r.stuck=0;}}
-    else if(r.phase==='pause'){ep.pose='stand'; r.t-=dt; if(r.t<=0){ if(hasHome){r.phase='back'; r.path=buildPath(ep,seat); r.wi=0; r.stuck=0;} else {r.phase='sitting'; r.t=.8+Math.random()*2.5;} }}
+    if(r.phase==='sitting'){ep.pose=hasHome?'sit':'stand'; r.t-=dt; if(r.t<=0){r.phase='out'; r.speed=1.0+Math.random()*.6; r.path=buildPath(ep,pickRoamTarget(seat||ep)); r.wi=0; r.bestD=1e9; r.noProg=0;}}
+    else if(r.phase==='pause'){ep.pose='stand'; r.t-=dt; if(r.t<=0){ if(hasHome){r.phase='back'; r.path=buildPath(ep,seat); r.wi=0; r.bestD=1e9; r.noProg=0;} else {r.phase='sitting'; r.t=.8+Math.random()*2.5;} }}
     else { const out=r.phase==='out'; const path=r.path&&r.path.length?r.path:[seat||ep]; let wp=path[Math.min(r.wi,path.length-1)];
       const d=Math.hypot(wp.x-ep.x,wp.z-ep.z); ep.pose='walk'; dirty2d=true;
-      if(d<.35){ r.wi++; r.stuck=0; if(r.wi>=path.length){ roamArrive(ep,r,seat,out); } }
-      else { const ok=stepAvoid(ep,wp,Math.min(d,r.speed*dt)); if(ok){r.stuck=0;} else { r.stuck=(r.stuck||0)+1; if(r.stuck>18){ r.wi++; r.stuck=0; if(r.wi>=path.length) roamArrive(ep,r,seat,out); } } } }
+      if(d<.4){ r.wi++; r.bestD=1e9; r.noProg=0; if(r.wi>=path.length){ roamArrive(ep,r,seat,out); } }
+      else { stepAvoid(ep,wp,Math.min(d,r.speed*dt));
+        // progress-based unstick: if we haven't got closer to the waypoint for a while, re-route
+        if(d < (r.bestD??1e9)-.03){ r.bestD=d; r.noProg=0; }
+        else if((r.noProg=(r.noProg||0)+1) > 24){ r.noProg=0; r.bestD=1e9;
+          if(out){ r.path=buildPath(ep,pickRoamTarget(seat||ep)); r.wi=0; }
+          else { ep.x=seat.x; ep.z=seat.z; ep.ry=seat.ry; ep.pose='sit'; r.phase='sitting'; r.t=3+Math.random()*6; } } } }
   }}
 $('#shareBtn').onclick=async()=>{const url=location.href.split('?')[0]+'?mode=viewer'; try{await navigator.clipboard.writeText(url);}catch(e){} toast('Посилання «тільки перегляд» скопійовано');};
 
