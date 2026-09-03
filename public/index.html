@@ -35,6 +35,9 @@ a{color:var(--red)}a:hover{color:#b5000f}
 #app{position:fixed;inset:0;background:#dbe7f0;color:var(--ink)}
 .card,.ibtn,.item,.emp,.rl,.tag .b,#sugg,#modal{color:var(--ink)}
 #c{position:absolute;inset:0;display:block;touch-action:none}
+#c2{position:absolute;inset:0;display:none;touch-action:none}
+#app[data-view="2d"] #c{display:none}
+#app[data-view="2d"] #c2{display:block}
 #labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .card{background:var(--panel);backdrop-filter:blur(14px);border-radius:var(--r);box-shadow:var(--shadow);border:1px solid var(--line)}
 /* header */
@@ -57,6 +60,8 @@ a{color:var(--red)}a:hover{color:#b5000f}
 #status i{width:8px;height:8px;border-radius:50%;background:#e0a300;display:block}#status.saved i{background:#4CAF6E}
 #app[data-mode="viewer"] .builder-only{display:none!important}
 #app[data-mode="builder"] .viewer-only{display:none!important}
+/* hard viewer lock: shared link opens view-only, no way back to Builder */
+#app[data-locked="viewer"] #modeSeg{display:none!important}
 /* search (viewer) */
 #search{position:relative;width:420px}
 #search input{width:100%;height:44px;border-radius:14px;border:1.5px solid var(--line);background:var(--panel-solid);padding:0 44px 0 42px;font-size:15px;font-weight:600;outline:0}
@@ -84,6 +89,7 @@ a{color:var(--red)}a:hover{color:#b5000f}
 #tabs button b{margin-left:6px;font-size:11px;background:var(--red);color:#fff;border-radius:999px;padding:1px 6px}
 .pane{display:none;padding:14px;background:var(--panel-solid);border-radius:3px 14px 14px 14px;margin:0 10px 10px}.pane.on{display:block}
 .hint{font-size:12px;color:var(--muted);font-weight:600;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;text-align:center;gap:8px}
+.hint-i{width:13px;height:13px;fill:var(--red);flex:none;opacity:.85}
 kbd{font:700 11px Nunito;background:var(--chip);border:1px solid var(--line);border-radius:6px;padding:1px 6px;color:var(--ink)}
 #cat{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin;justify-content:safe center}
 .item{flex:none;width:104px;border-radius:14px;background:var(--chip);padding:8px 8px 10px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:grab;user-select:none;transition:transform .15s,box-shadow .15s;border:1.5px solid transparent}
@@ -124,12 +130,17 @@ kbd{font:700 11px Nunito;background:var(--chip);border:1px solid var(--line);bor
 #app[data-layout="sides"][data-mode="viewer"] #dock2{transform:translateX(120%)}
 /* pops */
 .pop{position:absolute;z-index:8;padding:14px;width:280px;display:none}
+#zonePop{max-height:calc(100vh - 110px);overflow:auto}
 .pop.open{display:block}
 .pop h4{margin:0 0 10px;font-size:15px;font-weight:800}
 .pop .grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .pop .grid button{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:var(--chip);font-weight:700;font-size:12px;text-align:left;border:1.5px solid transparent}
 .pop .grid button[aria-pressed="true"]{border-color:var(--ink)}
 .pop .grid i{width:14px;height:14px;border-radius:5px;display:block;flex:none}
+.pop .zdepts{display:flex;flex-wrap:wrap;gap:5px}
+.pop .zdept{display:flex;align-items:center;gap:6px;padding:6px 9px;border-radius:9px;background:var(--chip);font-weight:700;font-size:11.5px;text-align:left;border:1.5px solid transparent;line-height:1.15}
+.pop .zdept[aria-pressed="true"]{border-color:var(--ink)}
+.pop .zdept i{width:10px;height:10px;border-radius:4px;display:block;flex:none}
 .pop label{display:block;font-size:11px;font-weight:800;color:var(--muted);margin:12px 0 4px;text-transform:uppercase;letter-spacing:.04em}
 .field{width:100%;height:40px;border-radius:10px;border:1.5px solid var(--line);background:var(--panel-solid);padding:0 12px;outline:0;font-weight:600;font-size:14px}
 .field:focus{border-color:var(--red)}
@@ -235,6 +246,8 @@ kbd{font:700 11px Nunito;background:var(--chip);border:1px solid var(--line);bor
 #modal form{padding:22px 26px 20px;justify-content:flex-start;gap:0;max-height:92vh;overflow:auto}
 .fsec-t{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:16px 0 8px;padding-top:14px;border-top:1px solid var(--line);display:flex;align-items:center;gap:8px}
 .fsec-t:first-of-type{border-top:0;padding-top:0;margin-top:2px}
+.fsec-i{width:14px;height:14px;fill:var(--red);flex:none}
+.fsec-t .fsec-d{font-size:10px;font-weight:700;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:auto}
 .optrow{display:flex;gap:6px;flex-wrap:wrap}
 .optbtn{padding:7px 11px;border-radius:10px;background:var(--chip);font-weight:700;font-size:12.5px;border:1.5px solid transparent;display:flex;align-items:center;gap:6px}
 .optbtn[aria-pressed="true"]{border-color:var(--ink)}
@@ -251,8 +264,9 @@ kbd{font:700 11px Nunito;background:var(--chip);border:1px solid var(--line);bor
 </style>
 </head>
 <body>
-<div id="app" data-mode="builder" data-ui="light" data-layout="dock" data-tab="furniture" data-dock="open">
+<div id="app" data-mode="builder" data-ui="light" data-layout="dock" data-tab="furniture" data-dock="open" data-view="2d">
 <canvas id="c"></canvas>
+<canvas id="c2"></canvas>
 <div id="labels"></div>
 
 <header id="hdr" class="card" data-screen-label="Header">
@@ -286,16 +300,16 @@ kbd{font:700 11px Nunito;background:var(--chip);border:1px solid var(--line);bor
     <button id="collapseBtn" class="ibtn" title="Згорнути / розгорнути панель"><svg viewBox="0 0 512 512"><path d="M233.4 105.4c12.5-12.5 32.8-12.5 45.3 0l192 192c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L256 173.3 86.6 342.6c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l192-192z"/></svg></button>
   </div>
   <div class="pane on" data-pane="furniture">
-    <div class="hint" style="justify-content:space-between"><span>Перетягніть предмет на підлогу. <kbd>R</kbd> повернути · <kbd>Esc</kbd> скасувати</span></div>
+    <div class="hint"><svg class="hint-i" viewBox="0 0 448 512"><path d="M278.6 9.4c-12.5-12.5-32.8-12.5-45.3 0l-64 64c-9.2 9.2-11.9 22.9-6.9 34.9s16.6 19.8 29.6 19.8l32 0 0 96-96 0 0-32c0-12.9-7.8-24.6-19.8-29.6s-25.7-2.2-34.9 6.9l-64 64c-12.5 12.5-12.5 32.8 0 45.3l64 64c9.2 9.2 22.9 11.9 34.9 6.9s19.8-16.6 19.8-29.6l0-32 96 0 0 96-32 0c-12.9 0-24.6 7.8-29.6 19.8s-2.2 25.7 6.9 34.9l64 64c12.5 12.5 32.8 12.5 45.3 0l64-64c9.2-9.2 11.9-22.9 6.9-34.9s-16.6-19.8-29.6-19.8l-32 0 0-96 96 0 0 32c0 12.9 7.8 24.6 19.8 29.6s25.7 2.2 34.9-6.9l64-64c12.5-12.5 12.5-32.8 0-45.3l-64-64c-9.2-9.2-22.9-11.9-34.9-6.9s-19.8 16.6-19.8 29.6l0 32-96 0 0-96 32 0c12.9 0 24.6-7.8 29.6-19.8s2.2-25.7-6.9-34.9l-64-64z"/></svg><span>Перетягніть предмет на підлогу. <kbd>R</kbd> повернути · <kbd>Esc</kbd> скасувати</span></div>
     <div id="catFilter" class="catf"></div>
     <div id="cat"></div>
   </div>
   <div class="pane" data-pane="zones">
-    <p class="hint" id="zoneHint">Натисніть на кімнату в офісі, щоб призначити зону</p>
+    <p class="hint"><svg class="hint-i" viewBox="0 0 384 512"><path d="M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0zM192 128a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><span id="zoneHint">Натисніть на кімнату в офісі, щоб призначити зону</span></p>
     <div id="zonesList"></div>
   </div>
   <div class="pane" data-pane="people" id="panePeople">
-    <p class="hint">Перетягніть співробітника на вільний стіл, диван або крісло</p>
+    <p class="hint"><svg class="hint-i" viewBox="0 0 640 512"><path d="M96 128a128 128 0 1 1 256 0A128 128 0 1 1 96 128zM0 482.3C0 383.8 79.8 304 178.3 304l91.4 0C368.2 304 448 383.8 448 482.3c0 16.4-13.3 29.7-29.7 29.7L29.7 512C13.3 512 0 498.7 0 482.3zM504 312l0-64-64 0c-13.3 0-24-10.7-24-24s10.7-24 24-24l64 0 0-64c0-13.3 10.7-24 24-24s24 10.7 24 24l0 64 64 0c13.3 0 24 10.7 24 24s-10.7 24-24 24l-64 0 0 64c0 13.3-10.7 24-24 24s-24-10.7-24-24z"/></svg><span>Перетягніть співробітника на вільний стіл, диван або крісло</span></p>
     <div id="people"></div>
   </div>
 </div>
@@ -313,6 +327,11 @@ kbd{font:700 11px Nunito;background:var(--chip);border:1px solid var(--line);bor
     <button class="set-x" id="settingsClose" title="Закрити"><svg viewBox="0 0 384 512"><path d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z"/></svg></button>
   </div>
   <p class="set-sub">Ці параметри впливають лише на відображення у вашому браузері — збережений офіс вони не змінюють.</p>
+
+  <div class="set">
+    <div class="set-h"><svg class="set-i" viewBox="0 0 640 512"><path d="M64 0C28.7 0 0 28.7 0 64L0 352c0 35.3 28.7 64 64 64l176 0-10.7 32L160 448c-17.7 0-32 14.3-32 32s14.3 32 32 32l320 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-69.3 0L400 416l176 0c35.3 0 64-28.7 64-64l0-288c0-35.3-28.7-64-64-64L64 0zM576 64l0 224L64 288 64 64l512 0z"/></svg><div class="set-tx"><div class="set-t">Режим відображення</div><div class="set-d">2D — легкий план для будь-якого пристрою; 3D — об'ємний офіс (потужніший ПК)</div></div></div>
+    <div class="opt" data-set="view"><button data-v="2d">2D план (легкий)</button><button data-v="3d">3D офіс</button></div>
+  </div>
 
   <div class="set">
     <div class="set-h"><svg class="set-i" viewBox="0 0 512 512"><path d="M512 256c0 .9 0 1.8 0 2.7c-.4 36.5-33.6 61.3-70.1 61.3L344 320c-26.5 0-48 21.5-48 48c0 3.4 .4 6.7 1 9.9c2.1 10.2 6.5 20 10.8 29.9c6.1 13.8 12.1 27.5 12.1 42c0 31.8-21.6 60.7-53.4 62c-3.5 .1-7 .2-10.6 .2C114.6 512 0 397.4 0 256S114.6 0 256 0S512 114.6 512 256zM128 288a32 32 0 1 0 -64 0 32 32 0 1 0 64 0zm0-96a32 32 0 1 0 0-64 32 32 0 1 0 0 64zM288 96a32 32 0 1 0 -64 0 32 32 0 1 0 64 0zm96 96a32 32 0 1 0 0-64 32 32 0 1 0 0 64z"/></svg><div class="set-tx"><div class="set-t">Стиль офісу</div><div class="set-d">Кольорова тема сцени</div></div></div>
@@ -369,14 +388,14 @@ kbd{font:700 11px Nunito;background:var(--chip);border:1px solid var(--line);bor
     <form id="empForm" autocomplete="off">
       <h3 id="empTitle">Новий співробітник</h3>
       <p id="empSub">Після додавання перетягніть картку на вільне місце.</p>
-      <div class="fsec-t">Основне</div>
+      <div class="fsec-t"><svg class="fsec-i" viewBox="0 0 448 512"><path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512l388.6 0c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304l-91.4 0z"/></svg><span>Основне</span></div>
       <label class="fl" for="fName">Ім'я та прізвище</label><input class="field" id="fName" required placeholder="Олена Коваленко">
       <div class="f2">
         <div><label class="fl" for="fDept">Відділ</label><input class="field" id="fDept" list="deptList" required placeholder="Логістика"><datalist id="deptList"></datalist></div>
         <div><label class="fl" for="fPos">Посада</label><input class="field" id="fPos" placeholder="Менеджер"></div>
       </div>
       <label class="fl">Колір відділу</label><div class="sw" id="swatches"></div>
-      <div class="fsec-t">Контакти</div>
+      <div class="fsec-t"><svg class="fsec-i" viewBox="0 0 512 512"><path d="M164.9 24.6c-7.7-18.6-28-28.5-47.4-23.2l-88 24C12.1 30.2 0 46 0 64C0 311.4 200.6 512 448 512c18 0 33.8-12.1 38.6-29.5l24-88c5.3-19.4-4.6-39.7-23.2-47.4l-96-40c-16.3-6.8-35.2-2.1-46.3 11.6L304.7 368C234.3 334.7 177.3 277.7 144 207.3L193.3 167c13.7-11.2 18.4-30 11.6-46.3l-40-96z"/></svg><span>Контакти</span><span class="fsec-d">необов'язково</span></div>
       <div class="f2">
         <div><label class="fl" for="fMail">Email</label><input class="field" id="fMail" type="email" placeholder="o.kovalenko@ag95.ua"></div>
         <div><label class="fl" for="fPhone">Телефон</label><input class="field" id="fPhone" placeholder="+380 …"></div>
@@ -385,9 +404,9 @@ kbd{font:700 11px Nunito;background:var(--chip);border:1px solid var(--line);bor
         <div><label class="fl" for="fExt">Робочий номер</label><input class="field" id="fExt" placeholder="Напр. 214"></div>
         <div><label class="fl">Фото</label><div class="photo"><div class="av" id="fAv">?</div><label class="up">Завантажити<input id="fPhoto" type="file" accept="image/*"></label><span class="dp" id="fPhotoName">необов'язково</span></div></div>
       </div>
-      <div class="fsec-t">Де зараз</div>
+      <div class="fsec-t"><svg class="fsec-i" viewBox="0 0 384 512"><path d="M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0zM192 128a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><span>Де зараз</span></div>
       <div class="optrow" id="fStatus"></div>
-      <div class="fsec-t">Настрій</div>
+      <div class="fsec-t"><svg class="fsec-i" viewBox="0 0 512 512"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM176 208a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zm128 0a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zM164.1 325.5C158 318.4 158 308.5 164.1 301.4C176.5 287.2 199.3 272 240 272l32 0c40.7 0 63.5 15.2 75.9 29.4c6.1 7 6.1 17 0 24.1c-6.1 7.1-16 7.1-22.1 0C317.5 316 302.7 304 272 304l-32 0c-30.7 0-45.5 12-53.8 21.5c-6.1 7.1-16 7.1-22.1 0z"/></svg><span>Настрій</span></div>
       <div class="moodrow" id="fMood"></div>
       <div class="actions"><button type="button" class="tbtn" id="cancelEmp">Скасувати</button><button type="submit" class="btn" id="empSubmit">Додати</button></div>
     </form>
@@ -438,6 +457,14 @@ const STATUS={office:{n:'В офісі',c:'#4CAF6E',icon:'🏢'},remote:{n:'Пр
 const MOODS={great:{n:'Чудовий',e:'😄'},good:{n:'Гарний',e:'🙂'},ok:{n:'Нормально',e:'😐'},tired:{n:'Втомлений',e:'😴'},stressed:{n:'У стресі',e:'😫'}};
 const CATS={work:'Робочі місця',meeting:'Переговорні',kitchen:'Кухня',reception:'Рецепція і відпочинок',storage:'Склад і техніка',decor:'Декор'};
 const DEPTS=['Закупівлі','Логістика','IT','Бухгалтерія','Юридичний','HR','Продажі','Маркетинг','Адміністрація','Керівництво','Склад','Підтримка','Виробництво','Сервіс'];
+// Ready-made department / personal-office labels for tagging a room's zone (пункт 6).
+// {name, type} → type picks the base ZONES colour; personal cabinets use 'office'.
+const ZONE_DEPT_PRESETS=[
+  {name:'Закупівлі / Логістика',type:'open'},{name:'IT',type:'open'},
+  {name:'Бухгалтерія / Фінанси',type:'open'},{name:'Юристи',type:'office'},
+  {name:'Продажі',type:'open'},{name:'HR',type:'open'},
+  {name:'Кабінет Ольги Валентинівни',type:'office'},{name:'Кабінет Руслана Станіславовича',type:'office'}
+];
 function fillDeptList(){const seen=new Set(), out=[]; for(const d of [...DEPTS,...Object.keys(state.depts)]){if(d&&!seen.has(d)){seen.add(d); out.push(d);}} const dl=$('#deptList'); if(dl) dl.innerHTML=out.map(d=>`<option value="${esc(d)}">`).join('');}
 const FURN={
   desk:{n:'Стіл',cat:'work',seats:[{x:0,z:.55,ry:Math.PI,y:.45}]},
@@ -493,8 +520,9 @@ const FURN={
 /* ---------- state ---------- */
 const LS_LAYOUT='alliancesim.layout.v3', LS_SET='alliancesim.settings';
 let state={furniture:[],zones:{},rects:[],employees:[],depts:{}};
-let settings=Object.assign({theme:'pastel',avatar:'blocky',layout:'dock',zoning:'click',hl:'both',move:'off'},JSON.parse(localStorage.getItem(LS_SET)||'{}'));
+let settings=Object.assign({theme:'pastel',avatar:'blocky',layout:'dock',zoning:'click',hl:'both',move:'off',view:'2d'},JSON.parse(localStorage.getItem(LS_SET)||'{}'));
 let mode='builder', tab='furniture', dirty=false, undoStack=[], uidc=1;
+let view='2d', dirty2d=true; // 2D top-down (Canvas) is the default light renderer; 3D is opt-in
 
 /* ---------- backend sync (MVP: localStorage -> API з офлайн-фолбеком) ---------- */
 const API=(location.protocol==='file:')?'http://localhost:8011/api':'/api';
@@ -538,7 +566,7 @@ function ensureTokenModal(){
   wrap.style.cssText='position:fixed;inset:0;background:rgba(20,10,15,.55);display:none;align-items:center;justify-content:center;z-index:99999';
   wrap.innerHTML='<div style="background:var(--panel-solid,#fff);color:var(--ink,#2B2530);width:360px;max-width:92vw;border-radius:16px;padding:22px;font-family:Nunito,system-ui,sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.3)">'
     +'<div style="font-weight:800;font-size:18px;margin-bottom:6px">Код доступу HR</div>'
-    +'<div style="color:var(--muted,#8A7F86);font-size:14px;line-height:1.5;margin-bottom:14px">Режим редагування захищено спільним кодом. Введіть його — він збережеться у цьому браузері та використовуватиметься під час збереження.</div>'
+    +'<div style="color:var(--muted,#8A7F86);font-size:14px;line-height:1.5;margin-bottom:14px">Щоб зберегти планування, введіть простий код HR (його встановлює адміністратор у налаштуваннях сервера). Код спитають лише раз — він збережеться у цьому браузері.</div>'
     +'<input id="asTokenInput" type="password" placeholder="Код доступу" style="width:100%;padding:10px;border:1px solid var(--line,#ddd);border-radius:10px;font:inherit;box-sizing:border-box">'
     +'<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">'
     +'<button id="asTokenCancel" style="padding:9px 14px;border:1px solid var(--line,#ddd);background:transparent;border-radius:10px;font:inherit;cursor:pointer">Скасувати</button>'
@@ -556,6 +584,14 @@ const app=$('#app');
 
 /* ---------- three setup ---------- */
 const canvas=$('#c');
+/* ---------- 2D top-down camera (light Canvas renderer, пункт 1) ---------- */
+const c2=$('#c2'); const ctx2=c2.getContext('2d');
+const view2={ox:OW/2,oz:OD/2,scale:20};
+const activeCanvas=()=>view==='2d'?c2:canvas;
+function w2s(x,z){return {x:(x-view2.ox)*view2.scale+innerWidth/2, y:(z-view2.oz)*view2.scale+innerHeight/2};}
+function s2w(px,py){return {x:(px-innerWidth/2)/view2.scale+view2.ox, z:(py-innerHeight/2)/view2.scale+view2.oz};}
+function fit2d(){const padX=120,padY=200; view2.scale=Math.max(4,Math.min((innerWidth-padX)/OW,(innerHeight-padY)/OD)); view2.ox=OW/2; view2.oz=OD/2; dirty2d=true;}
+function resize2(){const dpr=Math.min(2,devicePixelRatio||1); c2.width=Math.round(innerWidth*dpr); c2.height=Math.round(innerHeight*dpr); c2.style.width=innerWidth+'px'; c2.style.height=innerHeight+'px'; ctx2.setTransform(dpr,0,0,dpr,0,0); dirty2d=true;}
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
 renderer.setPixelRatio(Math.min(3,devicePixelRatio*1.5));
 renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
@@ -685,7 +721,16 @@ function loadPose(g,pose){const key=pose===true?'sit':pose===false?'stand':pose;
 function buildAvatar(style,shirt,seated,withGem){const g=new THREE.Group(); g.userData.shirt=shirt; g.userData.opacity=1; loadPose(g,seated);
   if(withGem){const gem=new THREE.Mesh(new THREE.OctahedronGeometry(.14,0),new THREE.MeshStandardMaterial({color:'#4CAF6E',emissive:'#4CAF6E',emissiveIntensity:1.2,roughness:.2,metalness:.1,toneMapped:false})); gem.scale.set(.9,1.7,.9); g.userData.gem=gem; g.add(gem);}
   return g;}
-function disposeAvatar(g){g.userData.disposed=true; if(g.userData.mixer){g.userData.mixer.stopAllAction(); mixers.delete(g.userData.mixer);}}
+function disposeAvatar(g){g.userData.disposed=true; if(g.userData.mixer){g.userData.mixer.stopAllAction(); mixers.delete(g.userData.mixer);} if(g.userData.moodSprite) g.userData.moodSprite.material.dispose();}
+/* ---- mood emoji above the head (пункт 5): a billboard sprite, always visible ---- */
+const _moodTex={};
+function moodTex(emoji){if(_moodTex[emoji]) return _moodTex[emoji]; const cv=document.createElement('canvas'); cv.width=cv.height=128; const x=cv.getContext('2d');
+  x.beginPath(); x.arc(64,60,52,0,Math.PI*2); x.fillStyle='rgba(255,255,255,.92)'; x.fill(); x.lineWidth=4; x.strokeStyle='rgba(70,45,30,.18)'; x.stroke();
+  x.font='72px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(emoji,64,64);
+  const t=new THREE.CanvasTexture(cv); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=8; _moodTex[emoji]=t; return t;}
+function makeMoodSprite(emoji){const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:moodTex(emoji),transparent:true,depthWrite:false,depthTest:false,toneMapped:false})); sp.scale.set(.55,.55,.55); sp.renderOrder=10; return sp;}
+function setAvatarMood(g,emoji){let ms=g.userData.moodSprite; if(!ms){ms=makeMoodSprite(emoji); g.userData.moodSprite=ms; g.userData.moodEmoji=emoji; g.add(ms);} else if(g.userData.moodEmoji!==emoji){ms.material.map=moodTex(emoji); ms.material.needsUpdate=true; g.userData.moodEmoji=emoji;}}
+function updateAvatarMood(id){const g=avObjs[id], e=state.employees.find(x=>x.id===id); if(!g||!e) return; setAvatarMood(g,(MOODS[e.mood]||MOODS.good).e);}
 function setOpacity(g,a){g.userData.opacity=a; g.traverse(o=>{if(o.isMesh&&o!==g.userData.gem){o.material.transparent=a<1;o.material.opacity=a;o.material.depthWrite=a>=1;}});}
 
 /* ---------- geometry helpers ---------- */
@@ -704,18 +749,20 @@ function roomCenter(r){const rc=r.rects[0]; return new THREE.Vector3((rc[0]+rc[2
 
 /* ---------- scene sync ---------- */
 const furnObjs={}, avObjs={}, rectObjs={};
-function syncFurniture(){const live=new Set();
+function syncFurniture(){dirty2d=true; if(view==='2d') return; const live=new Set();
   for(const f of state.furniture){live.add(f.uid); let g=furnObjs[f.uid]; if(!g){g=buildFurn(f.type); g.userData.uid=f.uid; furnRoot.add(g); furnObjs[f.uid]=g;}
     g.position.set(f.x,FURN[f.type].onDesk&&deskUnder(f)?(deskUnder(f).type==='counter'?.9:.75):0.02,f.z); g.rotation.y=f.rot*Math.PI/2;}
   for(const k in furnObjs) if(!live.has(k)){furnRoot.remove(furnObjs[k]); delete furnObjs[k];}}
-function syncAvatars(){const live=new Set();
+function syncAvatars(){dirty2d=true; const live=new Set();
   for(const e of state.employees){if(!e.seat) continue; const f=state.furniture.find(x=>x.uid===e.seat.f); if(!f){e.seat=null;continue;} live.add(e.id);
+    if(view==='2d') continue; // light 2D mode: no 3D avatar objects (draw2D reads state directly)
     let g=avObjs[e.id]; const key=e.color; if(g&&g.userData.key!==key){avRoot.remove(g); disposeAvatar(g); g=null;}
     if(!g){g=buildAvatar(settings.avatar,e.color,true,true); g.userData.key=key; g.userData.emp=e.id; avRoot.add(g); avObjs[e.id]=g;}
+    setAvatarMood(g,(MOODS[e.mood]||MOODS.good).e);
     const s=seatWorld(f,e.seat.i); const r=g.userData.roam; if(!(r&&r.phase&&r.phase!=='sitting')){g.position.set(s.x,.02,s.z); g.rotation.y=s.ry; loadPose(g,true);}}
   for(const k in avObjs) if(!live.has(k)){avRoot.remove(avObjs[k]); disposeAvatar(avObjs[k]); delete avObjs[k];}
-  refreshAvatarLook();}
-function syncZones(){const th=THEMES[settings.theme];
+  if(view!=='2d') refreshAvatarLook();}
+function syncZones(){dirty2d=true; if(view==='2d') return; const th=THEMES[settings.theme];
   for(const r of ROOMS){const base=new THREE.Color(r.corridor?th.cor:th.floor); const z=state.zones[r.id]; if(z) base.lerp(new THREE.Color(ZONES[z.type].c),th.zone); floorMats[r.id].color.copy(base);}
   const live=new Set(); for(const rz of state.rects){live.add(rz.uid); let m=rectObjs[rz.uid]; if(!m){m=new THREE.Mesh(new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({transparent:true,opacity:.6,roughness:1})); rectRoot.add(m); rectObjs[rz.uid]=m;}
     m.material.color.set(ZONES[rz.type].c); m.position.set((rz.x0+rz.x1)/2,.012,(rz.z0+rz.z1)/2); m.scale.set(Math.max(.01,rz.x1-rz.x0),1,Math.max(.01,rz.z1-rz.z0));}
@@ -736,13 +783,15 @@ function renderLabels(rebuild){
     el.innerHTML=`<i style="background:${ZONES[rz.type].c}"></i>${esc(rz.name||ZONES[rz.type].n)}`;}
   for(const k in roomLabelEls) if(k.startsWith('rz')&&!state.rects.some(r=>'rz'+r.uid===k)){roomLabelEls[k].remove(); delete roomLabelEls[k];}}
 const _v=new THREE.Vector3();
-function project(x,y,z){_v.set(x,y,z).project(camera); return {x:(_v.x+1)/2*innerWidth,y:(1-_v.y)/2*innerHeight,ok:_v.z<1};}
+function project(x,y,z){if(view==='2d'){const s=w2s(x,z); return {x:s.x,y:s.y-(y||0)*view2.scale*.35,ok:true};} _v.set(x,y,z).project(camera); return {x:(_v.x+1)/2*innerWidth,y:(1-_v.y)/2*innerHeight,ok:_v.z<1};}
 function updateLabels(){
   for(const r of ROOMS){const el=roomLabelEls[r.id]; if(!el) continue; const c=roomCenter(r); const p=project(c.x,.2,c.z); el.style.left=p.x+'px'; el.style.top=p.y+'px'; el.style.opacity=p.ok?1:0;}
   for(const rz of state.rects){const el=roomLabelEls['rz'+rz.uid]; if(!el) continue; const p=project((rz.x0+rz.x1)/2,.2,(rz.z0+rz.z1)/2); el.style.left=p.x+'px'; el.style.top=p.y+'px';}
-  for(const e of state.employees){const el=tagEls[e.id], g=avObjs[e.id]; if(!el||!g) continue; const p=project(g.position.x,g.position.y+g.userData.tagY+.85,g.position.z); el.style.left=p.x+'px'; el.style.top=p.y+'px'; const show=(hoverEmp===e.id||hlEmp===e.id); el.style.opacity=(p.ok&&show)?1:0; el.style.pointerEvents=show?'auto':'none';
+  for(const e of state.employees){const el=tagEls[e.id]; if(!el) continue; const g=avObjs[e.id]; let wx,wy,wz,ty;
+    if(g){wx=g.position.x;wy=g.position.y;wz=g.position.z;ty=g.userData.tagY;} else {const sw=seatOfEmp(e); if(!sw){el.style.opacity=0;continue;} wx=sw.x;wy=.02;wz=sw.z;ty=1.0;}
+    const p=project(wx,wy+ty+.85,wz); el.style.left=p.x+'px'; el.style.top=p.y+'px'; const show=(hoverEmp===e.id||hlEmp===e.id); el.style.opacity=(p.ok&&show)?1:0; el.style.pointerEvents=show?'auto':'none';
     el.classList.toggle('hi',hlEmp===e.id); el.classList.toggle('dim',!!filterDept&&e.dept!==filterDept&&hlEmp!==e.id);}
-  if(selected&&furnObjs[selected]){const g=furnObjs[selected]; const p=project(g.position.x,1.3,g.position.z); const ib=$('#itemBar'); ib.style.left=(p.x-ib.offsetWidth/2)+'px'; ib.style.top=(p.y-ib.offsetHeight-8)+'px';}
+  if(selected){const g=furnObjs[selected]; let px,pz; if(g){px=g.position.x;pz=g.position.z;} else {const f=state.furniture.find(x=>x.uid===selected); if(f){px=f.x;pz=f.z;}} if(px!=null){const p=project(px,1.3,pz); const ib=$('#itemBar'); ib.style.left=(p.x-ib.offsetWidth/2)+'px'; ib.style.top=(p.y-ib.offsetHeight-8)+'px';}}
 }
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
@@ -770,10 +819,11 @@ function furnHit(){const h=ray.intersectObjects(furnRoot.children,true)[0]; if(!
 function avHit(){const h=ray.intersectObjects(avRoot.children,true)[0]; if(!h) return null; let o=h.object; while(o.parent&&o.parent!==avRoot) o=o.parent; return o.userData.emp;}
 function mkPlate(w,d){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:'#4CAF6E',transparent:true,opacity:.35,depthWrite:false})); m.position.y=.03; return m;}
 function startFurnDrag(type,existing){cancelDrag(); const f=existing||{uid:uid(),type,x:-99,z:-99,rot:0}; drag={kind:'furn',f,fromExisting:!!existing,over:false};
-  ghost=buildFurn(type); setOpacity(ghost,.65); ghost.visible=false; scene.add(ghost); const {w,d}=fp(f); plate=mkPlate(w,d); plate.visible=false; scene.add(plate); controls.enabled=false; hideItemBar(); canvas.style.cursor='grabbing';}
-function startEmpDrag(id){cancelDrag(); const e=state.employees.find(x=>x.id===id); drag={kind:'emp',id,seat:null}; ghost=buildAvatar(settings.avatar,e.color,false); setOpacity(ghost,.7); ghost.visible=false; scene.add(ghost); plate=mkPlate(.9,.9); plate.visible=false; scene.add(plate); controls.enabled=false; canvas.style.cursor='grabbing';}
-function cancelDrag(){if(ghost){scene.remove(ghost); disposeAvatar(ghost); ghost=null;} if(plate){scene.remove(plate); plate=null;} if(drag&&drag.kind==='rect'&&drag.mesh) scene.remove(drag.mesh); if(drag&&drag.kind==='furn'&&drag.fromExisting&&furnObjs[drag.f.uid]) furnObjs[drag.f.uid].visible=true; drag=null; controls.enabled=true; canvas.style.cursor='';}
-function updateDrag(e){setPtr(e); const hit=floorHit(); if(!hit) return;
+  if(view==='3d'){ghost=buildFurn(type); setOpacity(ghost,.65); ghost.visible=false; scene.add(ghost); const {w,d}=fp(f); plate=mkPlate(w,d); plate.visible=false; scene.add(plate); controls.enabled=false;} hideItemBar(); activeCanvas().style.cursor='grabbing'; dirty2d=true;}
+function startEmpDrag(id){cancelDrag(); const e=state.employees.find(x=>x.id===id); drag={kind:'emp',id,seat:null};
+  if(view==='3d'){ghost=buildAvatar(settings.avatar,e.color,false); setOpacity(ghost,.7); ghost.visible=false; scene.add(ghost); plate=mkPlate(.9,.9); plate.visible=false; scene.add(plate); controls.enabled=false;} activeCanvas().style.cursor='grabbing'; dirty2d=true;}
+function cancelDrag(){if(ghost){scene.remove(ghost); disposeAvatar(ghost); ghost=null;} if(plate){scene.remove(plate); plate=null;} if(drag&&drag.kind==='rect'&&drag.mesh) scene.remove(drag.mesh); if(drag&&drag.kind==='furn'&&drag.fromExisting&&furnObjs[drag.f.uid]) furnObjs[drag.f.uid].visible=true; drag=null; controls.enabled=true; canvas.style.cursor=''; c2.style.cursor=''; dirty2d=true;}
+function updateDrag(e){ if(view==='2d') return updateDrag2(e); setPtr(e); const hit=floorHit(); if(!hit) return;
   if(drag.kind==='furn'){const f=drag.f; f.x=snap(hit.x); f.z=snap(hit.z); const ok=fits(f); ghost.visible=plate.visible=true; ghost.position.set(f.x,FURN[f.type].onDesk&&deskUnder(f)?.75:.02,f.z); ghost.rotation.y=f.rot*Math.PI/2; const {w,d}=fp(f); plate.scale.set(w,1,d); plate.position.set(f.x,.03,f.z); plate.material.color.set(ok?'#4CAF6E':'#E2001A'); drag.ok=ok; drag.over=true;}
   else if(drag.kind==='emp'){const fh=furnHit(); drag.seat=null; ghost.visible=true; plate.visible=false;
     if(fh){const f=state.furniture.find(x=>x.uid===fh.uid); const seats=FURN[f.type].seats||[]; let best=null,bd=9;
@@ -781,13 +831,21 @@ function updateDrag(e){setPtr(e); const hit=floorHit(); if(!hit) return;
       if(best){drag.seat={f:best.f.uid,i:best.i}; ghost.position.set(best.sw.x,.02,best.sw.z); ghost.rotation.y=best.sw.ry; plate.visible=true; plate.position.set(best.sw.x,.03,best.sw.z); plate.material.color.set('#4CAF6E'); return;}}
     ghost.position.set(hit.x,.02,hit.z); ghost.rotation.y=Math.atan2(camera.position.x-hit.x,camera.position.z-hit.z);}
   else if(drag.kind==='rect'){drag.x1=snap(hit.x); drag.z1=snap(hit.z); const x0=Math.min(drag.x0,drag.x1),x1=Math.max(drag.x0,drag.x1),z0=Math.min(drag.z0,drag.z1),z1=Math.max(drag.z0,drag.z1); drag.mesh.position.set((x0+x1)/2,.015,(z0+z1)/2); drag.mesh.scale.set(Math.max(.01,x1-x0),1,Math.max(.01,z1-z0));}}
+// 2D drag update: compute world from screen, no THREE ghost — draw2D renders it from `drag`
+function updateDrag2(e){const w=s2w(e.clientX,e.clientY); dirty2d=true;
+  if(drag.kind==='furn'){const f=drag.f; f.x=snap(w.x); f.z=snap(w.z); drag.ok=fits(f); drag.over=true;}
+  else if(drag.kind==='emp'){drag.seat=null; drag.gx=w.x; drag.gz=w.z; const fu=furnHit2(w.x,w.z);
+    if(fu){const f=state.furniture.find(x=>x.uid===fu); const seats=FURN[f.type].seats||[]; let best=null,bd=1e9;
+      seats.forEach((s,i)=>{if(seatTaken(f.uid,i))return; const sw=seatWorld(f,i); const dd=Math.hypot(sw.x-w.x,sw.z-w.z); if(dd<bd){bd=dd;best={f,i,sw};}});
+      if(best){drag.seat={f:best.f.uid,i:best.i}; drag.gx=best.sw.x; drag.gz=best.sw.z;}}}
+  else if(drag.kind==='rect'){drag.x1=snap(w.x); drag.z1=snap(w.z);}}
 function finishDrag(e){if(!drag) return; const d=drag;
   if(d.kind==='furn'){if(d.over&&d.ok){pushUndo(); if(d.fromExisting){const o=state.furniture.find(x=>x.uid===d.f.uid); Object.assign(o,{x:d.f.x,z:d.f.z,rot:d.f.rot});} else state.furniture.push(d.f); markDirty(); cancelDrag(); syncFurniture(); syncAvatars(); if(!d.fromExisting) hideWelcome();}
-    else if(d.over||d.fromExisting){if(!d.over&&d.fromExisting){cancelDrag();return;} toast('Тут не поміститься — оберіть вільне місце в кімнаті'); /* keep dragging as sticky */ drag.sticky=true; canvas.style.cursor='grabbing';}
+    else if(d.over||d.fromExisting){if(!d.over&&d.fromExisting){cancelDrag();return;} toast('Тут не поміститься — оберіть вільне місце в кімнаті'); /* keep dragging as sticky */ drag.sticky=true; activeCanvas().style.cursor='grabbing';}
     else {drag.sticky=true;} return;}
   if(d.kind==='emp'){if(d.seat){pushUndo(); const emp=state.employees.find(x=>x.id===d.id); emp.seat=d.seat; markDirty(); cancelDrag(); syncAvatars(); renderPeople(); renderLabels(); toast(`${emp.name} — тепер за столом у «${roomName(roomAt(seatWorld(state.furniture.find(f=>f.uid===d.seat.f),d.seat.i).x,seatWorld(state.furniture.find(f=>f.uid===d.seat.f),d.seat.i).z))}»`);}
     else cancelDrag(); return;}
-  if(d.kind==='rect'){const x0=Math.min(d.x0,d.x1),x1=Math.max(d.x0,d.x1),z0=Math.min(d.z0,d.z1),z1=Math.max(d.z0,d.z1); scene.remove(d.mesh); drag=null; controls.enabled=true;
+  if(d.kind==='rect'){const x0=Math.min(d.x0,d.x1),x1=Math.max(d.x0,d.x1),z0=Math.min(d.z0,d.z1),z1=Math.max(d.z0,d.z1); if(d.mesh) scene.remove(d.mesh); drag=null; controls.enabled=true; dirty2d=true;
     if(x1-x0>=.5&&z1-z0>=.5){pushUndo(); const rz={uid:uid(),x0,z0,x1,z1,type:'open',name:''}; state.rects.push(rz); markDirty(); syncZones(); renderLabels(); openZonePop({rect:rz.uid});}}}
 
 canvas.addEventListener('pointerdown',e=>{if(e.button!==0) return; downPos={x:e.clientX,y:e.clientY}; setPtr(e);
@@ -803,29 +861,29 @@ canvas.addEventListener('pointerup',e=>{const moved=downPos&&Math.hypot(e.client
   const aid=avHit(); if(aid){const emp=state.employees.find(x=>x.id===aid); if(emp){showCard(emp); return;}}
   if(tab==='zones'&&settings.zoning==='click'){const h=ray.intersectObjects(floorMeshes)[0]; if(h) openZonePop({room:h.object.userData.room}); return;}
   const fh=furnHit(); if(fh&&tab!=='zones') select(fh.uid); else select(null);});
-document.addEventListener('pointermove',e=>{if(drag&&(drag.kind==='furn'||drag.kind==='emp')&&!drag.sticky&&e.target!==canvas){/* over UI: hide ghost */ if(ghost){ghost.visible=false;} if(plate) plate.visible=false; if(drag.kind==='furn') drag.over=false;}});
-document.addEventListener('pointerup',e=>{if(!drag) return; if(drag.kind==='rect') return; if(drag.sticky) return; if(e.target===canvas){updateDrag(e); finishDrag(e);} else {if(drag.kind==='furn'&&!drag.fromExisting){drag.sticky=true; canvas.style.cursor='grabbing';} else finishDrag(e);}});
+document.addEventListener('pointermove',e=>{if(drag&&(drag.kind==='furn'||drag.kind==='emp')&&!drag.sticky&&e.target!==activeCanvas()){/* over UI: hide ghost */ if(ghost){ghost.visible=false;} if(plate) plate.visible=false; if(drag.kind==='furn') drag.over=false; dirty2d=true;}});
+document.addEventListener('pointerup',e=>{if(!drag) return; if(drag.kind==='rect') return; if(drag.sticky) return; if(e.target===activeCanvas()){updateDrag(e); finishDrag(e);} else {if(drag.kind==='furn'&&!drag.fromExisting){drag.sticky=true; activeCanvas().style.cursor='grabbing';} else finishDrag(e);}});
 window.addEventListener('keydown',e=>{if(e.target instanceof Element&&e.target.matches('input,textarea')) return; const k=e.key.toLowerCase();
   if(k==='escape'){cancelDrag(); select(null); closePops(); return;}
-  if(k==='r'||k==='к'){if(drag&&drag.kind==='furn'){drag.f.rot=(drag.f.rot+1)%4;} else if(selected) rotateSel(); return;}
+  if(k==='r'||k==='к'){if(drag&&drag.kind==='furn'){drag.f.rot=(drag.f.rot+1)%4; dirty2d=true;} else if(selected) rotateSel(); return;}
   if((k==='delete'||k==='backspace')&&selected){delSel(); return;}
   if((e.ctrlKey||e.metaKey)&&k==='z'){e.preventDefault(); undo();}});
 
-function select(id){selected=id; const ib=$('#itemBar'); ib.classList.toggle('open',!!id); for(const k in furnObjs) furnObjs[k].traverse(o=>{if(o.isMesh&&o.material.emissive) o.material.emissive.set(0);}); if(id&&furnObjs[id]) furnObjs[id].traverse(o=>{if(o.isMesh&&o.material.emissive){o.material=o.material.clone(); o.material.emissive.set('#E2001A'); o.material.emissiveIntensity=.12;}});}
+function select(id){selected=id; dirty2d=true; const ib=$('#itemBar'); ib.classList.toggle('open',!!id); for(const k in furnObjs) furnObjs[k].traverse(o=>{if(o.isMesh&&o.material.emissive) o.material.emissive.set(0);}); if(id&&furnObjs[id]) furnObjs[id].traverse(o=>{if(o.isMesh&&o.material.emissive){o.material=o.material.clone(); o.material.emissive.set('#E2001A'); o.material.emissiveIntensity=.12;}});}
 function hideItemBar(){$('#itemBar').classList.remove('open');}
 function rotateSel(){const f=state.furniture.find(x=>x.uid===selected); if(!f) return; pushUndo(); f.rot=(f.rot+1)%4; if(!fits(f)){f.rot=(f.rot+3)%4; undoStack.pop(); toast('Так не поміститься'); return;} markDirty(); syncFurniture(); syncAvatars();}
 function delSel(){const f=state.furniture.find(x=>x.uid===selected); if(!f) return; pushUndo(); state.furniture=state.furniture.filter(x=>x!==f); state.employees.forEach(e=>{if(e.seat&&e.seat.f===f.uid) e.seat=null;}); select(null); markDirty(); syncAll();}
 $('#rotBtn').onclick=rotateSel; $('#delBtn').onclick=delSel;
-$('#moveBtn').onclick=()=>{const f=state.furniture.find(x=>x.uid===selected); if(!f) return; select(null); furnObjs[f.uid].visible=false; startFurnDrag(f.type,{...f}); drag.sticky=true;};
+$('#moveBtn').onclick=()=>{const f=state.furniture.find(x=>x.uid===selected); if(!f) return; select(null); if(furnObjs[f.uid]) furnObjs[f.uid].visible=false; startFurnDrag(f.type,{...f}); drag.sticky=true;};
 
 /* dock drags */
-function bindDrag(el,onStart){let sp=null; el.addEventListener('pointerdown',e=>{if(e.button!==0) return; sp={x:e.clientX,y:e.clientY,started:false}; const mv=ev=>{if(!sp.started&&Math.hypot(ev.clientX-sp.x,ev.clientY-sp.y)>6){sp.started=true; onStart('drag');} if(sp.started&&drag&&ev.target===canvas) updateDrag(ev);};
+function bindDrag(el,onStart){let sp=null; el.addEventListener('pointerdown',e=>{if(e.button!==0) return; sp={x:e.clientX,y:e.clientY,started:false}; const mv=ev=>{if(!sp.started&&Math.hypot(ev.clientX-sp.x,ev.clientY-sp.y)>6){sp.started=true; onStart('drag');} if(sp.started&&drag&&ev.target===activeCanvas()) updateDrag(ev);};
   const up=ev=>{document.removeEventListener('pointermove',mv); document.removeEventListener('pointerup',up); if(!sp.started) onStart('click'); sp=null;}; document.addEventListener('pointermove',mv); document.addEventListener('pointerup',up);});}
 
 /* ---------- undo / save ---------- */
 function pushUndo(){undoStack.push(JSON.stringify(state)); if(undoStack.length>60) undoStack.shift(); $('#undoBtn').disabled=false;}
 function undo(){if(!undoStack.length) return; cancelDrag(); select(null); state=JSON.parse(undoStack.pop()); $('#undoBtn').disabled=!undoStack.length; markDirty(); syncAll();}
-function markDirty(){dirty=true; const s=$('#status'); s.classList.remove('saved'); s.querySelector('span').textContent='Є незбережені зміни';}
+function markDirty(){dirty=true; dirty2d=true; const s=$('#status'); s.classList.remove('saved'); s.querySelector('span').textContent='Є незбережені зміни';}
 $('#saveBtn').onclick=()=>{ saveLayout(); };
 let toastT; function toast(msg){const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2400);}
 
@@ -851,12 +909,16 @@ function updateZoneHint(){$('#zoneHint').textContent=settings.zoning==='rect'?'�
 /* ---------- zone popover ---------- */
 let popTarget=null;
 function openZonePop(t){popTarget=t; const pop=$('#zonePop'); const isRoom=!!t.room; const cur=isRoom?state.zones[t.room]:state.rects.find(r=>r.uid===t.rect); const title=isRoom?('Кімната '+(ROOMS.find(r=>r.id===t.room).n||'')+(ROOMS.find(r=>r.id===t.room).corridor?' · Коридор':'')):'Зона на підлозі';
-  pop.innerHTML=`<h4>${title}</h4><label>Тип зони</label><div class="grid">${Object.keys(ZONES).map(k=>`<button data-z="${k}" aria-pressed="${cur&&cur.type===k}"><i style="background:${ZONES[k].c}"></i>${ZONES[k].n}</button>`).join('')}</div><label>Назва (необов'язково)</label><input class="field" id="zName" placeholder="Напр. Логістика" value="${esc(cur?cur.name:'')}"><div class="row"><button class="tbtn txt" id="zClear">Прибрати зону</button><button class="tbtn red" id="zDone">Готово</button></div>`;
+  pop.innerHTML=`<h4>${title}</h4><label>Тип зони</label><div class="grid">${Object.keys(ZONES).map(k=>`<button data-z="${k}" aria-pressed="${cur&&cur.type===k}"><i style="background:${ZONES[k].c}"></i>${ZONES[k].n}</button>`).join('')}</div>`
+    +`<label>Відділ / кабінет</label><div class="zdepts">${ZONE_DEPT_PRESETS.map((d,i)=>`<button class="zdept" data-di="${i}" aria-pressed="${cur&&cur.name===d.name}"><i style="background:${ZONES[d.type].c}"></i>${esc(d.name)}</button>`).join('')}</div>`
+    +`<label>Назва (необов'язково)</label><input class="field" id="zName" placeholder="Напр. Логістика" value="${esc(cur?cur.name:'')}"><div class="row"><button class="tbtn txt" id="zClear">Прибрати зону</button><button class="tbtn red" id="zDone">Готово</button></div>`;
   pop.classList.add('open'); let p; if(isRoom){const c=roomCenter(ROOMS.find(r=>r.id===t.room)); p=project(c.x,.2,c.z);} else {const rz=cur; p=project((rz.x0+rz.x1)/2,.2,(rz.z0+rz.z1)/2);}
   pop.style.left=Math.min(innerWidth-300,Math.max(10,p.x+20))+'px'; pop.style.top=Math.min(innerHeight-360,Math.max(90,p.y-40))+'px';
   const apply=(type,name)=>{pushUndo(); if(isRoom){if(type) state.zones[t.room]={type,name}; else delete state.zones[t.room];} else {const rz=state.rects.find(r=>r.uid===t.rect); if(type){rz.type=type;rz.name=name;} else state.rects=state.rects.filter(r=>r!==rz);} markDirty(); syncZones(); renderLabels(); hideWelcome();};
   pop.querySelectorAll('[data-z]').forEach(b=>b.onclick=()=>{pop.querySelectorAll('[data-z]').forEach(x=>x.setAttribute('aria-pressed',x===b)); apply(b.dataset.z,$('#zName').value.trim()); if(b.dataset.z==='custom') $('#zName').focus();});
-  $('#zName').oninput=e=>{const sel=pop.querySelector('[data-z][aria-pressed="true"]'); if(sel) apply(sel.dataset.z,e.target.value.trim());};
+  // department / office presets: set both zone type (colour) and its label at once
+  pop.querySelectorAll('.zdept').forEach(b=>b.onclick=()=>{const d=ZONE_DEPT_PRESETS[+b.dataset.di]; pop.querySelectorAll('.zdept').forEach(x=>x.setAttribute('aria-pressed',x===b)); pop.querySelectorAll('[data-z]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.z===d.type)); $('#zName').value=d.name; apply(d.type,d.name);});
+  $('#zName').oninput=e=>{const sel=pop.querySelector('[data-z][aria-pressed="true"]'); pop.querySelectorAll('.zdept').forEach(x=>x.setAttribute('aria-pressed',x.textContent.trim()===e.target.value.trim())); if(sel) apply(sel.dataset.z,e.target.value.trim());};
   $('#zClear').onclick=()=>{apply(null); closePops();}; $('#zDone').onclick=closePops;}
 function closePops(){$('#zonePop').classList.remove('open'); $('#settings').classList.remove('open'); $('#empcard').classList.remove('open'); $('#sugg').classList.remove('open');}
 
@@ -904,7 +966,9 @@ $('#empForm').onsubmit=ev=>{ev.preventDefault(); const name=$('#fName').value.tr
   if(tab!=='people') $('#tabPeople').click();};
 
 /* ---------- viewer ---------- */
-function focusEmployee(id,card){const e=state.employees.find(x=>x.id===id); const g=avObjs[id]; if(!e||!g){toast(`${e?e.name:'Співробітник'} ще не має місця`); return;} hlEmp=id; app.classList.add('hl'); const t=g.position.clone(); t.y=.9;
+function focusEmployee(id,card){const e=state.employees.find(x=>x.id===id); const seat=e&&seatOfEmp(e); if(!e||!seat){toast(`${e?e.name:'Співробітник'} ще не має місця`); return;} hlEmp=id; app.classList.add('hl'); dirty2d=true;
+  if(view==='2d'){fly2To(seat.x,seat.z,Math.max(view2.scale,34)); if(card) setTimeout(()=>showCard(e),620); return;}
+  const g=avObjs[id]; if(!g){if(card) showCard(e); return;} const t=g.position.clone(); t.y=.9;
   const dir=new THREE.Vector3(.35,.62,.7).normalize().multiplyScalar(mode==='viewer'?8.5:10); flyTo(t,dir,1100); if(mode==='viewer') showHighlight(g); if(card) setTimeout(()=>showCard(e),700);}
 let hlRing=null,hlArrow=null;
 function showHighlight(g){clearHighlight(); const p=g.position;
@@ -917,12 +981,12 @@ function showCard(e){const c=$('#empcard'); const f=e.seat&&state.furniture.find
   c.innerHTML=`<div class="top">${avHTML(e)}<div><div class="nm" style="font-size:16px">${esc(e.name)}</div><div class="dp">${esc(e.dept)}${e.position?' · '+esc(e.position):''}</div></div></div>`+
     `<div class="badges"><span class="pill" style="color:${st.c}">${st.icon} ${st.n}</span><span class="pill">${md.e} ${md.n}</span><span class="pill">📍 ${esc(where)}</span></div>`+
     `<dl>${e.email?`<dt>Email</dt><dd>${esc(e.email)}</dd>`:''}${e.phone?`<dt>Телефон</dt><dd>${esc(e.phone)}</dd>`:''}${e.ext?`<dt>Роб. номер</dt><dd>${esc(e.ext)}</dd>`:''}</dl>`+
-    `<div class="fsec-t">Де зараз</div><div class="optrow" id="cardStatus">${statusBtns(statusOf(e))}</div>`+
-    `<div class="fsec-t">Настрій</div><div class="moodrow" id="cardMood">${moodBtns(e.mood||'good')}</div>`+
+    `<div class="fsec-t"><svg class="fsec-i" viewBox="0 0 384 512"><path d="M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0zM192 128a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><span>Де зараз</span></div><div class="optrow" id="cardStatus">${statusBtns(statusOf(e))}</div>`+
+    `<div class="fsec-t"><svg class="fsec-i" viewBox="0 0 512 512"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM176 208a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zm128 0a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zM164.1 325.5C158 318.4 158 308.5 164.1 301.4C176.5 287.2 199.3 272 240 272l32 0c40.7 0 63.5 15.2 75.9 29.4c6.1 7 6.1 17 0 24.1c-6.1 7.1-16 7.1-22.1 0C317.5 316 302.7 304 272 304l-32 0c-30.7 0-45.5 12-53.8 21.5c-6.1 7.1-16 7.1-22.1 0z"/></svg><span>Настрій</span></div><div class="moodrow" id="cardMood">${moodBtns(e.mood||'good')}</div>`+
     `<div class="row"><button class="tbtn" id="cardEdit">Редагувати</button><button class="tbtn txt" id="cardClose">Закрити</button></div>`;
   c.classList.add('open'); c.style.left='16px'; c.style.top='auto'; c.style.bottom='24px';
   c.querySelectorAll('#cardStatus .optbtn').forEach(b=>b.onclick=()=>{pushUndo(); e.status=b.dataset.s; markDirty(); refreshAvatarLook(); renderPeople(); showCard(e);});
-  c.querySelectorAll('#cardMood .moodbtn').forEach(b=>b.onclick=()=>{pushUndo(); e.mood=b.dataset.m; markDirty(); renderPeople(); showCard(e);});
+  c.querySelectorAll('#cardMood .moodbtn').forEach(b=>b.onclick=()=>{pushUndo(); e.mood=b.dataset.m; markDirty(); updateAvatarMood(e.id); dirty2d=true; renderPeople(); showCard(e);});
   $('#cardEdit').onclick=()=>{c.classList.remove('open'); app.classList.remove('hl'); openModal(e);};
   $('#cardClose').onclick=()=>{c.classList.remove('open'); app.classList.remove('hl');};}
 // search
@@ -960,12 +1024,13 @@ function updateRoam(dt){const on=settings.move==='on';
       else { const step=Math.min(d,r.speed*dt); const nx=g.position.x+dx/d*step, nz=g.position.z+dz/d*step;
         if(r.phase==='out'&&pointBlocked(nx,nz)){ r.target=pickRoamTarget(home); }
         else { g.position.x=nx; g.position.z=nz; g.position.y=.02; g.rotation.y=Math.atan2(dx,dz); if(g.userData.poseKey!=='walk')loadPose(g,'walk'); } } } }}
-$('#shareBtn').onclick=async()=>{const url=location.href.split('?')[0]+'?mode=viewer'; try{await navigator.clipboard.writeText(url);}catch(e){} toast('Посилання для співробітників скопійовано');};
+$('#shareBtn').onclick=async()=>{const url=location.href.split('?')[0]+'?mode=viewer'; try{await navigator.clipboard.writeText(url);}catch(e){} toast('Посилання «тільки перегляд» скопійовано');};
 
 /* ---------- mode ---------- */
-function setMode(m){if(m===mode) return; mode=m; app.dataset.mode=m; grid.visible=m==='builder'; $$('#modeSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===m)); cancelDrag(); select(null); closePops(); clearHighlight(); hlEmp=null; app.classList.remove('hl');
+let lockedViewer=false; // true when opened via a share link (?mode=viewer): view-only, no Builder
+function setMode(m){if(lockedViewer&&m==='builder') return; if(m===mode) return; mode=m; app.dataset.mode=m; grid.visible=m==='builder'; $$('#modeSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===m)); cancelDrag(); select(null); closePops(); clearHighlight(); hlEmp=null; app.classList.remove('hl');
   const pill=$('#modePill'); pill.textContent=m==='viewer'?'Режим перегляду — знайдіть своє місце':'Режим будівника'; pill.classList.add('show'); setTimeout(()=>pill.classList.remove('show'),1600);
-  flyTo(CENTER,OVERVIEW.clone().multiplyScalar(m==='viewer'?.95:1),900);
+  if(view==='3d') flyTo(CENTER,OVERVIEW.clone().multiplyScalar(m==='viewer'?.95:1),900); else dirty2d=true;
   if(m==='viewer'){renderFilters(); if(state.employees.some(e=>e.seat)) showVIntro(); } else {hideVIntro(); filterDept=null;} applyFilter();}
 $$('#modeSeg button').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
 function showVIntro(){const vi=$('#vintro'); vi.style.display=''; $('#vsearchHolder').appendChild($('#search'));}
@@ -975,20 +1040,80 @@ function hideWelcome(){$('#welcome').style.display='none';}
 $('#startBtn').onclick=hideWelcome;
 
 /* ---------- settings ---------- */
-function applySettings(){app.dataset.layout=settings.layout; $$('#settings .opt').forEach(o=>o.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===settings[o.dataset.set])));
+function applySettings(){const viewChanged=view!==settings.view; view=settings.view; app.dataset.view=view; if(viewChanged){cancelDrag(); select(null); closePops();}
+  app.dataset.layout=settings.layout; $$('#settings .opt').forEach(o=>o.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===settings[o.dataset.set])));
   if(settings.layout==='sides') $('#dock2').appendChild($('#panePeople')); else $('#dock').appendChild($('#panePeople'));
   if(settings.layout==='sides'){$('#panePeople').classList.add('on'); if(tab==='people') $$('#tabs button[role="tab"]')[0].click();} else $('#panePeople').classList.toggle('on',tab==='people');
-  applyTheme(); syncAvatars(); updateZoneHint(); if(backdrop.classList.contains('open')) refreshPreview(); localStorage.setItem(LS_SET,JSON.stringify(settings));}
+  applyTheme(); syncAvatars(); updateZoneHint(); if(backdrop.classList.contains('open')) refreshPreview(); localStorage.setItem(LS_SET,JSON.stringify(settings));
+  if(view==='2d'){ if(viewChanged) fit2d(); dirty2d=true; } else { resize(); syncFurniture(); syncZones(); }}
 $$('#settings .opt').forEach(o=>o.querySelectorAll('button').forEach(b=>b.onclick=()=>{settings[o.dataset.set]=b.dataset.v; applySettings();}));
 $('#gear').onclick=e=>{e.stopPropagation(); const s=$('#settings'); const open=s.classList.contains('open'); closePops(); if(!open) s.classList.add('open');};
 $('#settingsClose').onclick=closePops;
 $('#resetBtn').onclick=()=>{pushUndo(); state={furniture:[],zones:{},rects:[],employees:[],depts:{}}; markDirty(); syncAll(); closePops(); toast('Офіс очищено');};
 document.addEventListener('pointerdown',e=>{if(!e.target.closest('.pop,#gear,#search,.rl')) closePops();});
 
+/* ---------- 2D renderer (Canvas 2D top-down, пункт 1) ---------- */
+const CAT_COLORS={work:'#D3BE9E',meeting:'#AEC6F2',kitchen:'#F4D48C',reception:'#EFB2AA',storage:'#C7BCA8',decor:'#B7D8AE'};
+function rrect(x,y,w,h,r){r=Math.max(0,Math.min(r,w/2,h/2)); ctx2.beginPath(); ctx2.moveTo(x+r,y); ctx2.arcTo(x+w,y,x+w,y+h,r); ctx2.arcTo(x+w,y+h,x,y+h,r); ctx2.arcTo(x,y+h,x,y,r); ctx2.arcTo(x,y,x+w,y,r); ctx2.closePath();}
+function draw2DFurn(f,color,S2,sel,ghost){const {w,d}=fp(f); const c=w2s(f.x,f.z); const pw=w*S2,pd=d*S2; const seated=!!FURN[f.type].seats;
+  ctx2.save(); ctx2.translate(c.x,c.y); rrect(-pw/2,-pd/2,pw,pd,Math.min(7,pw*.16,pd*.16)); ctx2.fillStyle=color; ctx2.fill(); ctx2.lineWidth=sel?3:1.4; ctx2.strokeStyle=sel?'#E2001A':'rgba(60,40,30,.35)'; ctx2.stroke();
+  if(seated&&!ghost){for(let i=0;i<FURN[f.type].seats.length;i++){const sw=seatWorld(f,i); const sp=w2s(sw.x,sw.z); ctx2.beginPath(); ctx2.arc(sp.x-c.x,sp.y-c.y,Math.max(3,S2*.14),0,Math.PI*2); ctx2.fillStyle=seatTaken(f.uid,i)?'rgba(226,0,26,.16)':'rgba(255,255,255,.6)'; ctx2.fill(); ctx2.lineWidth=1; ctx2.strokeStyle='rgba(60,40,30,.4)'; ctx2.stroke();}}
+  if(pw>44&&!ghost){ctx2.fillStyle='rgba(43,37,48,.72)'; ctx2.font=`700 ${Math.max(9,Math.min(12,pw*.15))}px Nunito`; ctx2.fillText(FURN[f.type].n,0,seated?-pd/2+9:0);}
+  ctx2.restore();}
+function drawEmp2D(e,wx,wz,S2,forceColor){if(!e) return; ctx2.save(); const p=w2s(wx,wz); if(filterDept&&e.dept!==filterDept&&mode==='viewer') ctx2.globalAlpha*=.28;
+  const rr=Math.max(7,S2*.26); ctx2.beginPath(); ctx2.arc(p.x,p.y,rr,0,Math.PI*2); ctx2.fillStyle=forceColor||e.color; ctx2.fill(); ctx2.lineWidth=2; ctx2.strokeStyle='#fff'; ctx2.stroke();
+  ctx2.fillStyle='#fff'; ctx2.font=`800 ${Math.round(rr*.82)}px Nunito`; ctx2.textAlign='center'; ctx2.textBaseline='middle'; ctx2.fillText(initials(e.name),p.x,p.y);
+  ctx2.font=`${Math.round(rr*1.3)}px "Segoe UI Emoji","Noto Color Emoji",sans-serif`; ctx2.fillText((MOODS[e.mood]||MOODS.good).e,p.x,p.y-rr*1.8);
+  if(hlEmp===e.id){ctx2.beginPath(); ctx2.arc(p.x,p.y,rr+6,0,Math.PI*2); ctx2.strokeStyle='#E2001A'; ctx2.lineWidth=3; ctx2.stroke();}
+  ctx2.restore();}
+function draw2D(){dirty2d=false; const th=THEMES[settings.theme]; const W=innerWidth,H=innerHeight,S2=view2.scale;
+  ctx2.setTransform(Math.min(2,devicePixelRatio||1),0,0,Math.min(2,devicePixelRatio||1),0,0);
+  ctx2.clearRect(0,0,W,H); ctx2.fillStyle=th.bg; ctx2.fillRect(0,0,W,H); ctx2.textAlign='center'; ctx2.textBaseline='middle';
+  for(const r of ROOMS){const base=new THREE.Color(r.corridor?th.cor:th.floor); const z=state.zones[r.id]; if(z) base.lerp(new THREE.Color(ZONES[z.type].c),th.zone);
+    ctx2.fillStyle='#'+base.getHexString(); const polys=r.polys||r.rects.map(([x0,z0,x1,z1])=>[[x0,z0],[x1,z0],[x1,z1],[x0,z1]]);
+    for(const poly of polys){ctx2.beginPath(); poly.forEach(([x,z],i)=>{const p=w2s(x,z); i?ctx2.lineTo(p.x,p.y):ctx2.moveTo(p.x,p.y);}); ctx2.closePath(); ctx2.fill();}}
+  for(const rz of state.rects){const a=w2s(rz.x0,rz.z0),b=w2s(rz.x1,rz.z1); ctx2.save(); ctx2.globalAlpha=.5; ctx2.fillStyle=ZONES[rz.type].c; ctx2.fillRect(Math.min(a.x,b.x),Math.min(a.y,b.y),Math.abs(b.x-a.x),Math.abs(b.y-a.y)); ctx2.restore();}
+  const dm=w2s(3*S,.6); ctx2.save(); ctx2.globalAlpha=.85; ctx2.fillStyle='#E2001A'; ctx2.fillRect(dm.x-.8*S2,dm.y-.4*S2,1.6*S2,.8*S2); ctx2.restore();
+  ctx2.strokeStyle=th.ui==='dark'?'#6b6675':'#b3a48f'; ctx2.lineWidth=Math.max(2,.16*S2); ctx2.lineCap='round';
+  for(const [x0,z0,x1,z1] of WALLS){const a=w2s(x0,z0),b=w2s(x1,z1); ctx2.beginPath(); ctx2.moveTo(a.x,a.y); ctx2.lineTo(b.x,b.y); ctx2.stroke();}
+  const rank=f=>FURN[f.type].underlay?0:(FURN[f.type].onDesk?2:1); const list=[...state.furniture].sort((a,b)=>rank(a)-rank(b));
+  for(const f of list){if(drag&&drag.kind==='furn'&&drag.fromExisting&&drag.f.uid===f.uid) continue; draw2DFurn(f,CAT_COLORS[FURN[f.type].cat]||'#c9bdaa',S2,selected===f.uid,false);}
+  if(drag&&drag.kind==='furn'&&drag.over){ctx2.save(); ctx2.globalAlpha=.72; draw2DFurn(drag.f,drag.ok?'#8fd6a3':'#f2a29a',S2,false,true); ctx2.restore();}
+  if(drag&&drag.kind==='rect'){const a=w2s(drag.x0,drag.z0),b=w2s(drag.x1,drag.z1),X=Math.min(a.x,b.x),Y=Math.min(a.y,b.y),Wd=Math.abs(b.x-a.x),Hd=Math.abs(b.y-a.y); ctx2.save(); ctx2.globalAlpha=.4; ctx2.fillStyle='#5B76E6'; ctx2.fillRect(X,Y,Wd,Hd); ctx2.restore(); ctx2.strokeStyle='#5B76E6'; ctx2.lineWidth=2; ctx2.strokeRect(X,Y,Wd,Hd);}
+  for(const e of state.employees){if(drag&&drag.kind==='emp'&&drag.id===e.id) continue; const s=seatOfEmp(e); if(!s) continue; drawEmp2D(e,s.x,s.z,S2);}
+  if(drag&&drag.kind==='emp'){const gx=drag.gx??view2.ox,gz=drag.gz??view2.oz; ctx2.save(); ctx2.globalAlpha=.8; drawEmp2D(state.employees.find(x=>x.id===drag.id),gx,gz,S2,drag.seat?'#4CAF6E':null); ctx2.restore();}}
+/* 2D hit-testing */
+function furnHit2(wx,wz){for(let i=state.furniture.length-1;i>=0;i--){const f=state.furniture[i]; if(FURN[f.type].underlay) continue; const {w,d}=fp(f); if(Math.abs(wx-f.x)<=w/2+.05&&Math.abs(wz-f.z)<=d/2+.05) return f.uid;} return null;}
+function avAt2(wx,wz){let best=null,bd=1e9; const rr=Math.max(.32,(Math.max(8,view2.scale*.26))/view2.scale); for(const e of state.employees){const s=seatOfEmp(e); if(!s) continue; const dd=Math.hypot(s.x-wx,s.z-wz); if(dd<rr&&dd<bd){bd=dd;best=e.id;}} return best;}
+/* 2D focus tween */
+let fly2=null;
+function fly2To(x,z,scale){fly2={t0:performance.now(),ms:700,ox0:view2.ox,oz0:view2.oz,s0:view2.scale,ox1:x,oz1:z,s1:scale};}
+function update2DFocus(now){if(!fly2) return; const k=Math.min(1,(now-fly2.t0)/fly2.ms),e=ease(k); view2.ox=fly2.ox0+(fly2.ox1-fly2.ox0)*e; view2.oz=fly2.oz0+(fly2.oz1-fly2.oz0)*e; view2.scale=fly2.s0+(fly2.s1-fly2.s0)*e; dirty2d=true; if(k>=1) fly2=null;}
+/* 2D pointer interaction on #c2 */
+let pan2=null;
+c2.addEventListener('pointerdown',e=>{if(e.button===2){pan2={x:e.clientX,y:e.clientY,ox:view2.ox,oz:view2.oz}; return;} if(e.button!==0) return; downPos={x:e.clientX,y:e.clientY};
+  if(drag&&drag.kind==='furn'&&drag.sticky){updateDrag2(e); drag.sticky=false; finishDrag(e); if(drag) drag.sticky=true; return;}
+  if(mode==='builder'&&tab==='zones'&&settings.zoning==='rect'&&!drag){const w=s2w(e.clientX,e.clientY); if(roomAt(w.x,w.z)){drag={kind:'rect',x0:snap(w.x),z0:snap(w.z),x1:snap(w.x),z1:snap(w.z)}; dirty2d=true; return;}}
+  if(!drag){pan2={x:e.clientX,y:e.clientY,ox:view2.ox,oz:view2.oz};}});
+c2.addEventListener('pointermove',e=>{if(drag){updateDrag(e); return;}
+  if(pan2){view2.ox=pan2.ox-(e.clientX-pan2.x)/view2.scale; view2.oz=pan2.oz-(e.clientY-pan2.y)/view2.scale; dirty2d=true; return;}
+  const w=s2w(e.clientX,e.clientY); const aid=avAt2(w.x,w.z); if(aid!==hoverEmp){hoverEmp=aid;} c2.style.cursor=aid?'pointer':(mode==='builder'&&tab==='furniture'&&furnHit2(w.x,w.z)?'pointer':'grab');});
+c2.addEventListener('pointerup',e=>{const moved=downPos&&Math.hypot(e.clientX-downPos.x,e.clientY-downPos.y)>5; pan2=null; downPos=null;
+  if(drag&&drag.kind==='rect'){finishDrag(e); return;}
+  if(drag&&(drag.kind==='furn'||drag.kind==='emp')){if(drag.sticky) return; /* finished by document pointerup */ return;}
+  if(moved) return; const w=s2w(e.clientX,e.clientY); closePops();
+  if(mode==='viewer'){const id=avAt2(w.x,w.z); if(id) focusEmployee(id,true); return;}
+  const aid=avAt2(w.x,w.z); if(aid){const emp=state.employees.find(x=>x.id===aid); if(emp){showCard(emp); return;}}
+  if(tab==='zones'&&settings.zoning==='click'){const rid=roomAt(w.x,w.z); if(rid) openZonePop({room:rid}); return;}
+  const fu=furnHit2(w.x,w.z); if(fu&&tab!=='zones') select(fu); else select(null);});
+c2.addEventListener('pointerleave',()=>{hoverEmp=null;});
+c2.addEventListener('contextmenu',e=>e.preventDefault());
+c2.addEventListener('wheel',e=>{e.preventDefault(); const w=s2w(e.clientX,e.clientY); view2.scale=Math.max(4,Math.min(120,view2.scale*Math.exp(-e.deltaY*.0012))); const w2=s2w(e.clientX,e.clientY); view2.ox+=w.x-w2.x; view2.oz+=w.z-w2.z; dirty2d=true;},{passive:false});
+
 /* ---------- init ---------- */
 const params=new URLSearchParams(location.search);
 applySettings(); syncAll();
-if(params.get('mode')==='viewer'){mode='viewer'; grid.visible=false; app.dataset.mode='viewer'; $$('#modeSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m==='viewer'));}
+if(params.get('mode')==='viewer'){mode='viewer'; lockedViewer=true; grid.visible=false; app.dataset.mode='viewer'; app.dataset.locked='viewer'; $$('#modeSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m==='viewer'));}
 initLoad().then(okServer=>{
   syncAll();
   setSyncStatus(okServer?'Синхронізовано з сервером':'Локальні дані (офлайн)', true);
@@ -996,14 +1121,19 @@ initLoad().then(okServer=>{
   else if(!state.furniture.length&&!Object.keys(state.zones).length) $('#welcome').style.display='';
 });
 
-function resize(){renderer.setSize(innerWidth,innerHeight); camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix();} addEventListener('resize',resize); resize();
+function resize(){renderer.setSize(innerWidth,innerHeight); camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); resize2();} addEventListener('resize',resize); fit2d(); resize();
 const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2; let lastT=0;
-function loop(now){requestAnimationFrame(loop); const dt=Math.min(.05,(now-lastT)/1000); lastT=now; for(const mx of mixers) mx.update(dt);
-  updateRoam(dt); for(const id in avObjs){const g=avObjs[id],gm=g.userData.gem; if(gm){gm.rotation.y+=dt*1.8; gm.position.set(0,g.userData.tagY+.55+Math.sin(now/500)*.05,0);}}
-  if(fly){const k=Math.min(1,(now-fly.t0)/fly.ms), e=ease(k); camera.position.lerpVectors(fly.p0,fly.p1,e); controls.target.lerpVectors(fly.t0v,fly.t1,e); if(k>=1) fly=null;}
-  panFromKeys(dt); controls.update();
-  if(hlRing){const s=1+Math.sin(now/300)*.08; hlRing.scale.set(s,1,s);} if(hlArrow){hlArrow.position.y=hlArrow.userData.y0??(hlArrow.userData.y0=hlArrow.position.y); hlArrow.position.y+=Math.abs(Math.sin(now/350))*.35;}
-  renderer.render(scene,camera); updateLabels();
+function loop(now){requestAnimationFrame(loop); const dt=Math.min(.05,(now-lastT)/1000); lastT=now;
+  if(view==='2d'){ update2DFocus(now); if(dirty2d||drag||fly2||pan2) draw2D(); }
+  else {
+    for(const mx of mixers) mx.update(dt);
+    updateRoam(dt); for(const id in avObjs){const g=avObjs[id],gm=g.userData.gem,ms=g.userData.moodSprite; const bob=Math.sin(now/500)*.05; if(gm){gm.rotation.y+=dt*1.8; gm.position.set(0,g.userData.tagY+.45+bob,0);} if(ms) ms.position.set(0,g.userData.tagY+.95+bob,0);}
+    if(fly){const k=Math.min(1,(now-fly.t0)/fly.ms), e=ease(k); camera.position.lerpVectors(fly.p0,fly.p1,e); controls.target.lerpVectors(fly.t0v,fly.t1,e); if(k>=1) fly=null;}
+    panFromKeys(dt); controls.update();
+    if(hlRing){const s=1+Math.sin(now/300)*.08; hlRing.scale.set(s,1,s);} if(hlArrow){hlArrow.position.y=hlArrow.userData.y0??(hlArrow.userData.y0=hlArrow.position.y); hlArrow.position.y+=Math.abs(Math.sin(now/350))*.35;}
+    renderer.render(scene,camera);
+  }
+  updateLabels();
   if(backdrop.classList.contains('open')&&pAv){pRenderer.render(pScene,pCam); const pv=$('#preview').getBoundingClientRect(), cr=$('#pc').getBoundingClientRect(); const v=new THREE.Vector3(0,pAv.userData.tagY+.1,0).project(pCam); const t=$('#ptag'); t.style.left=(cr.left-pv.left+(v.x+1)/2*cr.width)+'px'; t.style.top=(cr.top-pv.top+(1-v.y)/2*cr.height)+'px';}}
 requestAnimationFrame(loop);
 </script>

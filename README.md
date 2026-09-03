@@ -48,8 +48,12 @@ All paths work both directly (`:8011/api/...`) and via Caddy (which strips `/api
 
 ## Auth (MVP)
 
-One shared write token for the HR team (`EDIT_TOKEN` env var). Reads are public.
-Per-person HR login / audit trail is a v2 item.
+One shared **HR access code** for the whole HR team (`EDIT_TOKEN` env var). Set a
+short, memorable value (e.g. `alliance2025`) in `.env`. In the app, HR clicks
+**Зберегти планування** once, types this code in the prompt, and it is remembered
+in that browser for future saves. Reads are public: everyone else opens the
+read-only share link (**Поділитися посиланням** → `?mode=viewer`), which hard-locks
+the app to view-only. Per-person HR login / audit trail is a v2 item.
 
 ## Deploy
 
