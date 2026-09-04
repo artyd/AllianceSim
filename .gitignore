@@ -14,3 +14,6 @@ api/node_modules/
 *.log
 .DS_Store
 Thumbs.db
+
+# Claude Code — commit the shared kit, ignore local overrides
+.claude/settings.local.json
