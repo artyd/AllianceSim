@@ -707,7 +707,46 @@ const LS_TOKEN='alliancesim.edit_token', LS_PENDING='alliancesim.pending';
 const getToken=()=>localStorage.getItem(LS_TOKEN)||'';
 function setSyncStatus(txt,saved){const s=document.querySelector('#status'); if(!s) return; s.classList.toggle('saved',!!saved); const sp=s.querySelector('span'); if(sp) sp.textContent=txt;}
 async function apiLayoutGet(){const r=await fetch(API+'/layout',{headers:{'accept':'application/json'}}); if(!r.ok) throw new Error('http '+r.status); const j=await r.json(); return (j&&j.data)?j.data:null;}
-async function apiLayoutPut(data){const r=await fetch(API+'/layout',{method:'PUT',headers:{'content-type':'application/json','X-Edit-Token':getToken()},body:JSON.stringify({data})}); if(r.status===401){const e=new Error('unauthorized');e.code=401;throw e;} if(!r.ok) throw new Error('http '+r.status); return true;}
+async function apiLayoutPut(data){const {employees,...layout}=data; const r=await fetch(API+'/layout',{method:'PUT',headers:{'content-type':'application/json','X-Edit-Token':getToken()},body:JSON.stringify({data:layout})}); if(r.status===401){const e=new Error('unauthorized');e.code=401;throw e;} if(!r.ok) throw new Error('http '+r.status); return true;}
+/* ---------- employees: DB-backed source of truth, with offline (localStorage) fallback ---------- */
+async function apiEmpList(){const r=await fetch(API+'/employees',{headers:{'accept':'application/json'}}); if(!r.ok) throw new Error('http '+r.status); return r.json();}
+async function apiEmpWrite(method,path,body){const r=await fetch(API+path,{method,headers:{'content-type':'application/json','X-Edit-Token':getToken()},body:body?JSON.stringify(body):undefined}); if(r.status===401||r.status===503){const e=new Error('unauthorized');e.code=401;throw e;} if(!r.ok) throw new Error('http '+r.status); return r.status===204?null:r.json().catch(()=>null);}
+// Optimistic writes with a retry queue (mirrors the layout LS_PENDING model, so a
+// failed/offline write is NOT silently reverted by the 12 s poll). pendingEmp keys an
+// employee id → intended state; the poll overlays it on server truth, and flushEmp
+// keeps retrying until the server confirms. Employee writes are builder-only.
+const pendingEmp=new Map(); // id -> {op:'upsert', emp} | {op:'delete'}
+function promptTokenOnce(){const w=document.querySelector('#asTokenModal'); if(!getToken()&&(!w||w.style.display!=='flex')) openTokenModal();}
+async function flushEmp(){
+  if(mode!=='builder'||!getToken()) return;                 // nothing to sync without HR rights
+  for(const [id,w] of [...pendingEmp]){
+    try{
+      if(w.op==='delete') await apiEmpWrite('DELETE','/employees/'+encodeURIComponent(id));
+      else await apiEmpWrite('POST','/employees',w.emp);     // POST upserts by id
+      pendingEmp.delete(id);
+    }catch(e){ if(e.code===401){promptTokenOnce(); return;} return; /* keep for next retry */ }
+  }
+}
+// Builder-only guards: viewers never write (keeps the read-only link truly read-only
+// and never pops the HR token modal on a public link).
+function empUpsert(e){ if(mode!=='builder') return; pendingEmp.set(e.id,{op:'upsert',emp:JSON.parse(JSON.stringify(e))}); flushEmp(); }
+function empDelete(id){ if(mode!=='builder') return; pendingEmp.set(id,{op:'delete'}); flushEmp(); }
+let empPollT=null;
+async function refreshEmployees(){
+  const busy=()=>{const bd=document.querySelector('#backdrop'); return (bd&&bd.classList.contains('open'))||(typeof drag!=='undefined'&&drag);};
+  if(busy()) return;                                          // mid-edit / mid-drag
+  await flushEmp();                                           // retry any queued writes first
+  let emps; try{emps=await apiEmpList();}catch(e){return;}
+  if(busy()) return;                                          // re-check after the round-trip
+  // Overlay un-synced local changes so the poll never reverts them.
+  if(pendingEmp.size){const byId=new Map(emps.map(e=>[e.id,e])); for(const [id,w] of pendingEmp){ if(w.op==='delete') byId.delete(id); else byId.set(id,w.emp);} emps=[...byId.values()];}
+  if(JSON.stringify(emps)===JSON.stringify(state.employees)) return;
+  state.employees=emps;
+  try{localStorage.setItem(LS_LAYOUT,JSON.stringify(state));}catch(e){}
+  syncAvatars(); renderPeople(); renderLabels(); dirty2d=true;
+  if(mode==='viewer') renderFilters();
+}
+function startEmpPolling(){ if(!empPollT) empPollT=setInterval(refreshEmployees,12000); }
 async function saveLayout(){
   try{localStorage.setItem(LS_LAYOUT,JSON.stringify(state));}catch(e){}
   if(!getToken()){openTokenModal(); return;}
@@ -729,6 +768,9 @@ async function initLoad(){
   const base={furniture:[],zones:{},rects:[],employees:[],depts:{}};
   if(okServer){
     if(data) state=Object.assign(base,data);
+    // Employees are their own source of truth now (bot-owned); the layout blob no
+    // longer carries them. Pull the live list; keep the LS copy for offline reloads.
+    try{const emps=await apiEmpList(); state.employees=Array.isArray(emps)?emps:[];}catch(e){}
     try{localStorage.setItem(LS_LAYOUT,JSON.stringify(state));}catch(e){}
     if(localStorage.getItem(LS_PENDING)&&getToken()){try{await apiLayoutPut(state); localStorage.removeItem(LS_PENDING);}catch(e){}}
   }else{
@@ -1051,7 +1093,7 @@ function finishDrag(e){if(!drag) return; const d=drag;
   if(d.kind==='furn'){if(d.over&&d.ok){pushUndo(); if(d.fromExisting){const o=state.furniture.find(x=>x.uid===d.f.uid); Object.assign(o,{x:d.f.x,z:d.f.z,rot:d.f.rot});} else state.furniture.push(d.f); markDirty(); cancelDrag(); syncFurniture(); syncAvatars(); if(!d.fromExisting) hideWelcome();}
     else if(d.over||d.fromExisting){if(!d.over&&d.fromExisting){cancelDrag();return;} toast('Тут не поміститься — оберіть вільне місце в кімнаті'); /* keep dragging as sticky */ drag.sticky=true; activeCanvas().style.cursor='grabbing';}
     else {drag.sticky=true;} return;}
-  if(d.kind==='emp'){if(d.seat){pushUndo(); const emp=state.employees.find(x=>x.id===d.id); emp.seat=d.seat; markDirty(); cancelDrag(); syncAvatars(); renderPeople(); renderLabels(); toast(`${emp.name} — тепер за столом у «${roomName(roomAt(seatWorld(state.furniture.find(f=>f.uid===d.seat.f),d.seat.i).x,seatWorld(state.furniture.find(f=>f.uid===d.seat.f),d.seat.i).z))}»`);}
+  if(d.kind==='emp'){if(d.seat){pushUndo(); const emp=state.employees.find(x=>x.id===d.id); emp.seat=d.seat; empUpsert(emp); markDirty(); cancelDrag(); syncAvatars(); renderPeople(); renderLabels(); toast(`${emp.name} — тепер за столом у «${roomName(roomAt(seatWorld(state.furniture.find(f=>f.uid===d.seat.f),d.seat.i).x,seatWorld(state.furniture.find(f=>f.uid===d.seat.f),d.seat.i).z))}»`);}
     else cancelDrag(); return;}
   if(d.kind==='rect'){const x0=Math.min(d.x0,d.x1),x1=Math.max(d.x0,d.x1),z0=Math.min(d.z0,d.z1),z1=Math.max(d.z0,d.z1); if(d.mesh) scene.remove(d.mesh); drag=null; controls.enabled=true; dirty2d=true;
     if(x1-x0>=.5&&z1-z0>=.5){pushUndo(); const rz={uid:uid(),x0,z0,x1,z1,type:'open',name:''}; state.rects.push(rz); markDirty(); syncZones(); renderLabels(); openZonePop({rect:rz.uid});}}}
@@ -1080,7 +1122,7 @@ window.addEventListener('keydown',e=>{if(e.target instanceof Element&&e.target.m
 function select(id){selected=id; dirty2d=true; const ib=$('#itemBar'); ib.classList.toggle('open',!!id); for(const k in furnObjs) furnObjs[k].traverse(o=>{if(o.isMesh&&o.material.emissive) o.material.emissive.set(0);}); if(id&&furnObjs[id]) furnObjs[id].traverse(o=>{if(o.isMesh&&o.material.emissive){o.material=o.material.clone(); o.material.emissive.set('#E2001A'); o.material.emissiveIntensity=.12;}});}
 function hideItemBar(){$('#itemBar').classList.remove('open');}
 function rotateSel(){const f=state.furniture.find(x=>x.uid===selected); if(!f) return; pushUndo(); f.rot=(f.rot+1)%4; if(!fits(f)){f.rot=(f.rot+3)%4; undoStack.pop(); toast('Так не поміститься'); return;} markDirty(); syncFurniture(); syncAvatars();}
-function delSel(){const f=state.furniture.find(x=>x.uid===selected); if(!f) return; pushUndo(); state.furniture=state.furniture.filter(x=>x!==f); state.employees.forEach(e=>{if(e.seat&&e.seat.f===f.uid) e.seat=null;}); select(null); markDirty(); syncAll();}
+function delSel(){const f=state.furniture.find(x=>x.uid===selected); if(!f) return; pushUndo(); state.furniture=state.furniture.filter(x=>x!==f); state.employees.forEach(e=>{if(e.seat&&e.seat.f===f.uid){e.seat=null; empUpsert(e);}}); select(null); markDirty(); syncAll();}
 $('#rotBtn').onclick=rotateSel; $('#delBtn').onclick=delSel;
 $('#moveBtn').onclick=()=>{const f=state.furniture.find(x=>x.uid===selected); if(!f) return; select(null); if(furnObjs[f.uid]) furnObjs[f.uid].visible=false; startFurnDrag(f.type,{...f}); drag.sticky=true;};
 
@@ -1089,8 +1131,12 @@ function bindDrag(el,onStart){let sp=null; el.addEventListener('pointerdown',e=>
   const up=ev=>{document.removeEventListener('pointermove',mv); document.removeEventListener('pointerup',up); if(!sp.started) onStart('click'); sp=null;}; document.addEventListener('pointermove',mv); document.addEventListener('pointerup',up);});}
 
 /* ---------- undo / save ---------- */
-function pushUndo(){undoStack.push(JSON.stringify(state)); if(undoStack.length>60) undoStack.shift(); $('#undoBtn').disabled=false;}
-function undo(){if(!undoStack.length) return; cancelDrag(); select(null); state=JSON.parse(undoStack.pop()); $('#undoBtn').disabled=!undoStack.length; markDirty(); syncAll();}
+// Undo covers the HR-owned layout only; employees are DB-owned and restored live, so
+// they are excluded from the snapshot (also avoids serializing base64 photos 60×).
+function pushUndo(){const {employees,...layout}=state; undoStack.push(JSON.stringify(layout)); if(undoStack.length>60) undoStack.shift(); $('#undoBtn').disabled=false;}
+// Employees are DB-owned; undo only rewinds the layout (furniture/zones/rects/depts),
+// keeping the current people list so it stays in sync with the server.
+function undo(){if(!undoStack.length) return; cancelDrag(); select(null); const emps=state.employees; state=JSON.parse(undoStack.pop()); state.employees=emps; $('#undoBtn').disabled=!undoStack.length; markDirty(); syncAll();}
 function markDirty(){dirty=true; dirty2d=true; const s=$('#status'); s.classList.remove('saved'); s.querySelector('span').textContent='Є незбережені зміни';}
 $('#saveBtn').onclick=()=>{ saveLayout(); };
 let toastT; function toast(msg){const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2400);}
@@ -1158,8 +1204,8 @@ function renderPeople(){const holder=$('#people'); holder.innerHTML=''; $('#empC
       +`<div class="empacts"><button class="edit" title="Редагувати">${ICO_EDIT}</button>${e.seat?`<button class="unbind" title="Відв'язати від місця">${ICO_UNBIND}</button>`:''}<button class="del" title="Видалити працівника">${ICO_TRASH}</button></div>`;
     const acts=el.querySelector('.empacts'); acts.addEventListener('pointerdown',ev=>ev.stopPropagation());
     el.querySelector('.edit').onclick=ev=>{ev.stopPropagation(); openModal(e);};
-    const ub=el.querySelector('.unbind'); if(ub) ub.onclick=ev=>{ev.stopPropagation(); pushUndo(); e.seat=null; markDirty(); syncAvatars(); renderPeople(); renderLabels(); toast(`${e.name} — відв'язано, тепер вільно ходить`);};
-    el.querySelector('.del').onclick=ev=>{ev.stopPropagation(); pushUndo(); state.employees=state.employees.filter(x=>x!==e); delete EP[e.id]; markDirty(); syncAvatars(); renderPeople(); renderLabels(); toast(`${e.name} — видалено`);};
+    const ub=el.querySelector('.unbind'); if(ub) ub.onclick=ev=>{ev.stopPropagation(); pushUndo(); e.seat=null; empUpsert(e); markDirty(); syncAvatars(); renderPeople(); renderLabels(); toast(`${e.name} — відв'язано, тепер вільно ходить`);};
+    el.querySelector('.del').onclick=ev=>{ev.stopPropagation(); pushUndo(); state.employees=state.employees.filter(x=>x!==e); delete EP[e.id]; empDelete(e.id); markDirty(); syncAvatars(); renderPeople(); renderLabels(); toast(`${e.name} — видалено`);};
     bindDrag(el,how=>{if(how==='drag'){startEmpDrag(e.id);} else focusEmployee(e.id,false);});
     holder.appendChild(el);}
   const add=document.createElement('button'); add.className='addemp'; add.innerHTML='<b>+</b>Додати співробітника'; add.onclick=()=>openModal(); holder.appendChild(add);
@@ -1189,8 +1235,8 @@ $('#fName').oninput=renderSwatches; $('#fDept').oninput=renderSwatches;
 $('#fPhoto').onchange=e=>{const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{fPhoto=rd.result; $('#fPhotoName').textContent=f.name; renderSwatches();}; rd.readAsDataURL(f);};
 $('#empForm').onsubmit=ev=>{ev.preventDefault(); const name=$('#fName').value.trim(), dept=$('#fDept').value.trim(); if(!name||!dept) return; pushUndo(); state.depts[dept]=fColor; const color=fColor;
   const data={name,dept,position:$('#fPos').value.trim(),email:$('#fMail').value.trim(),phone:$('#fPhone').value.trim(),ext:$('#fExt').value.trim(),color,photo:fPhoto,status:fStatus,mood:fMood};
-  if(editingId){const emp=state.employees.find(x=>x.id===editingId); Object.assign(emp,data); editingId=null; markDirty(); closeModal(); syncAvatars(); renderPeople(); renderLabels(); toast(`${name} — оновлено`); return;}
-  state.employees.push(Object.assign({id:uid(),seat:null},data)); markDirty(); closeModal(); syncAvatars(); renderPeople(); toast(`${name} — додано й ходить офісом. За бажанням перетягніть на місце`); hideWelcome();
+  if(editingId){const emp=state.employees.find(x=>x.id===editingId); Object.assign(emp,data); empUpsert(emp); editingId=null; markDirty(); closeModal(); syncAvatars(); renderPeople(); renderLabels(); toast(`${name} — оновлено`); return;}
+  const ne=Object.assign({id:uid(),seat:null},data); state.employees.push(ne); empUpsert(ne); markDirty(); closeModal(); syncAvatars(); renderPeople(); toast(`${name} — додано й ходить офісом. За бажанням перетягніть на місце`); hideWelcome();
   if(tab!=='people') $('#tabPeople').click();};
 
 /* ---------- viewer ---------- */
@@ -1207,15 +1253,21 @@ function clearHighlight(){while(fxRoot.children.length) fxRoot.remove(fxRoot.chi
 function showCard(e){const c=$('#empcard'); const f=e.seat&&state.furniture.find(x=>x.uid===e.seat.f); let where; if(f){const sw=seatWorld(f,e.seat.i); where=roomName(roomAt(sw.x,sw.z))||'В офісі';} else where=statusOf(e)==='office'?'Ходить офісом':'Не в офісі';
   const st=STATUS[statusOf(e)], md=MOODS[e.mood]||MOODS.good;
   c.innerHTML=`<div class="top">${avHTML(e)}<div><div class="nm" style="font-size:16px">${esc(e.name)}</div><div class="dp">${esc(e.dept)}${e.position?' · '+esc(e.position):''}</div></div></div>`+
-    `<div class="badges"><span class="pill" style="color:${st.c}">${st.icon} ${st.n}</span><span class="pill">${md.e} ${md.n}</span><span class="pill">📍 ${esc(where)}</span></div>`+
+    `<div class="badges"><span class="pill" style="color:${st.c}">${st.icon} ${st.n}</span><span class="pill">${md.e} ${md.n}</span><span class="pill">📍 ${esc(where)}</span>${e.tg_linked?'<span class="pill" style="color:#229ED9" title="Прив\'язано через Telegram">✈️ TG</span>':''}</div>`+
     `<dl>${e.email?`<dt>Email</dt><dd>${esc(e.email)}</dd>`:''}${e.phone?`<dt>Телефон</dt><dd>${esc(e.phone)}</dd>`:''}${e.ext?`<dt>Роб. номер</dt><dd>${esc(e.ext)}</dd>`:''}</dl>`+
-    `<div class="fsec-t"><svg class="fsec-i" viewBox="0 0 384 512"><path d="M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0zM192 128a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><span>Де зараз</span></div><div class="optrow" id="cardStatus">${statusBtns(statusOf(e))}</div>`+
-    `<div class="fsec-t"><svg class="fsec-i" viewBox="0 0 512 512"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM176 208a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zm128 0a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zM164.1 325.5C158 318.4 158 308.5 164.1 301.4C176.5 287.2 199.3 272 240 272l32 0c40.7 0 63.5 15.2 75.9 29.4c6.1 7 6.1 17 0 24.1c-6.1 7.1-16 7.1-22.1 0C317.5 316 302.7 304 272 304l-32 0c-30.7 0-45.5 12-53.8 21.5c-6.1 7.1-16 7.1-22.1 0z"/></svg><span>Настрій</span></div><div class="moodrow" id="cardMood">${moodBtns(e.mood||'good')}</div>`+
-    `<div class="row"><button class="tbtn" id="cardEdit">Редагувати</button><button class="tbtn txt" id="cardClose">Закрити</button></div>`;
+    // Status/mood/edit controls write to the DB, so they are builder-only. In viewer
+    // mode (public read-only link) the card is informational — no writes, no token prompt.
+    (mode==='builder'?
+      `<div class="fsec-t"><svg class="fsec-i" viewBox="0 0 384 512"><path d="M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0zM192 128a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><span>Де зараз</span></div><div class="optrow" id="cardStatus">${statusBtns(statusOf(e))}</div>`+
+      `<div class="fsec-t"><svg class="fsec-i" viewBox="0 0 512 512"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM176 208a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zm128 0a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zM164.1 325.5C158 318.4 158 308.5 164.1 301.4C176.5 287.2 199.3 272 240 272l32 0c40.7 0 63.5 15.2 75.9 29.4c6.1 7 6.1 17 0 24.1c-6.1 7.1-16 7.1-22.1 0C317.5 316 302.7 304 272 304l-32 0c-30.7 0-45.5 12-53.8 21.5c-6.1 7.1-16 7.1-22.1 0z"/></svg><span>Настрій</span></div><div class="moodrow" id="cardMood">${moodBtns(e.mood||'good')}</div>`+
+      `<div class="row"><button class="tbtn" id="cardEdit">Редагувати</button><button class="tbtn txt" id="cardClose">Закрити</button></div>`
+     :`<div class="row"><button class="tbtn txt" id="cardClose">Закрити</button></div>`);
   c.classList.add('open'); c.style.left='16px'; c.style.top='auto'; c.style.bottom='24px';
-  c.querySelectorAll('#cardStatus .optbtn').forEach(b=>b.onclick=()=>{pushUndo(); e.status=b.dataset.s; markDirty(); syncAvatars(); refreshAvatarLook(); renderPeople(); showCard(e);});
-  c.querySelectorAll('#cardMood .moodbtn').forEach(b=>b.onclick=()=>{pushUndo(); e.mood=b.dataset.m; markDirty(); updateAvatarMood(e.id); dirty2d=true; renderPeople(); showCard(e);});
-  $('#cardEdit').onclick=()=>{c.classList.remove('open'); app.classList.remove('hl'); openModal(e);};
+  if(mode==='builder'){
+    c.querySelectorAll('#cardStatus .optbtn').forEach(b=>b.onclick=()=>{pushUndo(); e.status=b.dataset.s; empUpsert(e); markDirty(); syncAvatars(); refreshAvatarLook(); renderPeople(); showCard(e);});
+    c.querySelectorAll('#cardMood .moodbtn').forEach(b=>b.onclick=()=>{pushUndo(); e.mood=b.dataset.m; empUpsert(e); markDirty(); updateAvatarMood(e.id); dirty2d=true; renderPeople(); showCard(e);});
+    $('#cardEdit').onclick=()=>{c.classList.remove('open'); app.classList.remove('hl'); openModal(e);};
+  }
   $('#cardClose').onclick=()=>{c.classList.remove('open'); app.classList.remove('hl');};}
 // search
 const q=$('#q'), sugg=$('#sugg'); let sIdx=0;
@@ -1313,7 +1365,9 @@ function applySettings(){const viewChanged=view!==settings.view; view=settings.v
 $$('#settings .opt').forEach(o=>o.querySelectorAll('button').forEach(b=>b.onclick=()=>{settings[o.dataset.set]=b.dataset.v; applySettings();}));
 $('#gear').onclick=e=>{e.stopPropagation(); const s=$('#settings'); const open=s.classList.contains('open'); closePops(); if(!open) s.classList.add('open');};
 $('#settingsClose').onclick=closePops;
-$('#resetBtn').onclick=()=>{pushUndo(); state={furniture:[],zones:{},rects:[],employees:[],depts:{}}; markDirty(); syncAll(); closePops(); toast('Офіс очищено');};
+// "Clear office" wipes the HR-owned layout only; people are managed via the bot/DB
+// and are intentionally left intact (delete individuals from the People list instead).
+$('#resetBtn').onclick=()=>{pushUndo(); const emps=state.employees; emps.forEach(e=>{if(e.seat){e.seat=null; empUpsert(e);}}); state={furniture:[],zones:{},rects:[],employees:emps,depts:{}}; markDirty(); syncAll(); closePops(); toast('Планування очищено');};
 document.addEventListener('pointerdown',e=>{if(!e.target.closest('.pop,#gear,#search,.rl')) closePops();});
 
 /* ---------- 2D renderer (Canvas 2D top-down, пункт 1) ---------- */
@@ -1387,6 +1441,7 @@ if(params.get('mode')==='viewer'){mode='viewer'; lockedViewer=true; grid.visible
 initLoad().then(okServer=>{
   syncAll();
   setSyncStatus(okServer?'Синхронізовано з сервером':'Локальні дані (офлайн)', true);
+  if(okServer) startEmpPolling(); // reflect bot-created people & daily check-ins live
   if(mode==='viewer'){renderFilters(); if(state.employees.some(e=>e.seat)) showVIntro();}
   else if(!state.furniture.length&&!Object.keys(state.zones).length) $('#welcome').style.display='';
 });
@@ -1410,6 +1465,8 @@ function loop(now){requestAnimationFrame(loop); const dt=Math.min(.05,(now-lastT
   const phone=$('#phone'), body=$('#pbody');
   const scr=id=>body.querySelector(`[data-scr="${id}"]`);
   const emp=id=>state.employees.find(e=>e.id===id);
+  // Fire-and-forget: tell the backend to notify this colleague on Telegram (if linked).
+  const notify=(id,kind,text)=>{try{fetch(API+'/notifications',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({employeeId:id,kind,text:text||null})}).catch(()=>{});}catch(e){}};
   let stack=[];
   const IC={
     phone:'<svg viewBox="0 0 24 24"><path d="M6.5 3h3l1.6 4-2 1.4a12 12 0 0 0 5 5l1.4-2 4 1.6v3a2 2 0 0 1-2.1 2A16 16 0 0 1 4 5.1 2 2 0 0 1 6.5 3Z"/></svg>',
@@ -1472,7 +1529,7 @@ function loop(now){requestAnimationFrame(loop); const dt=Math.min(.05,(now-lastT
         <div class="pfields">${e.email?fld('Email',e.email):''}${e.phone?fld('Телефон',e.phone):''}${e.ext?fld('Робочий №',e.ext):''}${fld('Відділ',e.dept)}</div></div>`;
       s.querySelector('[data-call]').onclick=()=>go('calling',x=>R.calling(x,id));
       s.querySelector('[data-msg]').onclick=()=>{markRead(id); go('conv',x=>R.conv(x,id));};
-      s.querySelector('[data-loc]').onclick=()=>{close(); focusEmployee(id,true);}; wire(s);}
+      s.querySelector('[data-loc]').onclick=()=>{notify(id,'mark'); close(); focusEmployee(id,true);}; wire(s);}
 ,
     chatlist(s){const es=state.employees;
       s.innerHTML=head('Чат')+`<div class="pscroll" data-list></div>`;
@@ -1487,7 +1544,7 @@ function loop(now){requestAnimationFrame(loop); const dt=Math.min(.05,(now-lastT
       const c=s.querySelector('[data-conv]'), inp=s.querySelector('[data-in]');
       const draw=()=>{c.innerHTML=msgs.map(m=>`<div class="pbub ${m.me?'me':'them'}">${esc(m.text)}</div>`).join(''); c.scrollTop=c.scrollHeight;};
       draw();
-      const send=()=>{const v=inp.value.trim(); if(!v)return; msgs.push({me:true,text:v}); inp.value=''; draw(); save(LS_C,chats);
+      const send=()=>{const v=inp.value.trim(); if(!v)return; msgs.push({me:true,text:v}); inp.value=''; draw(); save(LS_C,chats); notify(id,'message',v);
         setTimeout(()=>{msgs.push({me:false,text:REPLIES[Math.floor(Math.random()*REPLIES.length)]}); draw(); save(LS_C,chats);},900+Math.random()*700);};
       s.querySelector('[data-send]').onclick=send; inp.onkeydown=ev=>{if(ev.key==='Enter')send();};
       s.querySelector('[data-call]').onclick=()=>go('calling',x=>R.calling(x,id)); wire(s);}
@@ -1500,7 +1557,7 @@ function loop(now){requestAnimationFrame(loop); const dt=Math.min(.05,(now-lastT
       box.innerHTML=es.map((e,i)=>rowHTML(e,'Вихідний · '+times[i%times.length])).join('');
       box.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>go('calling',x=>R.calling(x,el.dataset.id))); wire(s);}
 ,
-    calling(s,id){const e=emp(id);
+    calling(s,id){const e=emp(id); notify(id,'call');
       s.innerHTML=`<div class="pcall"><div style="height:6px"></div><div class="who">${avHTML(e,'av big')}<div class="nm">${esc(e.name.split(' ')[0])}</div><div class="state" data-state>виклик…</div></div><div><button class="end" data-end>${IC.phone}</button></div></div>`;
       let secs=0,t2; const st=s.querySelector('[data-state]');
       const t1=setTimeout(()=>{st.textContent='00:00'; t2=setInterval(()=>{secs++; st.textContent=fmt(secs);},1000);},2200);

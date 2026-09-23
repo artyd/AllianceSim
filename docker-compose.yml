@@ -28,5 +28,21 @@ services:
     ports:
       - "127.0.0.1:${PORT}:${PORT}"
 
+  bot:
+    build: ./bot
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      api:
+        condition: service_started
+    environment:
+      API_URL: http://api:${PORT}/api
+      EDIT_TOKEN: ${EDIT_TOKEN}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      CHECKIN_HOUR: ${CHECKIN_HOUR:-9}
+      CHECKIN_TZ: ${CHECKIN_TZ:-Europe/Kyiv}
+    # Long polling — no inbound ports, only outbound to Telegram + the api service.
+
 volumes:
   pgdata:

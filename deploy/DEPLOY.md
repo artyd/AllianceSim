@@ -132,6 +132,39 @@ Open **https://alliancesim.alliancegroup95.com**:
 
 ---
 
+## Telegram bot (self-service characters, daily check-in, phone notifications)
+
+The `bot` service (in `docker-compose.yml`) lets staff create their office character
+from Telegram, sends a weekday-morning check-in (status + mood), and relays phone
+notifications from the site. It talks to the `api` over the internal network and uses
+**long polling** (no inbound ports, no Caddy route).
+
+**One-time setup:**
+
+```bash
+# 1. Create the bot: open @BotFather in Telegram → /newbot → copy the token.
+# 2. Put it in .env (plus optional check-in time):
+cd /opt/alliancesim
+nano .env
+#   TELEGRAM_BOT_TOKEN=123456:ABC...     <- required
+#   CHECKIN_HOUR=9                        <- optional (default 9)
+#   CHECKIN_TZ=Europe/Kyiv               <- optional
+
+# 3. Build & start (rebuilds api too — the employees schema expanded):
+sudo docker compose up -d --build
+
+# 4. Verify:
+sudo docker compose logs bot --tail=30      # -> "@yourbot started (polling)"
+```
+
+Then open the bot in Telegram and send `/start`. The new character appears on the
+site within ~12 s (the page polls `/api/employees`). People are now stored in the
+`employees` table (source of truth); HR still edits furniture/zones in the browser.
+
+> **Data note:** on first boot after this update the api migrates any employees that
+> were embedded in the layout blob into the `employees` table and strips them from the
+> blob. This is automatic and idempotent.
+
 ## Backups
 
 ```bash
