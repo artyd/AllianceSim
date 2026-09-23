@@ -1,7 +1,7 @@
 # 003 — Telegram bot: self-service characters, daily check-in, phone notifications
 
-- **Status:** planned
-- **Commit(s):** <hash once merged>
+- **Status:** in-progress (code complete + browser-verified offline; needs server integration test with a real bot token)
+- **Commit(s):** 89cb35e
 - **Date:** 2026-09-23
 
 ## Intent
