@@ -13,20 +13,24 @@ export function verifyInitData(initData, botToken, maxAgeSec = 0) {
   try { params = new URLSearchParams(initData); } catch (e) { return null; }
   const hash = params.get('hash');
   if (!hash) return null;
-  params.delete('hash');
-  params.delete('signature'); // Telegram's optional Ed25519 field is not part of the HMAC check
-
-  const dataCheckString = [...params.entries()]
-    .map(([k, v]) => `${k}=${v}`)
-    .sort()
-    .join('\n');
 
   const secret = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest();
-  const computed = crypto.createHmac('sha256', secret).update(dataCheckString).digest('hex');
-
-  const a = Buffer.from(computed, 'hex');
-  const b = Buffer.from(hash, 'hex');
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+  // Current Telegram INCLUDES the `signature` field in the HMAC data-check-string
+  // (verified against live data); older guidance said to exclude it. Accept a match
+  // for EITHER variant so we're robust to Telegram changing this again.
+  const hashOf = (excludeSignature) => {
+    const p = new URLSearchParams(initData);
+    p.delete('hash');
+    if (excludeSignature) p.delete('signature');
+    const dcs = [...p.entries()].map(([k, v]) => `${k}=${v}`).sort().join('\n');
+    return crypto.createHmac('sha256', secret).update(dcs).digest('hex');
+  };
+  const recv = Buffer.from(hash, 'hex');
+  const matches = [hashOf(false), hashOf(true)].some((h) => {
+    const a = Buffer.from(h, 'hex');
+    return a.length === recv.length && crypto.timingSafeEqual(a, recv);
+  });
+  if (!matches) return null;
 
   const authDate = Number(params.get('auth_date') || 0);
   if (maxAgeSec && authDate && Date.now() / 1000 - authDate > maxAgeSec) return null;
@@ -36,25 +40,4 @@ export function verifyInitData(initData, botToken, maxAgeSec = 0) {
   const tgId = user && user.id != null ? String(user.id) : null;
   if (!tgId) return null;
   return { tgId, user };
-}
-
-// TEMPORARY diagnostic (no secrets leaked): reveals why the HMAC check fails —
-// field keys present, token length, and whether the recomputed hash matches with
-// signature EXCLUDED vs INCLUDED. Remove once the Mini App login is confirmed.
-export function initDataDebug(initData, botToken) {
-  try {
-    const recv = new URLSearchParams(initData).get('hash') || '';
-    const secret = crypto.createHmac('sha256', 'WebAppData').update(botToken || '').digest();
-    const calc = (keepSig) => {
-      const p = new URLSearchParams(initData);
-      p.delete('hash'); if (!keepSig) p.delete('signature');
-      const dcs = [...p.entries()].map(([k, v]) => `${k}=${v}`).sort().join('\n');
-      return crypto.createHmac('sha256', secret).update(dcs).digest('hex');
-    };
-    const noSig = calc(false), withSig = calc(true);
-    const keys = [...new URLSearchParams(initData).keys()].sort();
-    return { keys, tokenLen: (botToken || '').length, recv6: recv.slice(0, 6),
-      noSig6: noSig.slice(0, 6), withSig6: withSig.slice(0, 6),
-      matchNoSig: recv === noSig, matchWithSig: recv === withSig };
-  } catch (e) { return { err: e.message }; }
 }

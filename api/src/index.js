@@ -1,7 +1,7 @@
 import express from 'express';
 import { query, initSchema, migrateBlobEmployees } from './db.js';
 import { requireEditToken, writeAuth } from './auth.js';
-import { verifyInitData, initDataDebug } from './telegram.js';
+import { verifyInitData } from './telegram.js';
 
 const app = express();
 app.use(express.json({ limit: '25mb' })); // layout blob embeds employees (+ optional base64 photos)
@@ -18,10 +18,7 @@ router.post('/tg/verify', async (req, res, next) => {
   try {
     const initData = (req.body && req.body.initData) || req.get('X-Telegram-Init-Data');
     const v = verifyInitData(initData, process.env.TELEGRAM_BOT_TOKEN);
-    if (!v) {
-      console.warn('[api] tg/verify failed', { hasToken: !!process.env.TELEGRAM_BOT_TOKEN, initDataLen: (initData || '').length, debug: initDataDebug(initData, process.env.TELEGRAM_BOT_TOKEN) });
-      return res.status(401).json({ ok: false, error: 'invalid initData' });
-    }
+    if (!v) return res.status(401).json({ ok: false, error: 'invalid initData' });
     const { rows } = await query(`SELECT ${EMP_COLS} FROM employees WHERE telegram_id = $1`, [v.tgId]);
     res.json({ ok: true, tgId: v.tgId, user: v.user, employee: rows[0] ? toEmp(rows[0], { includeTelegram: true }) : null });
   } catch (err) {
