@@ -4,6 +4,11 @@ alliancesim.alliancegroup95.com {
     }
     handle {
         root * /var/www/alliancesim
+        # Always revalidate the HTML so Telegram Mini App / browsers pick up new
+        # deploys immediately (Caddy adds ETag/Last-Modified → cheap 304s when
+        # unchanged). Other static assets (logo, .glb models) stay cacheable.
+        @html path / /index.html
+        header @html Cache-Control "no-cache"
         file_server
     }
 }
