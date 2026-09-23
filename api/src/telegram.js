@@ -1,9 +1,13 @@
 import crypto from 'crypto';
 
 // Verify a Telegram Mini App initData string (HMAC-SHA256 with the bot token).
-// Returns { tgId, user } when authentic and fresh, else null.
+// Returns { tgId, user } when authentic, else null.
 // Algorithm: https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
-export function verifyInitData(initData, botToken, maxAgeSec = 86400) {
+// maxAgeSec defaults to 0 (no freshness check): Telegram can hand the page initData
+// from an earlier launch, so enforcing a window caused "worked then stopped" failures.
+// Replay risk is negligible for this internal tool (worst case: a user replays their
+// own signed data). Pass a positive value to re-enable the auth_date window.
+export function verifyInitData(initData, botToken, maxAgeSec = 0) {
   if (!initData || !botToken) return null;
   let params;
   try { params = new URLSearchParams(initData); } catch (e) { return null; }

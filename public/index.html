@@ -577,6 +577,7 @@ html.tgapp #app #preview{display:none}
         <div class="pwall">
           <div class="pgreet"><b>AllianceOS</b><span id="pdate">Офіс · Харків</span></div>
           <div class="pgrid">
+            <button class="papp" data-go="profile"><span class="ic" style="background:#E2001A"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span><span class="lb">Мій профіль</span></button>
             <button class="papp" data-go="contacts"><span class="ic" style="background:#5B76E6"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3.4"/><path d="M2 19a6 6 0 0 1 12 0"/><path d="M16 5a3.4 3.4 0 0 1 0 6.8M22 19a6 6 0 0 0-4.5-5.8"/></svg></span><span class="lb">Контакти</span></button>
             <button class="papp" data-go="chatlist"><span class="ic" style="background:#5DBE7C"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4V5Z"/></svg></span><span class="lb">Чат</span><span class="badge" id="chatBadge" style="display:none">0</span></button>
             <button class="papp" data-go="calls"><span class="ic" style="background:var(--red)"><svg viewBox="0 0 24 24"><path d="M6.5 3h3l1.6 4-2 1.4a12 12 0 0 0 5 5l1.4-2 4 1.6v3a2 2 0 0 1-2.1 2A16 16 0 0 1 4 5.1 2 2 0 0 1 6.5 3Z"/></svg></span><span class="lb">Дзвінки</span></button>
@@ -598,6 +599,7 @@ html.tgapp #app #preview{display:none}
       <div class="pscreen" data-scr="coffee"></div>
       <div class="pscreen" data-scr="tasks"></div>
       <div class="pscreen" data-scr="broadcast"></div>
+      <div class="pscreen" data-scr="profile"></div>
       <div class="pscreen" data-scr="settings"></div>
     </div>
     <div class="phome"><div class="bar" id="pbar"></div></div>
@@ -728,7 +730,7 @@ const getToken=()=>localStorage.getItem(LS_TOKEN)||'';
 const TG={active:false,initData:'',tgId:null,me:null};
 (function(){const w=window.Telegram&&window.Telegram.WebApp; if(w&&w.initData&&w.initData.length){TG.active=true; TG.initData=w.initData; try{w.ready();w.expand();}catch(e){} try{document.getElementById('app').dataset.tgapp='1';}catch(e){}}})();
 const isMe=(e)=>!!(TG.active&&TG.me&&e&&e.id===TG.me.id);
-async function tgVerify(){ if(!TG.active) return; try{ const r=await fetch(API+'/tg/verify',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({initData:TG.initData})}); if(r.ok){const j=await r.json(); TG.tgId=j.tgId||null; TG.me=j.employee||null;} }catch(e){} }
+async function tgVerify(){ if(!TG.active){TG.diag='no-tg'; return;} try{ const r=await fetch(API+'/tg/verify',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({initData:TG.initData})}); if(r.ok){const j=await r.json(); TG.tgId=j.tgId||null; TG.me=j.employee||null; TG.diag=TG.me?'ok':(TG.tgId?'no-emp':'no-user');} else {TG.diag='http'+r.status;} }catch(e){TG.diag='neterr';} }
 function setSyncStatus(txt,saved){const s=document.querySelector('#status'); if(!s) return; s.classList.toggle('saved',!!saved); const sp=s.querySelector('span'); if(sp) sp.textContent=txt;}
 async function apiLayoutGet(){const r=await fetch(API+'/layout',{headers:{'accept':'application/json'}}); if(!r.ok) throw new Error('http '+r.status); const j=await r.json(); return (j&&j.data)?j.data:null;}
 async function apiLayoutPut(data){const {employees,...layout}=data; const r=await fetch(API+'/layout',{method:'PUT',headers:{'content-type':'application/json','X-Edit-Token':getToken()},body:JSON.stringify({data:layout})}); if(r.status===401){const e=new Error('unauthorized');e.code=401;throw e;} if(!r.ok) throw new Error('http '+r.status); return true;}
@@ -1508,7 +1510,7 @@ initLoad().then(async okServer=>{
     // Precise status so it can be diagnosed on mobile (no console there):
     if(TG.me) toast(`Вітаю, ${esc(TG.me.name.split(' ')[0])}! 👋`);
     else if(TG.tgId) toast('Профіль не знайдено. Створи його в боті: /start');
-    else toast('Не вдалося розпізнати Telegram — онови застосунок (закрий і відкрий знову).');
+    else toast('Не вдалося визначити користувача ('+(TG.diag||'?')+'). Онови застосунок.');
     return;
   }
   if(mode==='viewer'){renderFilters(); if(state.employees.some(e=>e.seat)) showVIntro();}
@@ -1687,6 +1689,27 @@ function loop(now){requestAnimationFrame(loop); const dt=Math.min(.05,(now-lastT
       s.innerHTML=head('Оголошення')+`<div class="pbroad"><div style="font-size:12px;font-weight:800;color:var(--muted)">Кому</div><div class="pchips" data-aud><button class="pchip" data-a="Усім" aria-pressed="true">Усім</button>${depts.map(d=>`<button class="pchip" data-a="${esc(d)}">${esc(d)}</button>`).join('')}</div><textarea placeholder="Напишіть оголошення для команди…" data-txt></textarea><button class="pbtn" data-send>${IC.send}Надіслати</button></div>`;
       s.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{aud=b.dataset.a; s.querySelectorAll('[data-a]').forEach(x=>x.setAttribute('aria-pressed',x===b));});
       s.querySelector('[data-send]').onclick=()=>{const v=s.querySelector('[data-txt]').value.trim(); if(!v){toast('Напишіть текст оголошення'); return;} toast(`Оголошення надіслано · ${aud}`); home(); close();}; wire(s);}
+,
+    profile(s){
+      const me=TG.me?(emp(TG.me.id)||TG.me):null;
+      if(!me){ s.innerHTML=head('Мій профіль')+empty('Профіль недоступний','Відкрий офіс через Telegram-бота, щоб керувати своїм профілем.'); wire(s); return; }
+      const e=me;
+      const chip=(v,label,on)=>`<button class="pchip" data-v="${v}" aria-pressed="${on}">${label}</button>`;
+      const ttl=t=>`<div style="font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:16px 2px 8px">${t}</div>`;
+      s.innerHTML=head('Мій профіль')+`<div class="pscroll">
+        <div class="pdetail" style="padding-bottom:6px">${avHTML(e,'av big')}<div class="nm">${esc(e.name)}</div><div class="dp">${esc(e.dept)}${e.position?' · '+esc(e.position):''}</div>
+          <label class="pbtn" style="cursor:pointer;margin-top:14px;width:100%">📷 Змінити фото<input type="file" accept="image/*" data-photo style="display:none"></label></div>
+        <div style="padding:0 16px 18px">
+          ${ttl('Статус')}<div class="pchips" data-status>${Object.keys(STATUS).map(k=>chip(k,`${STATUS[k].icon} ${STATUS[k].n}`,statusOf(e)===k)).join('')}</div>
+          ${ttl('Настрій')}<div class="pchips" data-mood>${Object.keys(MOODS).map(k=>chip(k,`${MOODS[k].e} ${MOODS[k].n}`,(e.mood||'good')===k)).join('')}</div>
+          ${ttl('Колір аватара')}<div class="pchips" data-color>${DEPT_COLORS.map(c=>`<button class="pchip" data-c="${c}" title="колір" style="background:${c};width:32px;height:32px;padding:0;border-radius:50%;border:none${(e.color===c&&!e.photo)?';outline:3px solid var(--ink);outline-offset:2px':''}"></button>`).join('')}</div>
+        </div></div>`;
+      const save=()=>{ empUpsert(e); syncAvatars(); renderPeople(); renderLabels(); };
+      s.querySelectorAll('[data-status] .pchip').forEach(b=>b.onclick=()=>{ e.status=b.dataset.v; save(); R.profile(s); });
+      s.querySelectorAll('[data-mood] .pchip').forEach(b=>b.onclick=()=>{ e.mood=b.dataset.v; save(); R.profile(s); });
+      s.querySelectorAll('[data-color] [data-c]').forEach(b=>b.onclick=()=>{ e.color=b.dataset.c; e.photo=null; save(); R.profile(s); });
+      s.querySelector('[data-photo]').onchange=ev=>{ const f=ev.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ e.photo=rd.result; save(); toast('Фото оновлено'); R.profile(s); }; rd.readAsDataURL(f); };
+      wire(s);}
 ,
     settings(s){
       const dark=settings.theme==='dark';
