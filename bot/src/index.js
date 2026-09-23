@@ -1,7 +1,7 @@
 import { Bot, InlineKeyboard, session } from 'grammy';
 import cron from 'node-cron';
 import { api } from './api.js';
-import { STATUS, MOODS, COLORS, statusName, moodName } from './config.js';
+import { STATUS, MOODS, COLORS, COLOR_LABELS, statusName, moodName } from './config.js';
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 if (!TOKEN) {
@@ -27,10 +27,14 @@ const TEXT_STEPS = [
 ];
 const STEPS = [...TEXT_STEPS.map((s) => s.k), 'avatar', 'status', 'mood'];
 
+function avatarChoiceKeyboard() {
+  return new InlineKeyboard()
+    .text('📷 Надіслати фото', 'av:photo').row()
+    .text('🎨 Обрати колір', 'av:color');
+}
 function colorKeyboard() {
   const kb = new InlineKeyboard();
-  COLORS.forEach((c, i) => { kb.text('●', 'col:' + i); if (i % 4 === 3) kb.row(); });
-  kb.row().text('Без фото — обрати колір навмання ⤵', 'col:rand');
+  COLORS.forEach((c, i) => { kb.text(COLOR_LABELS[i] || 'Колір', 'col:' + i); if (i % 2 === 1) kb.row(); });
   return kb;
 }
 function statusKeyboard(prefix) {
@@ -51,7 +55,7 @@ async function sendStep(ctx) {
     const kb = meta.skip ? new InlineKeyboard().text('Пропустити ▶', 'skip') : undefined;
     return ctx.reply(meta.q, kb ? { reply_markup: kb } : undefined);
   }
-  if (step === 'avatar') return ctx.reply('Надішли своє фото для аватара 📷 або обери колір:', { reply_markup: colorKeyboard() });
+  if (step === 'avatar') return ctx.reply('Тепер аватар. Хочеш додати своє фото — чи обрати колір?', { reply_markup: avatarChoiceKeyboard() });
   if (step === 'status') return ctx.reply('Який твій статус на сьогодні?', { reply_markup: statusKeyboard('wst') });
   if (step === 'mood')   return ctx.reply('А настрій?', { reply_markup: moodKeyboard('wmd') });
 }
@@ -144,11 +148,21 @@ bot.on('callback_query:data', async (ctx) => {
   // skip an optional text step
   if (data === 'skip') { if (ctx.session.flow === 'new') return advance(ctx); return; }
 
-  // avatar colour choice
+  // avatar step: chose to send a photo
+  if (data === 'av:photo') {
+    if (ctx.session.flow !== 'new') return;
+    return ctx.reply('Добре! Надішли своє фото звичайним зображенням 📷');
+  }
+  // avatar step: chose to pick a colour
+  if (data === 'av:color') {
+    if (ctx.session.flow !== 'new') return;
+    return ctx.reply('Обери колір аватара:', { reply_markup: colorKeyboard() });
+  }
+  // colour picked
   if (data.startsWith('col:')) {
     if (ctx.session.flow !== 'new') return;
-    const v = data.slice(4);
-    ctx.session.draft.color = v === 'rand' ? COLORS[Math.floor(Math.random() * COLORS.length)] : COLORS[Number(v)] || COLORS[0];
+    ctx.session.draft.color = COLORS[Number(data.slice(4))] || COLORS[0];
+    ctx.session.draft.photo = null;
     ctx.session.stepIdx = STEPS.indexOf('status');
     return sendStep(ctx);
   }
