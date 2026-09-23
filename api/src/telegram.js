@@ -37,3 +37,24 @@ export function verifyInitData(initData, botToken, maxAgeSec = 0) {
   if (!tgId) return null;
   return { tgId, user };
 }
+
+// TEMPORARY diagnostic (no secrets leaked): reveals why the HMAC check fails —
+// field keys present, token length, and whether the recomputed hash matches with
+// signature EXCLUDED vs INCLUDED. Remove once the Mini App login is confirmed.
+export function initDataDebug(initData, botToken) {
+  try {
+    const recv = new URLSearchParams(initData).get('hash') || '';
+    const secret = crypto.createHmac('sha256', 'WebAppData').update(botToken || '').digest();
+    const calc = (keepSig) => {
+      const p = new URLSearchParams(initData);
+      p.delete('hash'); if (!keepSig) p.delete('signature');
+      const dcs = [...p.entries()].map(([k, v]) => `${k}=${v}`).sort().join('\n');
+      return crypto.createHmac('sha256', secret).update(dcs).digest('hex');
+    };
+    const noSig = calc(false), withSig = calc(true);
+    const keys = [...new URLSearchParams(initData).keys()].sort();
+    return { keys, tokenLen: (botToken || '').length, recv6: recv.slice(0, 6),
+      noSig6: noSig.slice(0, 6), withSig6: withSig.slice(0, 6),
+      matchNoSig: recv === noSig, matchWithSig: recv === withSig };
+  } catch (e) { return { err: e.message }; }
+}
