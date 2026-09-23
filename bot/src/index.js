@@ -233,23 +233,34 @@ bot.on('message:text', async (ctx) => {
   }
 });
 
-// ── photo (avatar step) ──────────────────────────────────────────────────────
-bot.on('message:photo', async (ctx) => {
+// ── photo (avatar step) — accepts a compressed photo OR an image sent as a file ──
+async function captureAvatar(ctx, fileId, mime) {
   if (ctx.session.flow !== 'new' || STEPS[ctx.session.stepIdx] !== 'avatar') return;
   try {
-    const photos = ctx.message.photo;
-    const size = photos[Math.min(1, photos.length - 1)]; // a small-ish size keeps the data URL light
-    const file = await ctx.api.getFile(size.file_id);
+    const file = await ctx.api.getFile(fileId);
     const url = `https://api.telegram.org/file/bot${TOKEN}/${file.file_path}`;
     const buf = Buffer.from(await (await fetch(url)).arrayBuffer());
-    ctx.session.draft.photo = `data:image/jpeg;base64,${buf.toString('base64')}`;
+    ctx.session.draft.photo = `data:${mime || 'image/jpeg'};base64,${buf.toString('base64')}`;
+    console.log(`[bot] avatar photo captured for tg ${ctx.from.id}: ${buf.length} bytes`);
     await ctx.reply('Гарне фото! 📸');
   } catch (e) {
     console.error('[bot] photo failed:', e.message);
-    await ctx.reply('Не вдалося обробити фото — оберемо колір замість нього.');
+    ctx.session.draft.photo = null;
+    await ctx.reply('Не вдалося обробити фото — обери колір замість нього:', { reply_markup: colorKeyboard() });
+    return; // stay on avatar step so the colour choice can complete it
   }
   ctx.session.stepIdx = STEPS.indexOf('status');
   return sendStep(ctx);
+}
+bot.on('message:photo', (ctx) => {
+  const photos = ctx.message.photo;
+  const size = photos[Math.min(1, photos.length - 1)]; // a small-ish size keeps the data URL light
+  return captureAvatar(ctx, size.file_id, 'image/jpeg');
+});
+bot.on('message:document', (ctx) => {
+  const d = ctx.message.document;
+  if (!d || !(d.mime_type || '').startsWith('image/')) return; // ignore non-image files
+  return captureAvatar(ctx, d.file_id, d.mime_type);
 });
 
 // ── daily check-in (weekday mornings, Kyiv) ──────────────────────────────────
