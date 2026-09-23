@@ -122,6 +122,30 @@ router.get('/employees/linked', requireEditToken, async (_req, res, next) => {
   }
 });
 
+// Atomic claim: link a Telegram user to an employee ONLY if it is not already linked
+// to someone. Prevents one user hijacking another's character (and claim races).
+// Idempotent: re-claiming your own returns 200; someone else's → 409.
+router.post('/employees/:id/claim', requireEditToken, async (req, res, next) => {
+  try {
+    const tgId = String((req.body || {}).telegram_id || '').replace(/[^0-9]/g, '');
+    if (!tgId) return res.status(400).json({ error: 'telegram_id required' });
+    const { rows } = await query(
+      `UPDATE employees SET telegram_id = $1, updated_at = now()
+       WHERE id = $2 AND telegram_id IS NULL
+       RETURNING ${EMP_COLS}`,
+      [tgId, req.params.id]
+    );
+    if (rows[0]) return res.json(toEmp(rows[0], { includeTelegram: true }));
+    // Nothing updated: either missing, or already linked (to you or someone else).
+    const { rows: ex } = await query(`SELECT ${EMP_COLS} FROM employees WHERE id = $1`, [req.params.id]);
+    if (!ex[0]) return res.status(404).json({ error: 'employee not found' });
+    if (String(ex[0].telegram_id) === tgId) return res.json(toEmp(ex[0], { includeTelegram: true }));
+    return res.status(409).json({ error: 'already linked to another user' });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post('/employees', requireEditToken, async (req, res, next) => {
   try {
     const b = req.body || {};

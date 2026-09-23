@@ -16,12 +16,24 @@ async function req(method, path, body) {
   return r.json().catch(() => null);
 }
 
+// Atomic claim returns a status so the bot can tell "already linked" (409) apart from
+// success — unlike req(), which throws on any non-OK.
+async function claim(id, tgId) {
+  const r = await fetch(`${BASE}/employees/${encodeURIComponent(id)}/claim`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'X-Edit-Token': TOKEN },
+    body: JSON.stringify({ telegram_id: tgId }),
+  });
+  return { status: r.status, data: await r.json().catch(() => null) };
+}
+
 export const api = {
   byTelegram: (tgId) => req('GET', `/employees/by-telegram/${tgId}`),
   search: (q) => req('GET', `/employees/search?q=${encodeURIComponent(q)}`),
   linked: () => req('GET', '/employees/linked'),
   create: (emp) => req('POST', '/employees', emp),
   update: (id, patch) => req('PUT', `/employees/${encodeURIComponent(id)}`, patch),
+  claim,
   pending: () => req('GET', '/notifications/pending'),
   markSent: (id) => req('POST', `/notifications/${id}/sent`),
 };

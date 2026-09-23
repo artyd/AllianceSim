@@ -192,11 +192,12 @@ bot.on('callback_query:data', async (ctx) => {
     ctx.session.draft.mood = data.slice(4);
     return finishWizard(ctx);
   }
-  // claim: pick a card
+  // claim: pick a card (atomic — can't steal a character already linked to someone else)
   if (data.startsWith('claim:')) {
     const id = data.slice(6);
-    try { await api.update(id, { telegram_id: ctx.from.id }); }
-    catch (e) { return ctx.reply('Не вдалося прив’язати 😕 Спробуй /start ще раз.'); }
+    let r; try { r = await api.claim(id, ctx.from.id); } catch (e) { return ctx.reply('Не вдалося прив’язати 😕 Спробуй /start ще раз.'); }
+    if (r.status === 409) return ctx.reply('Цю картку вже прив’язав інший користувач 🔒 Обери іншу або створи нового персонажа: /start');
+    if (r.status !== 200) return ctx.reply('Не вдалося прив’язати 😕 Спробуй /start ще раз.');
     ctx.session = { flow: null, stepIdx: 0, editId: null, draft: {} };
     return ctx.reply('✅ Прив’язано! Тепер це твій персонаж. Щоранку питатиму, як ти. /start — щоб змінити профіль.');
   }
