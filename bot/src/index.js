@@ -99,6 +99,7 @@ bot.command('start', async (ctx) => {
     const st = statusName(me.status), md = moodName(me.mood);
     const kb = new InlineKeyboard()
       .text('🔄 Оновити статус і настрій', 'upd').row()
+      .text('🖼 Змінити фото', 'setphoto').row()
       .text('✏️ Змінити профіль', 'edit');
     return ctx.reply(
       `Вітаю знову, ${me.name.split(' ')[0]}! 👋\n\n` +
@@ -148,20 +149,32 @@ bot.on('callback_query:data', async (ctx) => {
   // skip an optional text step
   if (data === 'skip') { if (ctx.session.flow === 'new') return advance(ctx); return; }
 
-  // avatar step: chose to send a photo
+  // change photo only (from the linked-user menu)
+  if (data === 'setphoto') {
+    ctx.session = { flow: 'photo', stepIdx: 0, editId: null, draft: {} };
+    return ctx.reply('Онови аватар — надішли фото чи обери колір:', { reply_markup: avatarChoiceKeyboard() });
+  }
+  // avatar step: chose to send a photo (create wizard or photo-only change)
   if (data === 'av:photo') {
-    if (ctx.session.flow !== 'new') return;
+    if (ctx.session.flow !== 'new' && ctx.session.flow !== 'photo') return;
     return ctx.reply('Добре! Надішли своє фото звичайним зображенням 📷');
   }
   // avatar step: chose to pick a colour
   if (data === 'av:color') {
-    if (ctx.session.flow !== 'new') return;
+    if (ctx.session.flow !== 'new' && ctx.session.flow !== 'photo') return;
     return ctx.reply('Обери колір аватара:', { reply_markup: colorKeyboard() });
   }
   // colour picked
   if (data.startsWith('col:')) {
+    const color = COLORS[Number(data.slice(4))] || COLORS[0];
+    if (ctx.session.flow === 'photo') {         // photo-only change → save immediately
+      let me = null; try { me = await api.byTelegram(ctx.from.id); } catch (e) {}
+      if (me) { try { await api.update(me.id, { color, photo: null }); } catch (e) {} }
+      ctx.session = { flow: null, stepIdx: 0, editId: null, draft: {} };
+      return ctx.reply('✅ Аватар оновлено — тепер колір.');
+    }
     if (ctx.session.flow !== 'new') return;
-    ctx.session.draft.color = COLORS[Number(data.slice(4))] || COLORS[0];
+    ctx.session.draft.color = color;
     ctx.session.draft.photo = null;
     ctx.session.stepIdx = STEPS.indexOf('status');
     return sendStep(ctx);
@@ -235,20 +248,29 @@ bot.on('message:text', async (ctx) => {
 
 // ── photo (avatar step) — accepts a compressed photo OR an image sent as a file ──
 async function captureAvatar(ctx, fileId, mime) {
-  if (ctx.session.flow !== 'new' || STEPS[ctx.session.stepIdx] !== 'avatar') return;
+  const flow = ctx.session.flow;
+  const onAvatarStep = flow === 'new' && STEPS[ctx.session.stepIdx] === 'avatar';
+  if (!onAvatarStep && flow !== 'photo') return;
+  let dataUrl;
   try {
     const file = await ctx.api.getFile(fileId);
     const url = `https://api.telegram.org/file/bot${TOKEN}/${file.file_path}`;
     const buf = Buffer.from(await (await fetch(url)).arrayBuffer());
-    ctx.session.draft.photo = `data:${mime || 'image/jpeg'};base64,${buf.toString('base64')}`;
+    dataUrl = `data:${mime || 'image/jpeg'};base64,${buf.toString('base64')}`;
     console.log(`[bot] avatar photo captured for tg ${ctx.from.id}: ${buf.length} bytes`);
-    await ctx.reply('Гарне фото! 📸');
   } catch (e) {
     console.error('[bot] photo failed:', e.message);
-    ctx.session.draft.photo = null;
     await ctx.reply('Не вдалося обробити фото — обери колір замість нього:', { reply_markup: colorKeyboard() });
-    return; // stay on avatar step so the colour choice can complete it
+    return; // stay in the current flow so the colour choice can complete it
   }
+  if (flow === 'photo') {                         // photo-only change → save immediately
+    let me = null; try { me = await api.byTelegram(ctx.from.id); } catch (e) {}
+    if (me) { try { await api.update(me.id, { photo: dataUrl }); } catch (e) { console.error('[bot] photo update failed:', e.message); } }
+    ctx.session = { flow: null, stepIdx: 0, editId: null, draft: {} };
+    return ctx.reply('✅ Фото оновлено! Побачиш його в офісі за кілька секунд.');
+  }
+  ctx.session.draft.photo = dataUrl;              // create wizard → continue to status
+  await ctx.reply('Гарне фото! 📸');
   ctx.session.stepIdx = STEPS.indexOf('status');
   return sendStep(ctx);
 }
