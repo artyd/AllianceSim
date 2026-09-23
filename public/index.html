@@ -6,6 +6,8 @@
 <title>AllianceSim — офіс Харків</title>
 <!-- Telegram Mini App SDK (harmless outside Telegram: WebApp.initData is empty) -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<!-- Detect the Mini App synchronously (before first paint) so the office never flashes -->
+<script>try{var w=window.Telegram&&window.Telegram.WebApp;if(w&&w.initData&&w.initData.length){document.documentElement.classList.add('tgapp');w.ready&&w.ready();w.expand&&w.expand();}}catch(e){}</script>
 <!-- UI icons: Font Awesome Free 6.7.2 (https://fontawesome.com) — Icons: CC BY 4.0, inlined as SVG -->
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -293,15 +295,17 @@ kbd{font:700 11px Nunito;background:var(--chip);border:1px solid var(--line);bor
 #phone{position:absolute;right:22px;bottom:22px;width:322px;height:min(686px,calc(100% - 40px));z-index:30;border-radius:46px;padding:11px;background:linear-gradient(155deg,#28242f,#131019);box-shadow:0 30px 70px rgba(20,10,25,.5),0 6px 16px rgba(0,0,0,.3),inset 0 0 0 2px rgba(255,255,255,.06);transform:translateY(26px) scale(.9);transform-origin:88% 100%;opacity:0;pointer-events:none;transition:transform .42s cubic-bezier(.2,.9,.25,1),opacity .3s}
 #app[data-phone] #phone{transform:none;opacity:1;pointer-events:auto}
 /* ---- Telegram Mini App: compact mode — phone fills the whole screen, office hidden ---- */
-#app[data-tgapp] #c,#app[data-tgapp] #c2{display:none}
-#app[data-tgapp] #phoneFab,#app[data-tgapp] #phoneClose{display:none!important}
-#app[data-tgapp] #phone{position:fixed;inset:0;width:100%;max-width:100%;height:100%;border-radius:0;padding:0;transform:none!important;opacity:1!important;pointer-events:auto!important;box-shadow:none;background:var(--panel-solid)}
-#app[data-tgapp] .pscreenwrap{border-radius:0;padding-top:env(safe-area-inset-top,0px)}
-#app[data-tgapp] .pnotch{display:none}
-#app[data-tgapp] .pactions [data-loc]{display:none}          /* "знайти на карті" is moot without the map */
-#app[data-tgapp] #backdrop{z-index:40}                       /* create-character modal above the phone */
-#app[data-tgapp] #modal{grid-template-columns:1fr;width:calc(100vw - 24px)}
-#app[data-tgapp] #preview{display:none}
+html.tgapp,html.tgapp body{background:#FFFCF8}          /* matches the phone screen — no office flash */
+html.tgapp #hdr,html.tgapp #labels,html.tgapp #dock,html.tgapp #dock2,html.tgapp #welcome,html.tgapp #vintro,html.tgapp #modePill{display:none!important}
+html.tgapp #app #c,html.tgapp #app #c2{display:none}
+html.tgapp #app #phoneFab,html.tgapp #app #phoneClose{display:none!important}
+html.tgapp #app #phone{position:fixed;inset:0;width:100%;max-width:100%;height:100%;border-radius:0;padding:0;transform:none!important;opacity:1!important;pointer-events:auto!important;box-shadow:none;background:var(--panel-solid)}
+html.tgapp #app .pscreenwrap{border-radius:0;padding-top:env(safe-area-inset-top,0px)}
+html.tgapp #app .pnotch{display:none}
+html.tgapp #app .pactions [data-loc]{display:none}          /* "знайти на карті" is moot without the map */
+html.tgapp #app #backdrop{z-index:40}                       /* create-character modal above the phone */
+html.tgapp #app #modal{grid-template-columns:1fr;width:calc(100vw - 24px)}
+html.tgapp #app #preview{display:none}
 .pscreenwrap{position:relative;width:100%;height:100%;border-radius:36px;overflow:hidden;display:flex;flex-direction:column;background:linear-gradient(180deg,var(--panel-solid),var(--chip))}
 .pnotch{position:absolute;top:9px;left:50%;transform:translateX(-50%);width:98px;height:23px;border-radius:999px;background:#131019;z-index:9}
 .pstatus{height:40px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:12.5px;font-weight:800;color:var(--ink);position:relative;z-index:2}
