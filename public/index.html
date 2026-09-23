@@ -1500,9 +1500,11 @@ initLoad().then(async okServer=>{
   if(TG.active){
     await tgVerify();                                   // who am I (linked character)?
     renderFilters();
-    setTimeout(()=>{const fab=$('#phoneFab'); if(fab) fab.click();}, 350); // open the phone
-    if(TG.me){ toast(`Вітаю, ${esc(TG.me.name.split(' ')[0])}! 👋`); }
-    else { setTimeout(()=>{ toast('Створи свого персонажа в офісі 🙂'); openModal(); }, 900); } // no character yet
+    setTimeout(()=>{const fab=$('#phoneFab'); if(fab) fab.click();}, 350); // open the phone (only the phone)
+    // Precise status so it can be diagnosed on mobile (no console there):
+    if(TG.me) toast(`Вітаю, ${esc(TG.me.name.split(' ')[0])}! 👋`);
+    else if(TG.tgId) toast('Профіль не знайдено. Створи його в боті: /start');
+    else toast('Не вдалося розпізнати Telegram — онови застосунок (закрий і відкрий знову).');
     return;
   }
   if(mode==='viewer'){renderFilters(); if(state.employees.some(e=>e.seat)) showVIntro();}
