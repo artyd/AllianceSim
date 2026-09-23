@@ -286,6 +286,39 @@ router.post('/notifications', async (req, res, next) => {
   }
 });
 
+// Coffee order → delivered as a Telegram notification to the designated HR.
+// Recipient is configured by env: COFFEE_HR_TG (telegram id) wins, else COFFEE_HR_NAME
+// (matched to a linked employee by name). Sender name comes from verified initData.
+router.post('/coffee', async (req, res, next) => {
+  try {
+    const ip = (req.headers['x-forwarded-for'] || req.ip || '').toString().split(',')[0].trim();
+    if (rateLimited(ip)) return res.status(429).json({ error: 'rate limited' });
+    const { drink, size } = req.body || {};
+    if (!drink) return res.status(400).json({ error: 'drink required' });
+    let fromName = null;
+    const initData = req.get('X-Telegram-Init-Data');
+    if (initData) {
+      const v = verifyInitData(initData, process.env.TELEGRAM_BOT_TOKEN);
+      if (v) { const { rows: s } = await query('SELECT name FROM employees WHERE telegram_id = $1', [v.tgId]); if (s[0]) fromName = s[0].name; }
+    }
+    // Resolve the HR recipient (must be a linked employee to receive Telegram).
+    let rec = null;
+    if (process.env.COFFEE_HR_TG) {
+      const { rows } = await query('SELECT id FROM employees WHERE telegram_id = $1', [String(process.env.COFFEE_HR_TG).replace(/[^0-9]/g, '')]);
+      rec = rows[0];
+    } else if (process.env.COFFEE_HR_NAME) {
+      const { rows } = await query('SELECT id FROM employees WHERE name ILIKE $1 AND telegram_id IS NOT NULL ORDER BY name LIMIT 1', [process.env.COFFEE_HR_NAME]);
+      rec = rows[0];
+    }
+    if (!rec) return res.json({ ok: true, delivered: false }); // no HR configured / not linked
+    const text = `${drink}${size ? ' (' + size + ')' : ''}`;
+    await query('INSERT INTO notifications (employee_id, kind, text, from_name) VALUES ($1, $2, $3, $4)', [rec.id, 'coffee', text, fromName]);
+    res.json({ ok: true, delivered: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Bot drains pending notifications (token-gated) and marks them delivered.
 router.get('/notifications/pending', requireEditToken, async (_req, res, next) => {
   try {

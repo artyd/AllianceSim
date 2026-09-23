@@ -310,6 +310,7 @@ const NOTIF_TEXT = {
   message: (t, who) => `💬 ${who} написав тобі з офісу:\n«${t || '…'}»`,
   call: (_t, who) => `📞 ${who} телефонує тобі з офісу!`,
   mark: (_t, who) => `📍 ${who} шукає тебе в офісі — відкрив твою картку.`,
+  coffee: (t, who) => `☕ Нове замовлення кави\nВід: ${who}\nЗамовлення: ${t}`,
 };
 async function drainNotifications() {
   let pending = [];

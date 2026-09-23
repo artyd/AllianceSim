@@ -25,6 +25,8 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       EDIT_TOKEN: ${EDIT_TOKEN}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}   # for Mini App initData verification
+      COFFEE_HR_TG: ${COFFEE_HR_TG:-}             # coffee orders → this telegram id (wins)
+      COFFEE_HR_NAME: ${COFFEE_HR_NAME:-}         # …or this linked employee by name
     # Loopback-only: nothing exposed publicly — Caddy fronts TLS and routing.
     ports:
       - "127.0.0.1:${PORT}:${PORT}"

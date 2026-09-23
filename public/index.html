@@ -1673,7 +1673,9 @@ function loop(now){requestAnimationFrame(loop); const dt=Math.min(.05,(now-lastT
         <div style="text-align:center;font-size:11.5px;color:var(--muted);font-weight:700;margin-top:12px">Принесуть до вашого столу ☕</div></div>`;
       s.querySelectorAll('[data-drink] .pchip').forEach(b=>b.onclick=()=>{pick=b.dataset.v; b.parentElement.querySelectorAll('.pchip').forEach(x=>x.setAttribute('aria-pressed',x===b));});
       s.querySelectorAll('[data-size] .pchip').forEach(b=>b.onclick=()=>{size=b.dataset.v; b.parentElement.querySelectorAll('.pchip').forEach(x=>x.setAttribute('aria-pressed',x===b));});
-      s.querySelector('[data-order]').onclick=()=>{toast(`Замовлено: ${pick} (${size}) ☕`); home(); close();}; wire(s);}
+      s.querySelector('[data-order]').onclick=()=>{
+        try{const h={'content-type':'application/json'}; if(TG.active) h['X-Telegram-Init-Data']=TG.initData; fetch(API+'/coffee',{method:'POST',headers:h,body:JSON.stringify({drink:pick,size})}).catch(()=>{});}catch(e){}
+        toast(`Замовлено: ${pick} (${size}) ☕`); home(); close();}; wire(s);}
 ,
     tasks(s){
       s.innerHTML=head('Задачі')+`<div class="pscroll" data-list></div><div class="pinput"><input placeholder="Нова задача…" data-in><button class="send" data-add>${IC.send}</button></div>`;
