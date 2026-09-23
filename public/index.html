@@ -281,6 +281,109 @@ kbd{font:700 11px Nunito;background:var(--chip);border:1px solid var(--line);bor
 #empcard .badges{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 12px}
 #empcard .pill{font-size:11px;font-weight:800;padding:4px 9px;border-radius:999px;background:var(--chip);display:flex;align-items:center;gap:5px}
 #empcard .fsec-t{margin:12px 0 7px;padding-top:11px}
+/* ---------- phone (AllianceOS) ---------- */
+#phoneFab{position:absolute;right:22px;bottom:22px;width:60px;height:60px;border-radius:20px;z-index:20;display:grid;place-items:center;background:linear-gradient(160deg,#ff4155,var(--red));box-shadow:0 12px 26px rgba(226,0,26,.42),inset 0 1px 0 rgba(255,255,255,.35);transition:transform .2s;animation:fabFloat 3.6s ease-in-out infinite}
+#phoneFab:hover{transform:translateY(-3px) scale(1.05)}#phoneFab:active{transform:scale(.95)}
+#phoneFab svg{width:26px;height:26px;stroke:#fff;fill:none;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+#phoneFab .dot{position:absolute;top:-4px;right:-4px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:#fff;color:var(--red);font-size:11px;font-weight:900;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+@keyframes fabFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+#app[data-phone] #phoneFab{opacity:0;pointer-events:none;transform:scale(.6)}
+#phone{position:absolute;right:22px;bottom:22px;width:322px;height:min(686px,calc(100% - 40px));z-index:30;border-radius:46px;padding:11px;background:linear-gradient(155deg,#28242f,#131019);box-shadow:0 30px 70px rgba(20,10,25,.5),0 6px 16px rgba(0,0,0,.3),inset 0 0 0 2px rgba(255,255,255,.06);transform:translateY(26px) scale(.9);transform-origin:88% 100%;opacity:0;pointer-events:none;transition:transform .42s cubic-bezier(.2,.9,.25,1),opacity .3s}
+#app[data-phone] #phone{transform:none;opacity:1;pointer-events:auto}
+.pscreenwrap{position:relative;width:100%;height:100%;border-radius:36px;overflow:hidden;display:flex;flex-direction:column;background:linear-gradient(180deg,var(--panel-solid),var(--chip))}
+.pnotch{position:absolute;top:9px;left:50%;transform:translateX(-50%);width:98px;height:23px;border-radius:999px;background:#131019;z-index:9}
+.pstatus{height:40px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:12.5px;font-weight:800;color:var(--ink);position:relative;z-index:2}
+.pstatus .r{display:flex;gap:6px;align-items:center}
+.pstatus svg{width:17px;height:15px;stroke:currentColor;fill:none;stroke-width:2}
+.pbody{position:relative;flex:1;overflow:hidden}
+.pscreen{position:absolute;inset:0;display:flex;flex-direction:column;background:linear-gradient(180deg,var(--panel-solid),var(--chip));transform:translateX(100%);transition:transform .34s cubic-bezier(.3,.85,.25,1)}
+.pscreen.home{transform:translateX(0);background:none}.pscreen.show{transform:translateX(0)}
+.phome{height:26px;flex:none;display:flex;align-items:center;justify-content:center}
+.phome .bar{width:120px;height:5px;border-radius:999px;background:var(--ink);opacity:.32;cursor:pointer}
+.pwall{flex:1;display:flex;flex-direction:column;padding:4px 20px 0;overflow:auto}
+.pgreet{margin:8px 2px 18px}.pgreet b{display:block;font-size:22px;font-weight:900;letter-spacing:-.02em}.pgreet span{font-size:13px;color:var(--muted);font-weight:700}
+.pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px 8px}
+.papp{position:relative;display:flex;flex-direction:column;align-items:center;gap:7px;background:none}
+.papp .ic{width:58px;height:58px;border-radius:18px;display:grid;place-items:center;box-shadow:0 8px 18px rgba(60,40,30,.2);transition:transform .15s}
+.papp:active .ic{transform:scale(.9)}
+.papp .ic svg{width:27px;height:27px;stroke:#fff;fill:none;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+.papp .lb{font-size:11.5px;font-weight:800;color:var(--ink)}
+.papp .badge{position:absolute;top:-5px;right:12px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:var(--red);color:#fff;font-size:11px;font-weight:900;display:grid;place-items:center;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.phead{flex:none;height:54px;display:flex;align-items:center;gap:10px;padding:0 12px;border-bottom:1px solid var(--line)}
+.phead .bk{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:var(--chip)}
+.phead .bk svg{width:18px;height:18px;stroke:var(--ink);fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.phead .ti{font-size:16px;font-weight:900}.phead .sp{flex:1}
+.pscroll{flex:1;overflow:auto}
+.psearch{padding:10px 14px}
+.psearch input{width:100%;height:38px;border-radius:12px;border:1.5px solid var(--line);background:var(--panel-solid);padding:0 14px;font-size:13.5px;font-weight:600;outline:0;color:var(--ink)}
+.psearch input:focus{border-color:var(--red)}
+.prow{display:flex;align-items:center;gap:12px;padding:11px 16px;cursor:pointer;transition:background .12s}
+.prow:hover{background:var(--chip)}
+.prow .av{width:42px;height:42px;font-size:14px}
+.prow .tx{flex:1;min-width:0}.prow .tx .nm{font-size:14.5px;font-weight:800}
+.prow .tx .sub{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow .meta{font-size:13px;color:var(--muted);font-weight:700}
+.pempty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:30px;text-align:center}
+.pempty svg{width:44px;height:44px;stroke:var(--muted);fill:none;stroke-width:1.7;opacity:.55}
+.pempty b{font-size:15px;color:var(--ink);font-weight:800}.pempty span{font-size:12.5px;font-weight:600;color:var(--muted);line-height:1.5}
+.pdetail{flex:1;overflow:auto;display:flex;flex-direction:column;align-items:center;padding:18px 20px 24px;text-align:center}
+.pdetail .big{width:104px;height:104px;border-radius:34px;font-size:34px;margin-bottom:14px;box-shadow:0 12px 28px rgba(60,40,30,.22)}
+.pdetail .nm{font-size:21px;font-weight:900}.pdetail .dp{font-size:13.5px;color:var(--muted);font-weight:700;margin-top:2px}
+.pdetail .status{margin-top:11px;font-size:12px;font-weight:800;padding:5px 12px;border-radius:999px;background:var(--chip);display:inline-flex;gap:6px;align-items:center}
+.pactions{display:flex;gap:10px;margin:20px 0 6px;width:100%}
+.pact{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 0;border-radius:16px;background:var(--chip);font-size:11.5px;font-weight:800;color:var(--ink)}
+.pact svg{width:22px;height:22px;stroke:var(--red);fill:none;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+.pfields{width:100%;margin-top:10px;display:flex;flex-direction:column}
+.pfield{display:flex;justify-content:space-between;gap:10px;padding:12px 4px;border-bottom:1px solid var(--line);font-size:13px}
+.pfield .k{color:var(--muted);font-weight:700}.pfield .v{font-weight:800;text-align:right;word-break:break-word}
+.pconv{flex:1;overflow:auto;display:flex;flex-direction:column;gap:8px;padding:14px}
+.pbub{max-width:78%;padding:9px 13px;border-radius:16px;font-size:13.5px;font-weight:600;line-height:1.35}
+.pbub.them{align-self:flex-start;background:var(--chip);border-bottom-left-radius:5px}
+.pbub.me{align-self:flex-end;background:var(--red);color:#fff;border-bottom-right-radius:5px}
+.pinput{flex:none;display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line)}
+.pinput input{flex:1;height:40px;border-radius:999px;border:1.5px solid var(--line);background:var(--panel-solid);padding:0 16px;font-size:13.5px;font-weight:600;outline:0;color:var(--ink)}
+.pinput input:focus{border-color:var(--red)}
+.pinput .send{width:40px;height:40px;border-radius:50%;background:var(--red);display:grid;place-items:center;flex:none}
+.pinput .send svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.pcall{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:46px 24px 40px;background:linear-gradient(180deg,#2c2833,#16131d);color:#fff}
+.pcall .who{display:flex;flex-direction:column;align-items:center;gap:14px}
+.pcall .big{width:116px;height:116px;border-radius:38px;font-size:38px;animation:ring 1.8s ease-out infinite}
+.pcall .nm{font-size:24px;font-weight:900}.pcall .state{font-size:14px;font-weight:700;opacity:.7}
+.pcall .end{width:64px;height:64px;border-radius:50%;background:var(--red);display:grid;place-items:center}
+.pcall .end svg{width:26px;height:26px;stroke:#fff;fill:none;stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round;transform:rotate(133deg)}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(255,255,255,.32)}100%{box-shadow:0 0 0 24px rgba(255,255,255,0)}}
+.ptask{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line)}
+.ptask .cb{width:24px;height:24px;border-radius:8px;border:2px solid var(--line);flex:none;display:grid;place-items:center;cursor:pointer;transition:.15s}
+.ptask.done .cb{background:var(--red);border-color:var(--red)}
+.ptask .cb svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:0}
+.ptask.done .cb svg{opacity:1}
+.ptask .t{flex:1;font-size:14px;font-weight:700}.ptask.done .t{text-decoration:line-through;color:var(--muted)}
+.pbroad{flex:1;display:flex;flex-direction:column;padding:16px;gap:12px}
+.pbroad textarea{flex:1;border-radius:16px;border:1.5px solid var(--line);background:var(--panel-solid);padding:14px;font:inherit;font-size:14px;font-weight:600;resize:none;outline:0;color:var(--ink)}
+.pbroad textarea:focus{border-color:var(--red)}
+.pchips{display:flex;gap:6px;flex-wrap:wrap}
+.pchip{padding:7px 13px;border-radius:999px;font-size:12px;font-weight:800;background:var(--chip);border:1.5px solid transparent;color:var(--ink)}
+.pchip[aria-pressed="true"]{border-color:var(--red);color:var(--red);background:var(--red-soft)}
+.pbtn{height:48px;border-radius:16px;background:var(--red);color:#fff;font-weight:900;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px}
+.pbtn svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.psetrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 18px;border-bottom:1px solid var(--line)}
+.psetrow .lb{font-size:14px;font-weight:800}.psetrow .sub{font-size:11.5px;color:var(--muted);font-weight:600}
+.ptog{width:46px;height:27px;border-radius:999px;background:var(--line);position:relative;transition:background .2s;cursor:pointer;flex:none}
+.ptog::after{content:"";position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.ptog[aria-pressed="true"]{background:var(--red)}.ptog[aria-pressed="true"]::after{transform:translateX(19px)}
+#phoneClose{position:absolute;top:-7px;right:-7px;width:34px;height:34px;border-radius:50%;z-index:6;display:none;place-items:center;background:var(--red);color:#fff;box-shadow:0 5px 14px rgba(226,0,26,.4);border:2px solid var(--panel-solid);transition:transform .15s}
+#phoneClose:hover{transform:scale(1.1)}
+#phoneClose svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.7;stroke-linecap:round}
+#app[data-phone] #phoneClose{display:grid}
+.pcalbar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 8px}
+.pcalbar .ti{font-weight:900}
+.pcalgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:0 10px}
+.pdowc{text-align:center;font-size:10.5px;font-weight:800;color:var(--muted);padding-bottom:4px}
+.pcell{position:relative;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--ink);background:none;transition:background .12s}
+.pcell:hover{background:var(--chip)}.pcell.tod{color:var(--red)}
+.pcell.sel,.pcell.sel:hover{background:var(--red);color:#fff}
+.pcell i{position:absolute;bottom:5px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--red)}
+.pcell.sel i{background:#fff}
 </style>
 </head>
 <body>
@@ -436,6 +539,52 @@ kbd{font:700 11px Nunito;background:var(--chip);border:1px solid var(--line);bor
       <div class="actions"><button type="button" class="tbtn" id="cancelEmp">Скасувати</button><button type="submit" class="btn" id="empSubmit">Додати</button></div>
     </form>
     <div id="preview"><span class="cap">Так виглядатиме в офісі</span><div id="ptag" class="tag"><div class="b"><i></i><span class="n">Ім'я</span><span class="d">Відділ</span></div></div><canvas id="pc" width="480" height="560"></canvas></div>
+  </div>
+</div>
+<button id="phoneFab" aria-label="Відкрити телефон" title="Телефон">
+  <svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M10 18.5h4"/></svg>
+  <span class="dot" id="phoneDot" style="display:none">0</span>
+</button>
+<div id="phone" aria-hidden="true">
+  <button id="phoneClose" aria-label="Закрити телефон" title="Закрити"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  <div class="pscreenwrap">
+    <div class="pnotch"></div>
+    <div class="pstatus">
+      <span id="pclock">09:41</span>
+      <span class="r">
+        <svg viewBox="0 0 24 24"><path d="M3 9a13 13 0 0 1 18 0M6 12.5a8 8 0 0 1 12 0M9 16a3.5 3.5 0 0 1 6 0"/></svg>
+        <svg viewBox="0 0 24 24"><rect x="2" y="8" width="17" height="9" rx="2.5"/><path d="M21 11.5v2"/><rect x="4" y="10" width="12" height="5" rx="1" fill="currentColor" stroke="none"/></svg>
+      </span>
+    </div>
+    <div class="pbody" id="pbody">
+      <div class="pscreen home" data-scr="home">
+        <div class="pwall">
+          <div class="pgreet"><b>AllianceOS</b><span id="pdate">Офіс · Харків</span></div>
+          <div class="pgrid">
+            <button class="papp" data-go="contacts"><span class="ic" style="background:#5B76E6"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3.4"/><path d="M2 19a6 6 0 0 1 12 0"/><path d="M16 5a3.4 3.4 0 0 1 0 6.8M22 19a6 6 0 0 0-4.5-5.8"/></svg></span><span class="lb">Контакти</span></button>
+            <button class="papp" data-go="chatlist"><span class="ic" style="background:#5DBE7C"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4V5Z"/></svg></span><span class="lb">Чат</span><span class="badge" id="chatBadge" style="display:none">0</span></button>
+            <button class="papp" data-go="calls"><span class="ic" style="background:var(--red)"><svg viewBox="0 0 24 24"><path d="M6.5 3h3l1.6 4-2 1.4a12 12 0 0 0 5 5l1.4-2 4 1.6v3a2 2 0 0 1-2.1 2A16 16 0 0 1 4 5.1 2 2 0 0 1 6.5 3Z"/></svg></span><span class="lb">Дзвінки</span></button>
+            <button class="papp" data-go="calendar"><span class="ic" style="background:#3EA8C9"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9.5h16M8 3v4M16 3v4"/></svg></span><span class="lb">Календар</span></button>
+            <button class="papp" data-go="tasks"><span class="ic" style="background:#F2A03D"><svg viewBox="0 0 24 24"><path d="M9 4h6v2.5H9zM8 5H5v15h14V5h-3M8.5 13l2.2 2.2L15 11"/></svg></span><span class="lb">Задачі</span></button>
+            <button class="papp" data-go="broadcast"><span class="ic" style="background:#A36BE0"><svg viewBox="0 0 24 24"><path d="M4 10v4h3l8 4V6l-8 4H4Z"/><path d="M18 9a4 4 0 0 1 0 6"/></svg></span><span class="lb">Оголошення</span></button>
+            <button class="papp" data-go="coffee"><span class="ic" style="background:#B5714E"><svg viewBox="0 0 24 24"><path d="M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Z"/><path d="M17 9h2.2a2.5 2.5 0 0 1 0 5H17"/><path d="M7.5 3v2M11 3v2"/></svg></span><span class="lb">Кава</span></button>
+            <button class="papp" data-go="settings"><span class="ic" style="background:#7C8590"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 13a1.7 1.7 0 0 0 .3 1.9 2 2 0 1 1-2.8 2.8 1.7 1.7 0 0 0-2.9 1.2 2 2 0 0 1-4 0 1.7 1.7 0 0 0-2.9-1.2 2 2 0 1 1-2.8-2.8A1.7 1.7 0 0 0 4.6 13a2 2 0 0 1 0-4 1.7 1.7 0 0 0 1.2-2.9 2 2 0 1 1 2.8-2.8A1.7 1.7 0 0 0 11 4.6a2 2 0 0 1 4 0 1.7 1.7 0 0 0 2.9 1.2 2 2 0 1 1 2.8 2.8A1.7 1.7 0 0 0 19.4 11a2 2 0 0 1 0 4Z"/></svg></span><span class="lb">Налаштування</span></button>
+          </div>
+        </div>
+      </div>
+      <div class="pscreen" data-scr="contacts"></div>
+      <div class="pscreen" data-scr="contact"></div>
+      <div class="pscreen" data-scr="chatlist"></div>
+      <div class="pscreen" data-scr="conv"></div>
+      <div class="pscreen" data-scr="calls"></div>
+      <div class="pscreen" data-scr="calling"></div>
+      <div class="pscreen" data-scr="calendar"></div>
+      <div class="pscreen" data-scr="coffee"></div>
+      <div class="pscreen" data-scr="tasks"></div>
+      <div class="pscreen" data-scr="broadcast"></div>
+      <div class="pscreen" data-scr="settings"></div>
+    </div>
+    <div class="phome"><div class="bar" id="pbar"></div></div>
   </div>
 </div>
 <div id="toast"></div>
@@ -1256,6 +1405,185 @@ function loop(now){requestAnimationFrame(loop); const dt=Math.min(.05,(now-lastT
   }
   updateLabels();
   if(backdrop.classList.contains('open')&&pAv){pRenderer.render(pScene,pCam); const pv=$('#preview').getBoundingClientRect(), cr=$('#pc').getBoundingClientRect(); const v=new THREE.Vector3(0,pAv.userData.tagY+.1,0).project(pCam); const t=$('#ptag'); t.style.left=(cr.left-pv.left+(v.x+1)/2*cr.width)+'px'; t.style.top=(cr.top-pv.top+(1-v.y)/2*cr.height)+'px';}}
+/* ---------- phone (AllianceOS) ---------- */
+(function(){
+  const phone=$('#phone'), body=$('#pbody');
+  const scr=id=>body.querySelector(`[data-scr="${id}"]`);
+  const emp=id=>state.employees.find(e=>e.id===id);
+  let stack=[];
+  const IC={
+    phone:'<svg viewBox="0 0 24 24"><path d="M6.5 3h3l1.6 4-2 1.4a12 12 0 0 0 5 5l1.4-2 4 1.6v3a2 2 0 0 1-2.1 2A16 16 0 0 1 4 5.1 2 2 0 0 1 6.5 3Z"/></svg>',
+    chat:'<svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4V5Z"/></svg>',
+    send:'<svg viewBox="0 0 24 24"><path d="M3 11l17-7-7 17-2.6-6.6L3 11Z"/></svg>',
+    back:'<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
+    pin:'<svg viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.4"/></svg>',
+    coffee:'<svg viewBox="0 0 24 24"><path d="M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Z"/><path d="M17 9h2.2a2.5 2.5 0 0 1 0 5H17"/><path d="M7.5 3v2M11 3v2"/></svg>'
+  };
+  const WEEK=[
+    [{t:'09:30',ti:'Стендап',r:'Переговорна',c:'#5B76E6'},{t:'14:00',ti:'Огляд закупівель',r:'Кабінет',c:'#F2A03D'}],
+    [{t:'11:00',ti:'1:1 з керівником',r:'Акустична кабіна',c:'#5DBE7C'},{t:'16:30',ti:'Демо клієнту',r:'Переговорна',c:'#E2001A'}],
+    [{t:'10:00',ti:'Планерка IT',r:'Опен-спейс',c:'#3EA8C9'}],
+    [{t:'09:30',ti:'Стендап',r:'Переговорна',c:'#5B76E6'},{t:'13:00',ti:'Співбесіда',r:'Кабінет',c:'#A36BE0'},{t:'15:00',ti:'Навчання HR',r:'Кухня',c:'#F2A03D'}],
+    [{t:'12:00',ti:'Обід команди',r:'Кухня',c:'#F2C036'},{t:'16:00',ti:'Ретро тижня',r:'Опен-спейс',c:'#3EA8C9'}],
+    [],[]
+  ];
+  const REPLIES=['Добре, зрозумів 👍','Зараз буду','Дякую, що написав!','Ок, домовились','Хвилинку, гляну','Так, все вірно'];
+  const LS_T='alliancesim.phone.tasks', LS_C='alliancesim.phone.chats', LS_R='alliancesim.phone.read';
+  const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k)); return v==null?f:v;}catch(e){return f;}};
+  const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}};
+  let tasks=load(LS_T,[{t:'Замовити воду в кулер',d:true},{t:'Підготувати переговорну до 14:00',d:false},{t:'Онбординг нового логіста',d:false},{t:'Перевірити доступи для IT',d:false}]);
+  let chats=load(LS_C,{});
+  let readSet=new Set(load(LS_R,[]));
+  function ensureChat(id){if(!chats[id]){const e=emp(id); chats[id]=[{me:false,text:e?`Привіт! Це ${e.name.split(' ')[0]}. Пиши, якщо щось треба 🙂`:'Привіт!'}]; save(LS_C,chats);} return chats[id];}
+  function markRead(id){if(!readSet.has(id)){readSet.add(id); save(LS_R,[...readSet]); badges();}}
+  function unread(){return state.employees.filter(e=>!readSet.has(e.id)).length;}
+  function badges(){const n=unread(),d=$('#phoneDot'),cb=$('#chatBadge'); d.style.display=n?'grid':'none'; d.textContent=n; cb.style.display=n?'grid':'none'; cb.textContent=n;}
+
+  function tick(){const d=new Date(); $('#pclock').textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+    $('#pdate').textContent=d.toLocaleDateString('uk-UA',{weekday:'long',day:'numeric',month:'long'});}
+  const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+  const wire=s=>s.querySelectorAll('[data-back]').forEach(b=>b.onclick=back);
+  const head=t=>`<div class="phead"><button class="bk" data-back>${IC.back}</button><div class="ti">${t}</div><div class="sp"></div></div>`;
+  const rowHTML=(e,sub)=>`<div class="prow" data-id="${e.id}">${avHTML(e)}<div class="tx"><div class="nm">${esc(e.name)}</div><div class="sub">${esc(sub||e.position||e.dept)}</div></div><div class="meta">${STATUS[statusOf(e)].icon}</div></div>`;
+  const empty=(b,s)=>`<div class="pempty"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M3 19a6 6 0 0 1 12 0M17 5a3.4 3.4 0 0 1 0 6.8M22 19a6 6 0 0 0-4.5-5.8"/></svg><b>${b}</b><span>${s}</span></div>`;
+  const fld=(k,v)=>`<div class="pfield"><span class="k">${k}</span><span class="v">${esc(v)}</span></div>`;
+
+  function setZ(){scr('home').style.zIndex=0; stack.forEach((id,i)=>scr(id).style.zIndex=i+1);}
+  function go(id,build){if(build)build(scr(id)); if(!stack.includes(id))stack.push(id); setZ(); const s=scr(id); void s.offsetWidth; s.classList.add('show');}
+  function pop(){const id=stack.pop(); const s=scr(id); if(s._stop){s._stop();s._stop=null;} s.classList.remove('show'); setZ(); return id;}
+  function back(){if(!stack.length){close();return;} pop();}
+  function home(){while(stack.length)pop();}
+  function open(){app.dataset.phone='1'; phone.setAttribute('aria-hidden','false'); tick(); badges();}
+  function close(){delete app.dataset.phone; phone.setAttribute('aria-hidden','true');}
+
+  const R={
+    contacts(s){const es=state.employees;
+      s.innerHTML=head('Контакти')+`<div class="psearch"><input placeholder="Пошук колеги" data-q></div><div class="pscroll" data-list></div>`;
+      const box=s.querySelector('[data-list]');
+      function draw(q){if(!es.length){box.innerHTML=empty('Ще немає колег','Додайте співробітників у режимі будівника — вкладка «Люди».');return;}
+        const r=es.filter(e=>!q||(e.name+' '+e.dept+' '+(e.position||'')).toLowerCase().includes(q));
+        box.innerHTML=r.length?r.map(e=>rowHTML(e)).join(''):empty('Нічого не знайшли','Спробуйте інше ім\'я або відділ.');
+        box.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>go('contact',x=>R.contact(x,el.dataset.id)));}
+      draw(''); s.querySelector('[data-q]').oninput=e=>draw(e.target.value.trim().toLowerCase()); wire(s);}
+,
+    contact(s,id){const e=emp(id),st=STATUS[statusOf(e)];
+      s.innerHTML=head('')+`<div class="pdetail">${avHTML(e,'av big')}<div class="nm">${esc(e.name)}</div><div class="dp">${esc(e.dept)}${e.position?' · '+esc(e.position):''}</div><div class="status" style="color:${st.c}">${st.icon} ${st.n}</div>
+        <div class="pactions"><button class="pact" data-call>${IC.phone}Подзвонити</button><button class="pact" data-msg>${IC.chat}Написати</button><button class="pact" data-loc>${IC.pin}Знайти</button></div>
+        <div class="pfields">${e.email?fld('Email',e.email):''}${e.phone?fld('Телефон',e.phone):''}${e.ext?fld('Робочий №',e.ext):''}${fld('Відділ',e.dept)}</div></div>`;
+      s.querySelector('[data-call]').onclick=()=>go('calling',x=>R.calling(x,id));
+      s.querySelector('[data-msg]').onclick=()=>{markRead(id); go('conv',x=>R.conv(x,id));};
+      s.querySelector('[data-loc]').onclick=()=>{close(); focusEmployee(id,true);}; wire(s);}
+,
+    chatlist(s){const es=state.employees;
+      s.innerHTML=head('Чат')+`<div class="pscroll" data-list></div>`;
+      const box=s.querySelector('[data-list]');
+      if(!es.length){box.innerHTML=empty('Немає чатів','Додайте колег — і зможете листуватися з ними тут.'); wire(s); return;}
+      box.innerHTML=es.map(e=>{const c=chats[e.id]; const last=c&&c.length?c[c.length-1].text:'Почніть розмову';return rowHTML(e,last);}).join('');
+      box.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>{markRead(el.dataset.id); go('conv',x=>R.conv(x,el.dataset.id));}); wire(s);}
+,
+    conv(s,id){const e=emp(id),msgs=ensureChat(id); markRead(id);
+      s.innerHTML=`<div class="phead"><button class="bk" data-back>${IC.back}</button>${avHTML(e)}<div style="min-width:0"><div class="ti" style="font-size:14.5px">${esc(e.name.split(' ')[0])}</div><div class="sub" style="font-size:11px;color:var(--muted);font-weight:700">${STATUS[statusOf(e)].n}</div></div><div class="sp"></div><button class="bk" data-call>${IC.phone}</button></div>
+        <div class="pconv" data-conv></div><div class="pinput"><input placeholder="Повідомлення…" data-in><button class="send" data-send>${IC.send}</button></div>`;
+      const c=s.querySelector('[data-conv]'), inp=s.querySelector('[data-in]');
+      const draw=()=>{c.innerHTML=msgs.map(m=>`<div class="pbub ${m.me?'me':'them'}">${esc(m.text)}</div>`).join(''); c.scrollTop=c.scrollHeight;};
+      draw();
+      const send=()=>{const v=inp.value.trim(); if(!v)return; msgs.push({me:true,text:v}); inp.value=''; draw(); save(LS_C,chats);
+        setTimeout(()=>{msgs.push({me:false,text:REPLIES[Math.floor(Math.random()*REPLIES.length)]}); draw(); save(LS_C,chats);},900+Math.random()*700);};
+      s.querySelector('[data-send]').onclick=send; inp.onkeydown=ev=>{if(ev.key==='Enter')send();};
+      s.querySelector('[data-call]').onclick=()=>go('calling',x=>R.calling(x,id)); wire(s);}
+,
+    calls(s){const es=state.employees;
+      s.innerHTML=head('Дзвінки')+`<div class="pscroll" data-list></div>`;
+      const box=s.querySelector('[data-list]');
+      if(!es.length){box.innerHTML=empty('Немає дзвінків','Додайте колег, щоб телефонувати їм.'); wire(s); return;}
+      const times=['щойно','5 хв тому','Сьогодні','Вчора','Пн'];
+      box.innerHTML=es.map((e,i)=>rowHTML(e,'Вихідний · '+times[i%times.length])).join('');
+      box.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>go('calling',x=>R.calling(x,el.dataset.id))); wire(s);}
+,
+    calling(s,id){const e=emp(id);
+      s.innerHTML=`<div class="pcall"><div style="height:6px"></div><div class="who">${avHTML(e,'av big')}<div class="nm">${esc(e.name.split(' ')[0])}</div><div class="state" data-state>виклик…</div></div><div><button class="end" data-end>${IC.phone}</button></div></div>`;
+      let secs=0,t2; const st=s.querySelector('[data-state]');
+      const t1=setTimeout(()=>{st.textContent='00:00'; t2=setInterval(()=>{secs++; st.textContent=fmt(secs);},1000);},2200);
+      s._stop=()=>{clearTimeout(t1); clearInterval(t2);};
+      s.querySelector('[data-end]').onclick=()=>back();}
+,
+    calendar(s){
+      const DOW=['Пн','Вт','Ср','Чт','Пт','Сб','Нд'], MON=['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'], MONL=['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
+      const now=new Date(); now.setHours(0,0,0,0);
+      const wd=d=>(d.getDay()+6)%7, evOf=d=>WEEK[wd(d)]||[], same=(a,b)=>a.toDateString()===b.toDateString();
+      let view=new Date(now.getFullYear(),now.getMonth(),1), sel=new Date(now);
+      function draw(){
+        const y=view.getFullYear(), m=view.getMonth(), lead=wd(new Date(y,m,1)), dim=new Date(y,m+1,0).getDate();
+        let cells=''; for(let i=0;i<lead;i++) cells+='<div></div>';
+        for(let dn=1;dn<=dim;dn++){const d=new Date(y,m,dn);
+          cells+=`<button class="pcell${same(d,sel)?' sel':''}${same(d,now)?' tod':''}" data-d="${dn}"><span>${dn}</span>${evOf(d).length?'<i></i>':''}</button>`;}
+        const evs=evOf(sel);
+        s.innerHTML=head('Календар')+
+          `<div class="pcalbar"><button class="bk" data-prev>${IC.back}</button><div class="ti">${MON[m]} ${y}</div><button class="bk" data-next style="transform:scaleX(-1)">${IC.back}</button></div>
+           <div class="pcalgrid">${DOW.map(x=>`<div class="pdowc">${x}</div>`).join('')}</div>
+           <div class="pcalgrid" style="padding-bottom:6px">${cells}</div>
+           <div class="pscroll" style="border-top:1px solid var(--line);padding:4px 0">
+             <div style="padding:9px 16px 4px;font-size:13px;font-weight:900">${sel.getDate()} ${MONL[m]}${same(sel,now)?' · сьогодні':''}</div>
+             ${evs.length?evs.map(e=>`<div style="display:flex;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line)"><div style="width:3px;border-radius:3px;background:${e.c};flex:none"></div><div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:800;color:var(--muted)">${e.t}</div><div style="font-size:13.5px;font-weight:800">${esc(e.ti)}</div><div style="font-size:11px;color:var(--muted);font-weight:700">📍 ${esc(e.r)}</div></div></div>`).join(''):'<div style="padding:26px 16px;text-align:center;color:var(--muted);font-weight:700;font-size:13px">Немає запланованих справ</div>'}
+           </div>`;
+        s.querySelector('[data-prev]').onclick=()=>{view=new Date(y,m-1,1); draw();};
+        s.querySelector('[data-next]').onclick=()=>{view=new Date(y,m+1,1); draw();};
+        s.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{sel=new Date(y,m,+b.dataset.d); draw();});
+        wire(s);
+      }
+      draw();}
+,
+    coffee(s){
+      const drinks=[['Еспресо','☕'],['Американо','☕'],['Капучино','🥛'],['Лате','🥛'],['Раф','🥛'],['Чай','🍵']];
+      let pick='Капучино', size='M';
+      s.innerHTML=head('Кава')+`<div class="pscroll" style="padding:16px">
+        <div style="font-size:12px;font-weight:800;color:var(--muted);margin-bottom:9px;text-transform:uppercase;letter-spacing:.04em">Напій</div>
+        <div class="pchips" data-drink style="margin-bottom:18px">${drinks.map(d=>`<button class="pchip" data-v="${d[0]}" aria-pressed="${d[0]===pick}">${d[1]} ${d[0]}</button>`).join('')}</div>
+        <div style="font-size:12px;font-weight:800;color:var(--muted);margin-bottom:9px;text-transform:uppercase;letter-spacing:.04em">Розмір</div>
+        <div class="pchips" data-size style="margin-bottom:22px">${['S','M','L'].map(z=>`<button class="pchip" data-v="${z}" aria-pressed="${z===size}">${z}</button>`).join('')}</div>
+        <button class="pbtn" data-order>${IC.coffee}Замовити на кухню</button>
+        <div style="text-align:center;font-size:11.5px;color:var(--muted);font-weight:700;margin-top:12px">Принесуть до вашого столу ☕</div></div>`;
+      s.querySelectorAll('[data-drink] .pchip').forEach(b=>b.onclick=()=>{pick=b.dataset.v; b.parentElement.querySelectorAll('.pchip').forEach(x=>x.setAttribute('aria-pressed',x===b));});
+      s.querySelectorAll('[data-size] .pchip').forEach(b=>b.onclick=()=>{size=b.dataset.v; b.parentElement.querySelectorAll('.pchip').forEach(x=>x.setAttribute('aria-pressed',x===b));});
+      s.querySelector('[data-order]').onclick=()=>{toast(`Замовлено: ${pick} (${size}) ☕`); home(); close();}; wire(s);}
+,
+    tasks(s){
+      s.innerHTML=head('Задачі')+`<div class="pscroll" data-list></div><div class="pinput"><input placeholder="Нова задача…" data-in><button class="send" data-add>${IC.send}</button></div>`;
+      const box=s.querySelector('[data-list]'), inp=s.querySelector('[data-in]');
+      const draw=()=>{box.innerHTML=tasks.map((t,i)=>`<div class="ptask ${t.d?'done':''}" data-i="${i}"><span class="cb"><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg></span><span class="t">${esc(t.t)}</span></div>`).join('');
+        box.querySelectorAll('.cb').forEach((cb,i)=>cb.onclick=()=>{tasks[i].d=!tasks[i].d; save(LS_T,tasks); draw();});};
+      draw();
+      const add=()=>{const v=inp.value.trim(); if(!v)return; tasks.push({t:v,d:false}); inp.value=''; save(LS_T,tasks); draw();};
+      s.querySelector('[data-add]').onclick=add; inp.onkeydown=ev=>{if(ev.key==='Enter')add();}; wire(s);}
+,
+    broadcast(s){const depts=[...new Set(state.employees.map(e=>e.dept).filter(Boolean))];
+      let aud='Усім';
+      s.innerHTML=head('Оголошення')+`<div class="pbroad"><div style="font-size:12px;font-weight:800;color:var(--muted)">Кому</div><div class="pchips" data-aud><button class="pchip" data-a="Усім" aria-pressed="true">Усім</button>${depts.map(d=>`<button class="pchip" data-a="${esc(d)}">${esc(d)}</button>`).join('')}</div><textarea placeholder="Напишіть оголошення для команди…" data-txt></textarea><button class="pbtn" data-send>${IC.send}Надіслати</button></div>`;
+      s.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{aud=b.dataset.a; s.querySelectorAll('[data-a]').forEach(x=>x.setAttribute('aria-pressed',x===b));});
+      s.querySelector('[data-send]').onclick=()=>{const v=s.querySelector('[data-txt]').value.trim(); if(!v){toast('Напишіть текст оголошення'); return;} toast(`Оголошення надіслано · ${aud}`); home(); close();}; wire(s);}
+,
+    settings(s){
+      const dark=settings.theme==='dark';
+      let sound=load('alliancesim.phone.sound',true), notif=load('alliancesim.phone.notif',true);
+      s.innerHTML=head('Налаштування')+`<div class="pscroll">
+        <div class="psetrow"><div><div class="lb">Темна тема</div><div class="sub">Змінює вигляд офісу й телефону</div></div><div class="ptog" data-set="dark" aria-pressed="${dark}"></div></div>
+        <div class="psetrow"><div><div class="lb">Звук дзвінка</div></div><div class="ptog" data-set="sound" aria-pressed="${sound}"></div></div>
+        <div class="psetrow"><div><div class="lb">Сповіщення</div></div><div class="ptog" data-set="notif" aria-pressed="${notif}"></div></div>
+        <div class="psetrow"><div class="lb">Версія</div><div class="sub">AllianceOS 1.0</div></div></div>`;
+      s.querySelectorAll('.ptog').forEach(t=>t.onclick=()=>{const on=t.getAttribute('aria-pressed')!=='true'; t.setAttribute('aria-pressed',on);
+        const k=t.dataset.set;
+        if(k==='dark'){settings.theme=on?'dark':'pastel'; applySettings();}
+        else if(k==='sound') save('alliancesim.phone.sound',on);
+        else save('alliancesim.phone.notif',on);}); wire(s);}
+  };
+
+  $('#phoneFab').onclick=open;
+  $('#phoneClose').onclick=close;
+  $('#pbar').onclick=()=>{if(stack.length)home(); else close();};
+  scr('home').querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go,R[b.dataset.go]));
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&app.dataset.phone){if(stack.length)back(); else close();}});
+  tick(); setInterval(tick,20000); badges();
+})();
 requestAnimationFrame(loop);
 </script>
 </body>
