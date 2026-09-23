@@ -55,6 +55,20 @@ Telegram notification.
 - Seat auto-assignment by the bot.
 - Multi-language (bot is **Ukrainian** only).
 
+## Follow-up additions (same spec)
+- **Change-photo** button in the bot; readable colour names (Telegram can't tint buttons).
+- **Anti-hijack:** `POST /employees/:id/claim` links a tg id only if the row is unclaimed
+  (409 otherwise); bot edits are always scoped via by-telegram (own record only).
+- **Telegram Mini App:** the site opens inside Telegram (menu button + inline button,
+  `WEBAPP_URL`). `public/index.html` detects `Telegram.WebApp.initData`, verifies it via
+  `POST /api/tg/verify` (HMAC-SHA256 with the bot token, `api/src/telegram.js`), and runs
+  as a locked viewer that may edit **only its own** character (auto-opens the phone; lets a
+  user with no character create one, force-linked to their tg id). Employee/notification
+  writes authenticate with `X-Telegram-Init-Data` via `writeAuth` (HR token OR verified tg
+  user, scoped); `PUT` rejects editing someone else's card (403). Notifications now carry a
+  verified `from_name`, so the bot delivers "<name> написав…" instead of anonymous.
+  Requires `TELEGRAM_BOT_TOKEN` on the **api** service too.
+
 ## Design & decisions
 
 ### Runtime / hosting

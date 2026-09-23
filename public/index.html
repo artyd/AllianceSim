@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AllianceSim — офіс Харків</title>
+<!-- Telegram Mini App SDK (harmless outside Telegram: WebApp.initData is empty) -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <!-- UI icons: Font Awesome Free 6.7.2 (https://fontawesome.com) — Icons: CC BY 4.0, inlined as SVG -->
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -705,31 +707,42 @@ let view='2d', dirty2d=true; // 2D top-down (Canvas) is the default light render
 const API=(location.protocol==='file:')?'http://localhost:8011/api':'/api';
 const LS_TOKEN='alliancesim.edit_token', LS_PENDING='alliancesim.pending';
 const getToken=()=>localStorage.getItem(LS_TOKEN)||'';
+/* ---------- Telegram Mini App identity ---------- */
+// When opened inside Telegram, WebApp.initData is a signed string identifying the user.
+// The backend verifies it (HMAC with the bot token); writes then authenticate as this
+// user (scoped to their own character) instead of the HR token.
+const TG={active:false,initData:'',tgId:null,me:null};
+(function(){const w=window.Telegram&&window.Telegram.WebApp; if(w&&w.initData&&w.initData.length){TG.active=true; TG.initData=w.initData; try{w.ready();w.expand();}catch(e){}}})();
+const isMe=(e)=>!!(TG.active&&TG.me&&e&&e.id===TG.me.id);
+async function tgVerify(){ if(!TG.active) return; try{ const r=await fetch(API+'/tg/verify',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({initData:TG.initData})}); if(r.ok){const j=await r.json(); TG.tgId=j.tgId||null; TG.me=j.employee||null;} }catch(e){} }
 function setSyncStatus(txt,saved){const s=document.querySelector('#status'); if(!s) return; s.classList.toggle('saved',!!saved); const sp=s.querySelector('span'); if(sp) sp.textContent=txt;}
 async function apiLayoutGet(){const r=await fetch(API+'/layout',{headers:{'accept':'application/json'}}); if(!r.ok) throw new Error('http '+r.status); const j=await r.json(); return (j&&j.data)?j.data:null;}
 async function apiLayoutPut(data){const {employees,...layout}=data; const r=await fetch(API+'/layout',{method:'PUT',headers:{'content-type':'application/json','X-Edit-Token':getToken()},body:JSON.stringify({data:layout})}); if(r.status===401){const e=new Error('unauthorized');e.code=401;throw e;} if(!r.ok) throw new Error('http '+r.status); return true;}
 /* ---------- employees: DB-backed source of truth, with offline (localStorage) fallback ---------- */
 async function apiEmpList(){const r=await fetch(API+'/employees',{headers:{'accept':'application/json'}}); if(!r.ok) throw new Error('http '+r.status); return r.json();}
-async function apiEmpWrite(method,path,body){const r=await fetch(API+path,{method,headers:{'content-type':'application/json','X-Edit-Token':getToken()},body:body?JSON.stringify(body):undefined}); if(r.status===401||r.status===503){const e=new Error('unauthorized');e.code=401;throw e;} if(!r.ok) throw new Error('http '+r.status); return r.status===204?null:r.json().catch(()=>null);}
+async function apiEmpWrite(method,path,body){const headers={'content-type':'application/json','X-Edit-Token':getToken()}; if(TG.active) headers['X-Telegram-Init-Data']=TG.initData; const r=await fetch(API+path,{method,headers,body:body?JSON.stringify(body):undefined}); if(r.status===401||r.status===503){const e=new Error('unauthorized');e.code=401;throw e;} if(r.status===403){const e=new Error('forbidden');e.code=403;throw e;} if(!r.ok) throw new Error('http '+r.status); return r.status===204?null:r.json().catch(()=>null);}
 // Optimistic writes with a retry queue (mirrors the layout LS_PENDING model, so a
 // failed/offline write is NOT silently reverted by the 12 s poll). pendingEmp keys an
 // employee id → intended state; the poll overlays it on server truth, and flushEmp
 // keeps retrying until the server confirms. Employee writes are builder-only.
 const pendingEmp=new Map(); // id -> {op:'upsert', emp} | {op:'delete'}
 function promptTokenOnce(){const w=document.querySelector('#asTokenModal'); if(!getToken()&&(!w||w.style.display!=='flex')) openTokenModal();}
+// Can we persist employee writes? HR with a token, or a Telegram Mini App user.
+const canWriteEmp=()=>(mode==='builder'&&!!getToken())||TG.active;
 async function flushEmp(){
-  if(mode!=='builder'||!getToken()) return;                 // nothing to sync without HR rights
+  if(!((mode==='builder'&&getToken())||TG.active)) return;   // nothing to sync without rights
   for(const [id,w] of [...pendingEmp]){
     try{
       if(w.op==='delete') await apiEmpWrite('DELETE','/employees/'+encodeURIComponent(id));
       else await apiEmpWrite('POST','/employees',w.emp);     // POST upserts by id
       pendingEmp.delete(id);
-    }catch(e){ if(e.code===401){promptTokenOnce(); return;} return; /* keep for next retry */ }
+    }catch(e){ if(e.code===403){pendingEmp.delete(id); continue;} /* not allowed (e.g. not your character) → drop */
+      if(e.code===401){ if(!TG.active) promptTokenOnce(); return;} return; /* keep for next retry */ }
   }
 }
-// Builder-only guards: viewers never write (keeps the read-only link truly read-only
-// and never pops the HR token modal on a public link).
-function empUpsert(e){ if(mode!=='builder') return; pendingEmp.set(e.id,{op:'upsert',emp:JSON.parse(JSON.stringify(e))}); flushEmp(); }
+// Write guards. HR (builder) writes anything. A Mini App user may write only their own
+// character (or create one when they have none yet). Viewers on the public link never write.
+function empUpsert(e){ if(!(mode==='builder'||(TG.active&&(!TG.me||isMe(e))))) return; pendingEmp.set(e.id,{op:'upsert',emp:JSON.parse(JSON.stringify(e))}); flushEmp(); }
 function empDelete(id){ if(mode!=='builder') return; pendingEmp.set(id,{op:'delete'}); flushEmp(); }
 let empPollT=null;
 async function refreshEmployees(){
@@ -1263,7 +1276,7 @@ $('#fPhoto').onchange=e=>{const f=e.target.files[0]; if(!f) return; const rd=new
 $('#empForm').onsubmit=ev=>{ev.preventDefault(); const name=$('#fName').value.trim(), dept=$('#fDept').value.trim(); if(!name||!dept) return; pushUndo(); state.depts[dept]=fColor; const color=fColor;
   const data={name,dept,position:$('#fPos').value.trim(),email:$('#fMail').value.trim(),phone:$('#fPhone').value.trim(),ext:$('#fExt').value.trim(),color,photo:fPhoto,status:fStatus,mood:fMood};
   if(editingId){const emp=state.employees.find(x=>x.id===editingId); Object.assign(emp,data); empUpsert(emp); editingId=null; markDirty(); closeModal(); syncAvatars(); renderPeople(); renderLabels(); toast(`${name} — оновлено`); return;}
-  const ne=Object.assign({id:uid(),seat:null},data); state.employees.push(ne); empUpsert(ne); markDirty(); closeModal(); syncAvatars(); renderPeople(); toast(`${name} — додано й ходить офісом. За бажанням перетягніть на місце`); hideWelcome();
+  const ne=Object.assign({id:uid(),seat:null},data); state.employees.push(ne); if(TG.active&&!TG.me) TG.me=ne; empUpsert(ne); markDirty(); closeModal(); syncAvatars(); renderPeople(); toast(`${name} — додано й ходить офісом. За бажанням перетягніть на місце`); hideWelcome();
   if(tab!=='people') $('#tabPeople').click();};
 
 /* ---------- viewer ---------- */
@@ -1282,15 +1295,15 @@ function showCard(e){const c=$('#empcard'); const f=e.seat&&state.furniture.find
   c.innerHTML=`<div class="top">${avHTML(e)}<div><div class="nm" style="font-size:16px">${esc(e.name)}</div><div class="dp">${esc(e.dept)}${e.position?' · '+esc(e.position):''}</div></div></div>`+
     `<div class="badges"><span class="pill" style="color:${st.c}">${st.icon} ${st.n}</span><span class="pill">${md.e} ${md.n}</span><span class="pill">📍 ${esc(where)}</span>${e.tg_linked?'<span class="pill" style="color:#229ED9" title="Прив\'язано через Telegram">✈️ TG</span>':''}</div>`+
     `<dl>${e.email?`<dt>Email</dt><dd>${esc(e.email)}</dd>`:''}${e.phone?`<dt>Телефон</dt><dd>${esc(e.phone)}</dd>`:''}${e.ext?`<dt>Роб. номер</dt><dd>${esc(e.ext)}</dd>`:''}</dl>`+
-    // Status/mood/edit controls write to the DB, so they are builder-only. In viewer
-    // mode (public read-only link) the card is informational — no writes, no token prompt.
-    (mode==='builder'?
+    // Status/mood/edit controls write to the DB. Shown to HR (builder) and — in the
+    // Telegram Mini App — to the owner of this card only. Everyone else sees it read-only.
+    (mode==='builder'||isMe(e)?
       `<div class="fsec-t"><svg class="fsec-i" viewBox="0 0 384 512"><path d="M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0zM192 128a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><span>Де зараз</span></div><div class="optrow" id="cardStatus">${statusBtns(statusOf(e))}</div>`+
       `<div class="fsec-t"><svg class="fsec-i" viewBox="0 0 512 512"><path d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM176 208a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zm128 0a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zM164.1 325.5C158 318.4 158 308.5 164.1 301.4C176.5 287.2 199.3 272 240 272l32 0c40.7 0 63.5 15.2 75.9 29.4c6.1 7 6.1 17 0 24.1c-6.1 7.1-16 7.1-22.1 0C317.5 316 302.7 304 272 304l-32 0c-30.7 0-45.5 12-53.8 21.5c-6.1 7.1-16 7.1-22.1 0z"/></svg><span>Настрій</span></div><div class="moodrow" id="cardMood">${moodBtns(e.mood||'good')}</div>`+
       `<div class="row"><button class="tbtn" id="cardEdit">Редагувати</button><button class="tbtn txt" id="cardClose">Закрити</button></div>`
      :`<div class="row"><button class="tbtn txt" id="cardClose">Закрити</button></div>`);
   c.classList.add('open'); c.style.left='16px'; c.style.top='auto'; c.style.bottom='24px';
-  if(mode==='builder'){
+  if(mode==='builder'||isMe(e)){
     c.querySelectorAll('#cardStatus .optbtn').forEach(b=>b.onclick=()=>{pushUndo(); e.status=b.dataset.s; empUpsert(e); markDirty(); syncAvatars(); refreshAvatarLook(); renderPeople(); showCard(e);});
     c.querySelectorAll('#cardMood .moodbtn').forEach(b=>b.onclick=()=>{pushUndo(); e.mood=b.dataset.m; empUpsert(e); markDirty(); updateAvatarMood(e.id); dirty2d=true; renderPeople(); showCard(e);});
     $('#cardEdit').onclick=()=>{c.classList.remove('open'); app.classList.remove('hl'); openModal(e);};
@@ -1467,11 +1480,21 @@ $('#v2rotL').onclick=()=>rotateView(-1); $('#v2rotR').onclick=()=>rotateView(1);
 /* ---------- init ---------- */
 const params=new URLSearchParams(location.search);
 applySettings(); syncAll();
-if(params.get('mode')==='viewer'){mode='viewer'; lockedViewer=true; grid.visible=false; app.dataset.mode='viewer'; app.dataset.locked='viewer'; $$('#modeSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m==='viewer'));}
-initLoad().then(okServer=>{
+// In the Telegram Mini App the user is not HR: run as a locked viewer (no building),
+// but they may still edit their OWN character and use the phone.
+if(params.get('mode')==='viewer'||TG.active){mode='viewer'; lockedViewer=true; grid.visible=false; app.dataset.mode='viewer'; app.dataset.locked='viewer'; $$('#modeSeg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m==='viewer'));}
+initLoad().then(async okServer=>{
   syncAll();
   setSyncStatus(okServer?'Синхронізовано з сервером':'Локальні дані (офлайн)', true);
   if(okServer) startEmpPolling(); // reflect bot-created people & daily check-ins live
+  if(TG.active){
+    await tgVerify();                                   // who am I (linked character)?
+    renderFilters();
+    setTimeout(()=>{const fab=$('#phoneFab'); if(fab) fab.click();}, 350); // open the phone
+    if(TG.me){ toast(`Вітаю, ${esc(TG.me.name.split(' ')[0])}! 👋`); }
+    else { setTimeout(()=>{ toast('Створи свого персонажа в офісі 🙂'); openModal(); }, 900); } // no character yet
+    return;
+  }
   if(mode==='viewer'){renderFilters(); if(state.employees.some(e=>e.seat)) showVIntro();}
   else if(!state.furniture.length&&!Object.keys(state.zones).length) $('#welcome').style.display='';
 });
@@ -1496,7 +1519,7 @@ function loop(now){requestAnimationFrame(loop); const dt=Math.min(.05,(now-lastT
   const scr=id=>body.querySelector(`[data-scr="${id}"]`);
   const emp=id=>state.employees.find(e=>e.id===id);
   // Fire-and-forget: tell the backend to notify this colleague on Telegram (if linked).
-  const notify=(id,kind,text)=>{try{fetch(API+'/notifications',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({employeeId:id,kind,text:text||null})}).catch(()=>{});}catch(e){}};
+  const notify=(id,kind,text)=>{try{const h={'content-type':'application/json'}; if(TG.active) h['X-Telegram-Init-Data']=TG.initData; fetch(API+'/notifications',{method:'POST',headers:h,body:JSON.stringify({employeeId:id,kind,text:text||null})}).catch(()=>{});}catch(e){}};
   let stack=[];
   const IC={
     phone:'<svg viewBox="0 0 24 24"><path d="M6.5 3h3l1.6 4-2 1.4a12 12 0 0 0 5 5l1.4-2 4 1.6v3a2 2 0 0 1-2.1 2A16 16 0 0 1 4 5.1 2 2 0 0 1 6.5 3Z"/></svg>',

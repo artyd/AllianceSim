@@ -67,9 +67,11 @@ CREATE TABLE IF NOT EXISTS notifications (
   employee_id text REFERENCES employees(id) ON DELETE CASCADE,
   kind text NOT NULL,          -- 'message' | 'call' | 'mark'
   text text,
+  from_name text,              -- sender's name when known (Mini App user), else null
   created_at timestamptz NOT NULL DEFAULT now(),
   sent_at timestamptz          -- null until the bot delivers it
 );
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS from_name text;
 CREATE INDEX IF NOT EXISTS notifications_unsent ON notifications (id) WHERE sent_at IS NULL;
 `;
 

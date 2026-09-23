@@ -10,6 +10,7 @@ if (!TOKEN) {
 }
 const CHECKIN_HOUR = Number(process.env.CHECKIN_HOUR || 9);
 const CHECKIN_TZ = process.env.CHECKIN_TZ || 'Europe/Kyiv';
+const WEBAPP_URL = process.env.WEBAPP_URL || ''; // https URL of the site → opened as a Mini App
 
 const bot = new Bot(TOKEN);
 bot.use(session({ initial: () => ({ flow: null, stepIdx: 0, editId: null, draft: {} }) }));
@@ -97,8 +98,9 @@ bot.command('start', async (ctx) => {
   try { me = await api.byTelegram(ctx.from.id); } catch (e) { /* API down → treat as new */ }
   if (me) {
     const st = statusName(me.status), md = moodName(me.mood);
-    const kb = new InlineKeyboard()
-      .text('🔄 Оновити статус і настрій', 'upd').row()
+    const kb = new InlineKeyboard();
+    if (WEBAPP_URL) kb.webApp('📱 Відкрити офіс', WEBAPP_URL).row();
+    kb.text('🔄 Оновити статус і настрій', 'upd').row()
       .text('🖼 Змінити фото', 'setphoto').row()
       .text('✏️ Змінити профіль', 'edit');
     return ctx.reply(
@@ -107,12 +109,13 @@ bot.command('start', async (ctx) => {
       { reply_markup: kb }
     );
   }
-  const kb = new InlineKeyboard()
-    .text('🙋 Створити персонажа', 'flow:new').row()
+  const kb = new InlineKeyboard();
+  if (WEBAPP_URL) kb.webApp('📱 Відкрити офіс (створити там)', WEBAPP_URL).row();
+  kb.text('🙋 Створити персонажа', 'flow:new').row()
     .text('🔗 Я вже є в офісі — прив’язатися', 'flow:claim');
   return ctx.reply(
     'Привіт! Це офіс AllianceSim 🏢\n\nСтвори свого персонажа — він оживе в офісі на сайті. ' +
-    'Обери, як почати:',
+    'Обери, як почати (можна прямо в застосунку 📱 або тут у боті):',
     { reply_markup: kb }
   );
 });
@@ -304,16 +307,17 @@ cron.schedule(`0 ${CHECKIN_HOUR} * * 1-5`, sendCheckins, { timezone: CHECKIN_TZ 
 
 // ── deliver phone → Telegram notifications ───────────────────────────────────
 const NOTIF_TEXT = {
-  message: (t) => `💬 Тобі написали з офісного телефону:\n«${t || '…'}»`,
-  call: () => '📞 Тобі телефонують з офісу!',
-  mark: () => '📍 Тебе шукають в офісі — хтось відкрив твою картку.',
+  message: (t, who) => `💬 ${who} написав тобі з офісу:\n«${t || '…'}»`,
+  call: (_t, who) => `📞 ${who} телефонує тобі з офісу!`,
+  mark: (_t, who) => `📍 ${who} шукає тебе в офісі — відкрив твою картку.`,
 };
 async function drainNotifications() {
   let pending = [];
   try { pending = (await api.pending()) || []; } catch (e) { return; }
   for (const n of pending) {
     const make = NOTIF_TEXT[n.kind]; if (!make) { await api.markSent(n.id).catch(() => {}); continue; }
-    try { await bot.api.sendMessage(n.telegram_id, make(n.text)); } catch (e) { /* blocked → still mark sent to avoid a stuck queue */ }
+    const who = n.from_name || 'Хтось';
+    try { await bot.api.sendMessage(n.telegram_id, make(n.text, who)); } catch (e) { /* blocked → still mark sent to avoid a stuck queue */ }
     await api.markSent(n.id).catch(() => {});
   }
 }
@@ -321,4 +325,11 @@ setInterval(drainNotifications, 8000);
 
 bot.catch((err) => console.error('[bot] error:', err.error?.message || err.message));
 
-bot.start({ onStart: (info) => console.log(`[bot] @${info.username} started (polling); check-in ${CHECKIN_HOUR}:00 ${CHECKIN_TZ}`) });
+// Persistent Menu Button (next to the message input) opens the office as a Mini App.
+if (WEBAPP_URL) {
+  bot.api.setChatMenuButton({ menu_button: { type: 'web_app', text: '📱 Офіс', web_app: { url: WEBAPP_URL } } })
+    .then(() => console.log(`[bot] menu button → ${WEBAPP_URL}`))
+    .catch((e) => console.error('[bot] setChatMenuButton failed:', e.message));
+}
+
+bot.start({ onStart: (info) => console.log(`[bot] @${info.username} started (polling); check-in ${CHECKIN_HOUR}:00 ${CHECKIN_TZ}${WEBAPP_URL ? '; mini app on' : ''}`) });

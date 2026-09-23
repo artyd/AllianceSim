@@ -1,6 +1,7 @@
 import express from 'express';
 import { query, initSchema, migrateBlobEmployees } from './db.js';
-import { requireEditToken } from './auth.js';
+import { requireEditToken, writeAuth } from './auth.js';
+import { verifyInitData } from './telegram.js';
 
 const app = express();
 app.use(express.json({ limit: '25mb' })); // layout blob embeds employees (+ optional base64 photos)
@@ -10,6 +11,19 @@ const router = express.Router();
 // ── Utility ────────────────────────────────────────────────────────────────
 router.get('/health', (_req, res) => {
   res.json({ ok: true });
+});
+
+// ── Telegram Mini App: verify initData, return the caller's linked character ─────
+router.post('/tg/verify', async (req, res, next) => {
+  try {
+    const initData = (req.body && req.body.initData) || req.get('X-Telegram-Init-Data');
+    const v = verifyInitData(initData, process.env.TELEGRAM_BOT_TOKEN);
+    if (!v) return res.status(401).json({ ok: false, error: 'invalid initData' });
+    const { rows } = await query(`SELECT ${EMP_COLS} FROM employees WHERE telegram_id = $1`, [v.tgId]);
+    res.json({ ok: true, tgId: v.tgId, user: v.user, employee: rows[0] ? toEmp(rows[0], { includeTelegram: true }) : null });
+  } catch (err) {
+    next(err);
+  }
 });
 
 // ── Layout (singleton, id = 1) ───────────────────────────────────────────────
@@ -125,9 +139,10 @@ router.get('/employees/linked', requireEditToken, async (_req, res, next) => {
 // Atomic claim: link a Telegram user to an employee ONLY if it is not already linked
 // to someone. Prevents one user hijacking another's character (and claim races).
 // Idempotent: re-claiming your own returns 200; someone else's → 409.
-router.post('/employees/:id/claim', requireEditToken, async (req, res, next) => {
+router.post('/employees/:id/claim', writeAuth, async (req, res, next) => {
   try {
-    const tgId = String((req.body || {}).telegram_id || '').replace(/[^0-9]/g, '');
+    // A Mini App user can only claim to their own Telegram id; HR may pass one in the body.
+    const tgId = req.auth.tgId || String((req.body || {}).telegram_id || '').replace(/[^0-9]/g, '');
     if (!tgId) return res.status(400).json({ error: 'telegram_id required' });
     const { rows } = await query(
       `UPDATE employees SET telegram_id = $1, updated_at = now()
@@ -146,12 +161,15 @@ router.post('/employees/:id/claim', requireEditToken, async (req, res, next) => 
   }
 });
 
-router.post('/employees', requireEditToken, async (req, res, next) => {
+router.post('/employees', writeAuth, async (req, res, next) => {
   try {
     const b = req.body || {};
     if (!b.name || !b.name.toString().trim()) {
       return res.status(400).json({ error: 'name is required' });
     }
+    // A Mini App user always creates their OWN character (forced link to their tg id);
+    // they can't set an arbitrary telegram_id. HR (hr:true) may pass telegram_id freely.
+    const telegramId = req.auth.tgId ? req.auth.tgId : (b.telegram_id ?? null);
     const seat = b.seat && typeof b.seat === 'object' ? b.seat : null;
     // Upsert by id so the web client can safely re-send the full object on retry
     // (its optimistic-write queue re-flushes until the server confirms). Telegram
@@ -172,7 +190,7 @@ router.post('/employees', requireEditToken, async (req, res, next) => {
         b.id || null, b.name.toString().trim(), b.dept ?? null, b.position ?? null,
         b.email ?? null, b.phone ?? null, b.ext ?? null, b.photo ?? null, b.color ?? null,
         b.status ?? null, b.mood ?? null, seat ? seat.f : null, seat ? seat.i : null,
-        b.telegram_id ?? null,
+        telegramId,
       ]
     );
     res.status(201).json(toEmp(rows[0], { includeTelegram: true }));
@@ -181,9 +199,16 @@ router.post('/employees', requireEditToken, async (req, res, next) => {
   }
 });
 
-router.put('/employees/:id', requireEditToken, async (req, res, next) => {
+router.put('/employees/:id', writeAuth, async (req, res, next) => {
   try {
     const b = req.body || {};
+    // Mini App users may edit ONLY their own linked character, and never reassign the tg link.
+    if (req.auth.tgId) {
+      const { rows: own } = await query('SELECT telegram_id FROM employees WHERE id = $1', [req.params.id]);
+      if (!own[0]) return res.status(404).json({ error: 'employee not found' });
+      if (String(own[0].telegram_id) !== req.auth.tgId) return res.status(403).json({ error: 'not your character' });
+      delete b.telegram_id;
+    }
     const sets = [];
     const vals = [req.params.id];
     for (const [k, col] of Object.entries(SCALARS)) {
@@ -243,9 +268,17 @@ router.post('/notifications', async (req, res, next) => {
     // Only queue if the target has a linked Telegram; otherwise silently succeed.
     const { rows } = await query('SELECT telegram_id FROM employees WHERE id = $1', [employeeId]);
     if (!rows[0] || rows[0].telegram_id == null) return res.json({ ok: true, queued: false });
+    // If the sender is an authenticated Mini App user, record their name so the
+    // notification reads "від <name>" instead of anonymous.
+    let fromName = null;
+    const initData = req.get('X-Telegram-Init-Data');
+    if (initData) {
+      const v = verifyInitData(initData, process.env.TELEGRAM_BOT_TOKEN);
+      if (v) { const { rows: s } = await query('SELECT name FROM employees WHERE telegram_id = $1', [v.tgId]); if (s[0]) fromName = s[0].name; }
+    }
     await query(
-      'INSERT INTO notifications (employee_id, kind, text) VALUES ($1, $2, $3)',
-      [employeeId, kind, text ? String(text).slice(0, 500) : null]
+      'INSERT INTO notifications (employee_id, kind, text, from_name) VALUES ($1, $2, $3, $4)',
+      [employeeId, kind, text ? String(text).slice(0, 500) : null, fromName]
     );
     res.json({ ok: true, queued: true });
   } catch (err) {
@@ -257,12 +290,12 @@ router.post('/notifications', async (req, res, next) => {
 router.get('/notifications/pending', requireEditToken, async (_req, res, next) => {
   try {
     const { rows } = await query(
-      `SELECT n.id, n.kind, n.text, e.telegram_id, e.name
+      `SELECT n.id, n.kind, n.text, n.from_name, e.telegram_id, e.name
        FROM notifications n JOIN employees e ON e.id = n.employee_id
        WHERE n.sent_at IS NULL AND e.telegram_id IS NOT NULL
        ORDER BY n.id LIMIT 100`
     );
-    res.json(rows.map((r) => ({ id: r.id, kind: r.kind, text: r.text, name: r.name, telegram_id: String(r.telegram_id) })));
+    res.json(rows.map((r) => ({ id: r.id, kind: r.kind, text: r.text, from_name: r.from_name, name: r.name, telegram_id: String(r.telegram_id) })));
   } catch (err) {
     next(err);
   }
