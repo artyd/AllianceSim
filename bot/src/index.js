@@ -17,9 +17,19 @@ bot.use(session({ initial: () => ({ flow: null, stepIdx: 0, editId: null, draft:
 
 const genId = () => 'tg' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
+// Address people by name everywhere. `firstOf` takes the first token of a full name;
+// `hey` picks the best name we have for the person we're talking to — their Telegram
+// first_name (always present on an incoming update), falling back to a neutral vocative.
+const firstOf = (full) => (full || '').trim().split(/\s+/)[0] || '';
+const hey = (ctx) => (ctx.from && ctx.from.first_name) || 'колего';
+
 // ── wizard definition ────────────────────────────────────────────────────────
+// Name is asked as two steps (first, then last) so we always know which is which —
+// they're joined into a single `name` for the DB/renderer, and the first name alone
+// drives greetings. Order here is the source of truth; no guessing on the split.
 const TEXT_STEPS = [
-  { k: 'name',     q: 'Як тебе звати? (Ім’я та прізвище)', required: true },
+  { k: 'firstName', q: 'Як тебе звати? (Ім’я)',            required: true },
+  { k: 'lastName',  q: 'А твоє прізвище?',                 required: true },
   { k: 'dept',     q: 'У якому ти відділі?',                required: true },
   { k: 'position', q: 'Твоя посада?',                       skip: true },
   { k: 'email',    q: 'Робочий email?',                     skip: true },
@@ -65,8 +75,9 @@ async function advance(ctx) { ctx.session.stepIdx += 1; return sendStep(ctx); }
 
 async function finishWizard(ctx) {
   const d = ctx.session.draft;
+  const fullName = [d.firstName, d.lastName].map((s) => (s || '').trim()).filter(Boolean).join(' ');
   const emp = {
-    name: d.name, dept: d.dept, position: d.position || null, email: d.email || null,
+    name: fullName, dept: d.dept, position: d.position || null, email: d.email || null,
     phone: d.phone || null, ext: d.ext || null, photo: d.photo || null,
     color: d.color || COLORS[Math.floor(Math.random() * COLORS.length)],
     status: d.status || 'office', mood: d.mood || 'good',
@@ -83,8 +94,9 @@ async function finishWizard(ctx) {
   const wasEdit = !!ctx.session.editId;
   ctx.session = { flow: null, stepIdx: 0, editId: null, draft: {} };
   const st = statusName(emp.status), md = moodName(emp.mood);
+  const nm = (d.firstName || '').trim() || firstOf(emp.name) || hey(ctx);
   return ctx.reply(
-    `${wasEdit ? '✅ Профіль оновлено!' : '🎉 Готово! Ти вже в офісі.'}\n\n` +
+    `${wasEdit ? `✅ Профіль оновлено, ${nm}!` : `🎉 Готово, ${nm}! Ти вже в офісі.`}\n\n` +
     `👤 ${emp.name}\n🏷 ${emp.dept}${emp.position ? ' · ' + emp.position : ''}\n` +
     `${st.icon} ${st.n} · ${md.e} ${md.n}\n\n` +
     `Щоранку я питатиму, як ти. Відкрий офіс, щоб побачити себе: напиши /start будь-коли, щоб змінити профіль.`
@@ -114,7 +126,7 @@ bot.command('start', async (ctx) => {
   kb.text('🙋 Створити персонажа', 'flow:new').row()
     .text('🔗 Я вже є в офісі — прив’язатися', 'flow:claim');
   return ctx.reply(
-    'Привіт! Це офіс AllianceSim 🏢\n\nСтвори свого персонажа — він оживе в офісі на сайті. ' +
+    `Привіт, ${hey(ctx)}! Це офіс AllianceSim 🏢\n\nСтвори свого персонажа — він оживе в офісі на сайті. ` +
     'Обери, як почати (можна прямо в застосунку 📱 або тут у боті):',
     { reply_markup: kb }
   );
@@ -122,7 +134,7 @@ bot.command('start', async (ctx) => {
 
 bot.command('cancel', async (ctx) => {
   ctx.session = { flow: null, stepIdx: 0, editId: null, draft: {} };
-  return ctx.reply('Скасовано. Напиши /start, коли будеш готовий.');
+  return ctx.reply(`Скасовано, ${hey(ctx)}. Напиши /start, коли будеш готовий.`);
 });
 
 // ── callbacks ────────────────────────────────────────────────────────────────
@@ -138,7 +150,7 @@ bot.on('callback_query:data', async (ctx) => {
   // start claim
   if (data === 'flow:claim') {
     ctx.session = { flow: 'claim', stepIdx: 0, editId: null, draft: {} };
-    return ctx.reply('Введи своє ім’я, щоб я знайшов твою картку в офісі:');
+    return ctx.reply(`Введи своє ім’я, ${hey(ctx)}, щоб я знайшов твою картку в офісі:`);
   }
   // edit existing profile
   if (data === 'edit') {
@@ -147,7 +159,7 @@ bot.on('callback_query:data', async (ctx) => {
     return sendStep(ctx);
   }
   // update status+mood only
-  if (data === 'upd') return ctx.reply('Який у тебе статус зараз?', { reply_markup: statusKeyboard('cst') });
+  if (data === 'upd') return ctx.reply(`Який у тебе статус зараз, ${hey(ctx)}?`, { reply_markup: statusKeyboard('cst') });
 
   // skip an optional text step
   if (data === 'skip') { if (ctx.session.flow === 'new') return advance(ctx); return; }
@@ -202,7 +214,7 @@ bot.on('callback_query:data', async (ctx) => {
     if (r.status === 409) return ctx.reply('Цю картку вже прив’язав інший користувач 🔒 Обери іншу або створи нового персонажа: /start');
     if (r.status !== 200) return ctx.reply('Не вдалося прив’язати 😕 Спробуй /start ще раз.');
     ctx.session = { flow: null, stepIdx: 0, editId: null, draft: {} };
-    return ctx.reply('✅ Прив’язано! Тепер це твій персонаж. Щоранку питатиму, як ти. /start — щоб змінити профіль.');
+    return ctx.reply(`✅ Прив’язано, ${hey(ctx)}! Тепер це твій персонаж. Щоранку питатиму, як ти. /start — щоб змінити профіль.`);
   }
 
   // stateless check-in / update: status chosen → ask mood (carry status in callback)
@@ -218,8 +230,8 @@ bot.on('callback_query:data', async (ctx) => {
     if (!me) return ctx.reply('Спочатку створи персонажа: /start');
     try { await api.update(me.id, { status, mood }); } catch (e) { return ctx.reply('Не вдалося оновити 😕'); }
     const st = statusName(status), md = moodName(mood);
-    return ctx.editMessageText(`✅ Записав: ${st.icon} ${st.n} · ${md.e} ${md.n}. Гарного дня!`).catch(() =>
-      ctx.reply(`✅ Записав: ${st.icon} ${st.n} · ${md.e} ${md.n}. Гарного дня!`));
+    const done = `✅ Записав, ${hey(ctx)}: ${st.icon} ${st.n} · ${md.e} ${md.n}. Гарного дня!`;
+    return ctx.editMessageText(done).catch(() => ctx.reply(done));
   }
 });
 
@@ -306,11 +318,12 @@ async function sendCheckins() {
 cron.schedule(`0 ${CHECKIN_HOUR} * * 1-5`, sendCheckins, { timezone: CHECKIN_TZ });
 
 // ── deliver phone → Telegram notifications ───────────────────────────────────
+// `me` is the recipient's first name so every alert opens by addressing them.
 const NOTIF_TEXT = {
-  message: (t, who) => `💬 ${who} написав тобі з офісу:\n«${t || '…'}»`,
-  call: (_t, who) => `📞 ${who} телефонує тобі з офісу!`,
-  mark: (_t, who) => `📍 ${who} шукає тебе в офісі — відкрив твою картку.`,
-  coffee: (t, who) => `☕ Нове замовлення кави\nВід: ${who}\nЗамовлення: ${t}`,
+  message: (t, who, me) => `💬 ${me}, ${who} написав тобі з офісу:\n«${t || '…'}»`,
+  call: (_t, who, me) => `📞 ${me}, ${who} телефонує тобі з офісу!`,
+  mark: (_t, who, me) => `📍 ${me}, ${who} шукає тебе в офісі — відкрив твою картку.`,
+  coffee: (t, who, me) => `☕ ${me}, нове замовлення кави\nВід: ${who}\nЗамовлення: ${t}`,
 };
 async function drainNotifications() {
   let pending = [];
@@ -318,7 +331,8 @@ async function drainNotifications() {
   for (const n of pending) {
     const make = NOTIF_TEXT[n.kind]; if (!make) { await api.markSent(n.id).catch(() => {}); continue; }
     const who = n.from_name || 'Хтось';
-    try { await bot.api.sendMessage(n.telegram_id, make(n.text, who)); } catch (e) { /* blocked → still mark sent to avoid a stuck queue */ }
+    const me = firstOf(n.name) || 'колего';
+    try { await bot.api.sendMessage(n.telegram_id, make(n.text, who, me)); } catch (e) { /* blocked → still mark sent to avoid a stuck queue */ }
     await api.markSent(n.id).catch(() => {});
   }
 }
