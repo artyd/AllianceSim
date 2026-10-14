@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "grammy": "^1.30.0",
-    "node-cron": "^3.0.3"
+    "node-cron": "^3.0.3",
+    "@resvg/resvg-js": "^2.6.2"
   }
 }

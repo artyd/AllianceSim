@@ -46,6 +46,11 @@ services:
       CHECKIN_HOUR: ${CHECKIN_HOUR:-9}
       CHECKIN_TZ: ${CHECKIN_TZ:-Europe/Kyiv}
       WEBAPP_URL: ${WEBAPP_URL:-}   # https URL of the site → opened as a Telegram Mini App
+      REPORT_HOUR: ${REPORT_HOUR:-10}             # weekday HR report (status/mood card), Kyiv time
+      REPORT_HR_NAME: ${REPORT_HR_NAME:-}         # report recipient (linked employee); empty → COFFEE_HR_*
+      COFFEE_HR_NAME: ${COFFEE_HR_NAME:-}
+      REPORT_HR_TG: ${REPORT_HR_TG:-}             # …or telegram id (wins)
+      COFFEE_HR_TG: ${COFFEE_HR_TG:-}
     # Long polling — no inbound ports, only outbound to Telegram + the api service.
 
 volumes:

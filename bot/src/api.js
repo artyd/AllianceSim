@@ -31,6 +31,7 @@ export const api = {
   byTelegram: (tgId) => req('GET', `/employees/by-telegram/${tgId}`),
   search: (q) => req('GET', `/employees/search?q=${encodeURIComponent(q)}`),
   linked: () => req('GET', '/employees/linked'),
+  report: () => req('GET', '/employees/report'),
   create: (emp) => req('POST', '/employees', emp),
   update: (id, patch) => req('PUT', `/employees/${encodeURIComponent(id)}`, patch),
   claim,

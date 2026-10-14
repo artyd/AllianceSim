@@ -136,6 +136,22 @@ router.get('/employees/linked', requireEditToken, async (_req, res, next) => {
   }
 });
 
+// Bot's daily HR report: everyone (photos stripped), plus updated_at so the bot can tell
+// who hasn't answered today's check-in. Token-gated — includes telegram ids.
+router.get('/employees/report', requireEditToken, async (_req, res, next) => {
+  try {
+    const { rows } = await query(
+      `SELECT id, name, department, status, mood, telegram_id, updated_at FROM employees ORDER BY department, name`
+    );
+    res.json(rows.map((r) => ({
+      id: r.id, name: r.name, dept: r.department, status: r.status, mood: r.mood,
+      telegram_id: r.telegram_id != null ? String(r.telegram_id) : null, updated_at: r.updated_at,
+    })));
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Atomic claim: link a Telegram user to an employee ONLY if it is not already linked
 // to someone. Prevents one user hijacking another's character (and claim races).
 // Idempotent: re-claiming your own returns 200; someone else's → 409.

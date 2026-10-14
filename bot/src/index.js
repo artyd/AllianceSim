@@ -1,6 +1,7 @@
-import { Bot, InlineKeyboard, session } from 'grammy';
+import { Bot, InlineKeyboard, InputFile, session } from 'grammy';
 import cron from 'node-cron';
 import { api } from './api.js';
+import { renderReport, reportCaption } from './report.js';
 import { STATUS, MOODS, COLORS, COLOR_LABELS, statusName, moodName } from './config.js';
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -317,6 +318,42 @@ async function sendCheckins() {
 // Mon–Fri at CHECKIN_HOUR:00, Europe/Kyiv.
 cron.schedule(`0 ${CHECKIN_HOUR} * * 1-5`, sendCheckins, { timezone: CHECKIN_TZ });
 
+// ── daily HR report (weekday mornings, after the check-in) ───────────────────
+// Recipient: REPORT_HR_TG (telegram id) wins, else REPORT_HR_NAME (a linked employee);
+// both fall back to the coffee HR settings so one HR person is configured once.
+const REPORT_HOUR = Number(process.env.REPORT_HOUR || 10);
+const REPORT_HR_TG = String(process.env.REPORT_HR_TG || process.env.COFFEE_HR_TG || '').replace(/[^0-9]/g, '');
+const REPORT_HR_NAME = (process.env.REPORT_HR_NAME || process.env.COFFEE_HR_NAME || '').trim().toLocaleLowerCase('uk');
+
+function reportRecipient(list) {
+  if (REPORT_HR_TG) return list.find((e) => e.telegram_id === REPORT_HR_TG) || { telegram_id: REPORT_HR_TG, name: '' };
+  if (REPORT_HR_NAME) return list.find((e) => e.telegram_id && e.name.trim().toLocaleLowerCase('uk') === REPORT_HR_NAME) || null;
+  return null;
+}
+
+async function sendReport(toChatId) {
+  const list = (await api.report()) || [];
+  const hr = reportRecipient(list);
+  const chatId = toChatId || hr?.telegram_id;
+  if (!chatId) { console.error('[bot] HR report: no recipient (set REPORT_HR_NAME / REPORT_HR_TG, HR must be linked)'); return; }
+  const rep = renderReport(list, { tz: CHECKIN_TZ, checkinHour: CHECKIN_HOUR });
+  await bot.api.sendPhoto(chatId, new InputFile(rep.png, 'office-report.png'), {
+    caption: reportCaption(rep, firstOf(hr?.name)),
+  });
+  console.log(`[bot] HR report sent (${list.length} people, ${rep.pending.length} pending)`);
+}
+cron.schedule(`0 ${REPORT_HOUR} * * 1-5`, () => sendReport().catch((e) => console.error('[bot] HR report failed:', e.message)),
+  { timezone: CHECKIN_TZ });
+
+// /report — on-demand copy, HR only.
+bot.command('report', async (ctx) => {
+  let hr = null;
+  try { hr = reportRecipient((await api.report()) || []); } catch (e) {}
+  if (!hr || String(ctx.from.id) !== hr.telegram_id) return ctx.reply('Ця команда доступна лише HR 🔒');
+  await ctx.replyWithChatAction('upload_photo').catch(() => {});
+  try { await sendReport(ctx.chat.id); } catch (e) { console.error('[bot] /report failed:', e.message); return ctx.reply('Не вдалося зібрати звіт 😕'); }
+});
+
 // ── deliver phone → Telegram notifications ───────────────────────────────────
 // `me` is the recipient's first name so every alert opens by addressing them.
 const NOTIF_TEXT = {
@@ -347,4 +384,4 @@ if (WEBAPP_URL) {
     .catch((e) => console.error('[bot] setChatMenuButton failed:', e.message));
 }
 
-bot.start({ onStart: (info) => console.log(`[bot] @${info.username} started (polling); check-in ${CHECKIN_HOUR}:00 ${CHECKIN_TZ}${WEBAPP_URL ? '; mini app on' : ''}`) });
+bot.start({ onStart: (info) => console.log(`[bot] @${info.username} started (polling); check-in ${CHECKIN_HOUR}:00, HR report ${REPORT_HOUR}:00 ${CHECKIN_TZ}${WEBAPP_URL ? '; mini app on' : ''}`) });
