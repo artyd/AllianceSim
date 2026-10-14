@@ -727,10 +727,10 @@ const getToken=()=>localStorage.getItem(LS_TOKEN)||'';
 // When opened inside Telegram, WebApp.initData is a signed string identifying the user.
 // The backend verifies it (HMAC with the bot token); writes then authenticate as this
 // user (scoped to their own character) instead of the HR token.
-const TG={active:false,initData:'',tgId:null,me:null};
+const TG={active:false,initData:'',tgId:null,me:null,canCoffee:null};
 (function(){const w=window.Telegram&&window.Telegram.WebApp; if(w&&w.initData&&w.initData.length){TG.active=true; TG.initData=w.initData; try{w.ready();w.expand();}catch(e){} try{document.getElementById('app').dataset.tgapp='1';}catch(e){}}})();
 const isMe=(e)=>!!(TG.active&&TG.me&&e&&e.id===TG.me.id);
-async function tgVerify(){ if(!TG.active){TG.diag='no-tg'; return;} try{ const r=await fetch(API+'/tg/verify',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({initData:TG.initData})}); if(r.ok){const j=await r.json(); TG.tgId=j.tgId||null; TG.me=j.employee||null; TG.diag=TG.me?'ok':(TG.tgId?'no-emp':'no-user');} else {TG.diag='http'+r.status;} }catch(e){TG.diag='neterr';} }
+async function tgVerify(){ if(!TG.active){TG.diag='no-tg'; return;} try{ const r=await fetch(API+'/tg/verify',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({initData:TG.initData})}); if(r.ok){const j=await r.json(); TG.tgId=j.tgId||null; TG.me=j.employee||null; TG.canCoffee=j.canCoffee!==false; TG.diag=TG.me?'ok':(TG.tgId?'no-emp':'no-user');} else {TG.diag='http'+r.status;} }catch(e){TG.diag='neterr';} }
 function setSyncStatus(txt,saved){const s=document.querySelector('#status'); if(!s) return; s.classList.toggle('saved',!!saved); const sp=s.querySelector('span'); if(sp) sp.textContent=txt;}
 async function apiLayoutGet(){const r=await fetch(API+'/layout',{headers:{'accept':'application/json'}}); if(!r.ok) throw new Error('http '+r.status); const j=await r.json(); return (j&&j.data)?j.data:null;}
 async function apiLayoutPut(data){const {employees,...layout}=data; const r=await fetch(API+'/layout',{method:'PUT',headers:{'content-type':'application/json','X-Edit-Token':getToken()},body:JSON.stringify({data:layout})}); if(r.status===401){const e=new Error('unauthorized');e.code=401;throw e;} if(!r.ok) throw new Error('http '+r.status); return true;}
@@ -1664,6 +1664,8 @@ function loop(now){requestAnimationFrame(loop); const dt=Math.min(.05,(now-lastT
     coffee(s){
       const drinks=[['Еспресо','☕'],['Американо','☕'],['Капучино','🥛'],['Лате','🥛'],['Раф','🥛'],['Чай','🍵']];
       let pick='Капучино', size='M';
+      // Server keeps an allow-list (COFFEE_ALLOWED); known-refused Mini App users get a locked screen.
+      if(TG.active&&TG.canCoffee===false){ s.innerHTML=head('Кава')+`<div class="pscroll" style="padding:28px 18px;text-align:center"><div style="font-size:40px;margin-bottom:10px">☕🔒</div><div style="font-weight:800;margin-bottom:6px">Замовлення кави недоступне</div><div style="font-size:13px;color:var(--muted);font-weight:600">Ця функція доступна лише керівництву.</div></div>`; wire(s); return; }
       s.innerHTML=head('Кава')+`<div class="pscroll" style="padding:16px">
         <div style="font-size:12px;font-weight:800;color:var(--muted);margin-bottom:9px;text-transform:uppercase;letter-spacing:.04em">Напій</div>
         <div class="pchips" data-drink style="margin-bottom:18px">${drinks.map(d=>`<button class="pchip" data-v="${d[0]}" aria-pressed="${d[0]===pick}">${d[1]} ${d[0]}</button>`).join('')}</div>
@@ -1674,7 +1676,7 @@ function loop(now){requestAnimationFrame(loop); const dt=Math.min(.05,(now-lastT
       s.querySelectorAll('[data-drink] .pchip').forEach(b=>b.onclick=()=>{pick=b.dataset.v; b.parentElement.querySelectorAll('.pchip').forEach(x=>x.setAttribute('aria-pressed',x===b));});
       s.querySelectorAll('[data-size] .pchip').forEach(b=>b.onclick=()=>{size=b.dataset.v; b.parentElement.querySelectorAll('.pchip').forEach(x=>x.setAttribute('aria-pressed',x===b));});
       s.querySelector('[data-order]').onclick=()=>{
-        try{const h={'content-type':'application/json'}; if(TG.active) h['X-Telegram-Init-Data']=TG.initData; fetch(API+'/coffee',{method:'POST',headers:h,body:JSON.stringify({drink:pick,size})}).catch(()=>{});}catch(e){}
+        try{const h={'content-type':'application/json'}; if(TG.active) h['X-Telegram-Init-Data']=TG.initData; fetch(API+'/coffee',{method:'POST',headers:h,body:JSON.stringify({drink:pick,size})}).then(r=>{ if(r.status===403) toast('Замовлення кави доступне лише керівництву 🔒'); }).catch(()=>{});}catch(e){}
         toast(`Замовлено: ${pick} (${size}) ☕`); home(); close();}; wire(s);}
 ,
     tasks(s){

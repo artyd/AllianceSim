@@ -27,6 +27,7 @@ services:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}   # for Mini App initData verification
       COFFEE_HR_TG: ${COFFEE_HR_TG:-}             # coffee orders → this telegram id (wins)
       COFFEE_HR_NAME: ${COFFEE_HR_NAME:-}         # …or this linked employee by name
+      COFFEE_ALLOWED: ${COFFEE_ALLOWED:-Мороз Ольга,Руслан Зубар,Станіслав,Станислав}  # who may order coffee (names, any word order)
     # Loopback-only: nothing exposed publicly — Caddy fronts TLS and routing.
     ports:
       - "127.0.0.1:${PORT}:${PORT}"

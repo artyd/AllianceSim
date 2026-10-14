@@ -13,6 +13,20 @@ router.get('/health', (_req, res) => {
   res.json({ ok: true });
 });
 
+// ── Name matching (order-insensitive) ────────────────────────────────────────
+// Names are typed by hand, sometimes surname-first ("Тахтаулова Аліна"). An entry
+// matches when every one of its words appears in the name, in any order, ignoring
+// case and apostrophe variants — so "Руслан Зубар" matches "Зубар Руслан Станіславович".
+const words = (s) => String(s || '').toLocaleLowerCase('uk').replace(/[’'ʼ`]/g, '').split(/[\s,]+/).filter(Boolean);
+function nameMatches(name, entry) {
+  const have = new Set(words(name)), need = words(entry);
+  return need.length > 0 && need.every((w) => have.has(w));
+}
+
+// Who may order coffee: COFFEE_ALLOWED = comma-separated names. Empty or `*` → everyone.
+const COFFEE_ALLOWED = String(process.env.COFFEE_ALLOWED || '').split(',').map((s) => s.trim()).filter(Boolean);
+const canOrderCoffee = (name) => !COFFEE_ALLOWED.length || COFFEE_ALLOWED.includes('*') || (!!name && COFFEE_ALLOWED.some((e) => nameMatches(name, e)));
+
 // ── Telegram Mini App: verify initData, return the caller's linked character ─────
 router.post('/tg/verify', async (req, res, next) => {
   try {
@@ -20,7 +34,8 @@ router.post('/tg/verify', async (req, res, next) => {
     const v = verifyInitData(initData, process.env.TELEGRAM_BOT_TOKEN);
     if (!v) return res.status(401).json({ ok: false, error: 'invalid initData' });
     const { rows } = await query(`SELECT ${EMP_COLS} FROM employees WHERE telegram_id = $1`, [v.tgId]);
-    res.json({ ok: true, tgId: v.tgId, user: v.user, employee: rows[0] ? toEmp(rows[0], { includeTelegram: true }) : null });
+    const employee = rows[0] ? toEmp(rows[0], { includeTelegram: true }) : null;
+    res.json({ ok: true, tgId: v.tgId, user: v.user, employee, canCoffee: canOrderCoffee(employee && employee.name) });
   } catch (err) {
     next(err);
   }
@@ -317,14 +332,17 @@ router.post('/coffee', async (req, res, next) => {
       const v = verifyInitData(initData, process.env.TELEGRAM_BOT_TOKEN);
       if (v) { const { rows: s } = await query('SELECT name FROM employees WHERE telegram_id = $1', [v.tgId]); if (s[0]) fromName = s[0].name; }
     }
+    // Allow-listed people only (COFFEE_ALLOWED); anonymous browser orders are refused then.
+    if (!canOrderCoffee(fromName)) return res.status(403).json({ error: 'coffee not allowed' });
     // Resolve the HR recipient (must be a linked employee to receive Telegram).
     let rec = null;
     if (process.env.COFFEE_HR_TG) {
       const { rows } = await query('SELECT id FROM employees WHERE telegram_id = $1', [String(process.env.COFFEE_HR_TG).replace(/[^0-9]/g, '')]);
       rec = rows[0];
     } else if (process.env.COFFEE_HR_NAME) {
-      const { rows } = await query('SELECT id FROM employees WHERE name ILIKE $1 AND telegram_id IS NOT NULL ORDER BY name LIMIT 1', [process.env.COFFEE_HR_NAME]);
-      rec = rows[0];
+      // Order-insensitive, so renaming "Тахтаулова Аліна" → "Аліна Тахтаулова" keeps working.
+      const { rows } = await query('SELECT id, name FROM employees WHERE telegram_id IS NOT NULL ORDER BY name');
+      rec = rows.find((r) => nameMatches(r.name, process.env.COFFEE_HR_NAME));
     }
     if (!rec) return res.json({ ok: true, delivered: false }); // no HR configured / not linked
     const text = `${drink}${size ? ' (' + size + ')' : ''}`;

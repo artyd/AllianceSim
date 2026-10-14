@@ -323,11 +323,15 @@ cron.schedule(`0 ${CHECKIN_HOUR} * * 1-5`, sendCheckins, { timezone: CHECKIN_TZ 
 // both fall back to the coffee HR settings so one HR person is configured once.
 const REPORT_HOUR = Number(process.env.REPORT_HOUR || 10);
 const REPORT_HR_TG = String(process.env.REPORT_HR_TG || process.env.COFFEE_HR_TG || '').replace(/[^0-9]/g, '');
-const REPORT_HR_NAME = (process.env.REPORT_HR_NAME || process.env.COFFEE_HR_NAME || '').trim().toLocaleLowerCase('uk');
+const REPORT_HR_NAME = process.env.REPORT_HR_NAME || process.env.COFFEE_HR_NAME || '';
+
+// Same rule as the api: every word of the configured name present, in any order.
+const words = (s) => String(s || '').toLocaleLowerCase('uk').replace(/[’'ʼ`]/g, '').split(/[\s,]+/).filter(Boolean);
+const nameMatches = (name, entry) => { const have = new Set(words(name)), need = words(entry); return need.length > 0 && need.every((w) => have.has(w)); };
 
 function reportRecipient(list) {
   if (REPORT_HR_TG) return list.find((e) => e.telegram_id === REPORT_HR_TG) || { telegram_id: REPORT_HR_TG, name: '' };
-  if (REPORT_HR_NAME) return list.find((e) => e.telegram_id && e.name.trim().toLocaleLowerCase('uk') === REPORT_HR_NAME) || null;
+  if (REPORT_HR_NAME) return list.find((e) => e.telegram_id && nameMatches(e.name, REPORT_HR_NAME)) || null;
   return null;
 }
 
