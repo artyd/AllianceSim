@@ -237,9 +237,9 @@ bot.on('callback_query:data', async (ctx) => {
 });
 
 // ── text input (wizard steps + claim search) ─────────────────────────────────
-bot.on('message:text', async (ctx) => {
+bot.on('message:text', async (ctx, next) => {
   const text = ctx.message.text.trim();
-  if (text.startsWith('/')) return; // commands handled elsewhere
+  if (text.startsWith('/')) return next(); // pass on to commands registered further down (/report)
 
   if (ctx.session.flow === 'claim') {
     let matches = [];
