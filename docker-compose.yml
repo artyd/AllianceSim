@@ -52,6 +52,7 @@ services:
       COFFEE_HR_NAME: ${COFFEE_HR_NAME:-}
       REPORT_HR_TG: ${REPORT_HR_TG:-}             # …or telegram id (wins)
       COFFEE_HR_TG: ${COFFEE_HR_TG:-}
+      REPORT_VIEWERS: ${REPORT_VIEWERS:-Артем Свистельник}  # may also run /report (names, any word order)
     # Long polling — no inbound ports, only outbound to Telegram + the api service.
 
 volumes:
