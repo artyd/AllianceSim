@@ -63,6 +63,27 @@ services:
       REPORT_VIEWERS: ${REPORT_VIEWERS:-Артем Свистельник}  # may also run /report (names, any word order)
     # Long polling — no inbound ports, only outbound to Telegram + the api service.
 
+  # Daily pg_dump + attachments archive into ./backups on the host (spec 005).
+  # Make one right now:  sudo docker compose exec backup sh /backup.sh now
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      BACKUP_HOUR_UTC: ${BACKUP_HOUR_UTC:-1}
+    volumes:
+      - ./backups:/backups
+      - uploads:/uploads:ro
+      - ./deploy/backup.sh:/backup.sh:ro
+    entrypoint: ["/bin/sh", "/backup.sh"]
+
 volumes:
   pgdata:
   uploads:

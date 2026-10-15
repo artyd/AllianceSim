@@ -195,3 +195,32 @@ Postgres data lives in the `pgdata` docker volume (survives rebuilds).
 | Saving layout fails (401) | DevTools → Network: `X-Edit-Token` present and correct? |
 | Employee search finds nothing | `curl http://127.0.0.1:8011/api/employees` — is there data? |
 | Caddy won't get a certificate | DNS not pointing to server yet, or ports 80/443 closed |
+
+---
+
+## Backups & restore (spec 005)
+
+The `backup` service (started by `docker compose up -d`) writes once a day, at
+`BACKUP_HOUR_UTC` (default 01:00 UTC), into `/opt/alliancesim/backups/<YYYY-MM-DD>/`:
+
+- `db.dump` — the whole database (`pg_dump -Fc`): layout, employees, chats, calendar, tasks…
+- `uploads.tar.gz` — chat attachments (the `uploads` volume)
+
+Older than `BACKUP_KEEP_DAYS` (default 14) are deleted. Copy the folder off the server
+from time to time (e.g. `rsync`/`scp` to another machine) — a backup on the same disk
+does not survive a lost disk.
+
+```bash
+# make a backup right now / see the latest ones
+sudo docker compose exec backup sh /backup.sh now
+ls -lh /opt/alliancesim/backups/
+
+# restore (stop writers first)
+cd /opt/alliancesim
+D=backups/2026-10-15            # pick a day
+sudo docker compose stop api bot
+sudo docker compose exec -T db sh -c 'pg_restore --clean --if-exists -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < $D/db.dump
+VOL=$(sudo docker volume ls -q | grep '_uploads$')     # e.g. alliancesim_uploads
+sudo docker run --rm -v "$VOL":/u -v "$PWD/$D":/b:ro alpine sh -c 'rm -rf /u/* && tar -C /u -xzf /b/uploads.tar.gz'
+sudo docker compose start api bot
+```

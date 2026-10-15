@@ -1,0 +1,15 @@
+{
+  "name": "alliancesim-tests",
+  "private": true,
+  "type": "module",
+  "description": "Integration tests: API (embedded Postgres), bot (fake Bot API), Mini App (headless Chrome)",
+  "scripts": {
+    "test": "node run.mjs",
+    "test:api": "node run.mjs api",
+    "test:ui": "node run.mjs ui"
+  },
+  "devDependencies": {
+    "embedded-postgres": "^18.4.0-beta.0",
+    "puppeteer-core": "^24.0.0"
+  }
+}

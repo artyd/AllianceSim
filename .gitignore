@@ -7,6 +7,7 @@ api/node_modules/
 .env.local
 
 # db backups
+backups/
 *.sql
 !api/**/*.sql
 
@@ -17,3 +18,6 @@ Thumbs.db
 
 # Claude Code — commit the shared kit, ignore local overrides
 .claude/settings.local.json
+
+# test stacks (embedded Postgres data, screenshots)
+tests/.tmp/

@@ -19,6 +19,9 @@ free-roam colleagues, share a read-only link.
 3. **Verify in the browser** — don't trust parsing alone. Use `/serve`
    (`node .claude/scripts/serve.cjs public 5055`) and the **`app-verify`** agent;
    confirm **no console errors**.
+   For api/bot/phone changes run the suite in `tests/` (`cd tests && npm test`): real api
+   on embedded Postgres, the bot against a fake Bot API, Mini App in headless Chrome as
+   faked Telegram users. Add a scenario for every new feature.
 4. Commit one change at a time; update the spec status.
 
 ## Invariants (full list in `docs/SDD.md`; enforced by `agents/frontend-review`)
