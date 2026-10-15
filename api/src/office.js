@@ -3,6 +3,7 @@ import { query } from './db.js';
 import { occurrences, parts, TZ } from './recur.js';
 import { systemPost } from './chats.js';
 import { queueNotif } from './notify.js';
+import { requireEditToken } from './auth.js';
 
 // "Live office" data derived from calendars (spec 005): who is in a meeting right now and
 // which rooms are booked. The public view gets only times and room keys — never titles.
@@ -173,3 +174,46 @@ export async function snapshotDay(now = new Date()) {
      ON CONFLICT (day, employee_id) DO UPDATE SET department = EXCLUDED.department, status = EXCLUDED.status,
        mood = EXCLUDED.mood, checked_in = daily_snapshots.checked_in OR EXCLUDED.checked_in`, [day, TZ]);
 }
+
+// ── HR analytics (spec 005 E), token-gated: built from daily_snapshots ───────
+const MOOD_SCORE = { great: 5, good: 4, ok: 3, tired: 2, stressed: 1 };
+office.get('/analytics', requireEditToken, async (req, res, next) => {
+  try {
+    const days = Math.min(90, Math.max(7, Number(req.query.days) || 30));
+    await snapshotDay(); // make sure today is in
+    const today = localDay();
+    const { rows } = await query(
+      `SELECT s.day, s.employee_id, s.department, s.status, s.mood, s.checked_in FROM daily_snapshots s
+       JOIN employees e ON e.id = s.employee_id
+       WHERE s.day > $1::date - $2::int ORDER BY s.day`, [today, days]);
+    const dayKey = (d) => (d instanceof Date ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : String(d));
+    // mood: daily average of people who answered that day (else the day's known mood)
+    const byDay = new Map();
+    for (const r of rows) {
+      const k = dayKey(r.day);
+      if (!byDay.has(k)) byDay.set(k, { day: k, sum: 0, n: 0, status: {} });
+      const d = byDay.get(k);
+      if (MOOD_SCORE[r.mood]) { d.sum += MOOD_SCORE[r.mood]; d.n++; }
+      d.status[r.status || 'office'] = (d.status[r.status || 'office'] || 0) + 1;
+    }
+    const mood = [...byDay.values()].map((d) => ({ day: d.day, avg: d.n ? Math.round((d.sum / d.n) * 100) / 100 : null, n: d.n, status: d.status }));
+    // remote share per department over the period (remote / (office + remote) person-days)
+    const dept = new Map();
+    for (const r of rows) {
+      const k = (r.department || '—').trim() || '—';
+      if (!dept.has(k)) dept.set(k, { dept: k, office: 0, remote: 0, people: new Set() });
+      const d = dept.get(k); d.people.add(r.employee_id);
+      if (r.status === 'remote') d.remote++; else if ((r.status || 'office') === 'office') d.office++;
+    }
+    const remote = [...dept.values()].map((d) => ({ dept: d.dept, people: d.people.size, share: d.office + d.remote ? Math.round((d.remote / (d.office + d.remote)) * 1000) / 10 : 0 }))
+      .sort((a, b) => b.share - a.share);
+    // who hasn't answered the check-in for 7+ days (linked people only)
+    const { rows: quiet } = await query(
+      `SELECT e.id, e.name, e.department, max(s.day) FILTER (WHERE s.checked_in) AS last
+       FROM employees e LEFT JOIN daily_snapshots s ON s.employee_id = e.id
+       WHERE e.telegram_id IS NOT NULL GROUP BY e.id
+       HAVING max(s.day) FILTER (WHERE s.checked_in) IS NULL OR max(s.day) FILTER (WHERE s.checked_in) < $1::date - 6
+       ORDER BY last NULLS FIRST, e.name`, [today]);
+    res.json({ days, today, mood, remote, quiet: quiet.map((q) => ({ id: q.id, name: q.name, dept: q.department, last: q.last ? dayKey(q.last) : null })) });
+  } catch (err) { next(err); }
+});

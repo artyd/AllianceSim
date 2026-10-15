@@ -386,8 +386,17 @@ async function sendReport(toChatId, greetName) {
   const chatId = toChatId || hr?.telegram_id;
   if (!chatId) { console.error('[bot] HR report: no recipient (set REPORT_HR_NAME / REPORT_HR_TG, HR must be linked)'); return; }
   const rep = renderReport(list, { tz: CHECKIN_TZ, checkinHour: CHECKIN_HOUR });
+  // Week-over-week team mood (spec 005 analytics), if there is history yet.
+  let trend = '';
+  try {
+    const a = await api.analytics(14);
+    const avg = (xs) => { const v = xs.filter((d) => d.avg != null); return v.length ? v.reduce((s, d) => s + d.avg, 0) / v.length : null; };
+    const now = avg(a.mood.slice(-7)), prev = avg(a.mood.slice(-14, -7));
+    if (now != null) trend = `\n🙂 Настрій команди за тиждень: ${now.toFixed(1)}/5` + (prev != null ? ` (${now >= prev ? '↑' : '↓'} ${Math.abs(now - prev).toFixed(1)} до мин. тижня)` : '');
+    if (a.quiet.length) trend += `\n🔕 Не відмічались 7+ днів: ${a.quiet.slice(0, 6).map((q) => q.name).join(', ')}${a.quiet.length > 6 ? '…' : ''}`;
+  } catch (e) { /* analytics optional */ }
   await bot.api.sendPhoto(chatId, new InputFile(rep.png, 'office-report.png'), {
-    caption: reportCaption(rep, firstOf(greetName ?? hr?.name)),
+    caption: reportCaption(rep, firstOf(greetName ?? hr?.name)) + trend,
   });
   console.log(`[bot] HR report sent (${list.length} people, ${rep.pending.length} pending)`);
 }

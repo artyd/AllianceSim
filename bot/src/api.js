@@ -52,4 +52,5 @@ export const api = {
   respondEvent: (id, tgId, status) => act(`/bot/events/${encodeURIComponent(id)}/respond`, { tgId, status }),
   taskDone: (id, tgId) => act(`/bot/tasks/${encodeURIComponent(id)}/done`, { tgId }),
   digests: () => req('GET', '/bot/digests'),
+  analytics: (days) => req('GET', `/analytics?days=${days}`),
 };
