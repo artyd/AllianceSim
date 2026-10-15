@@ -2,7 +2,7 @@ import express from 'express';
 import { query, initSchema, migrateBlobEmployees } from './db.js';
 import { requireEditToken, writeAuth } from './auth.js';
 import { verifyInitData } from './telegram.js';
-import { personal } from './personal.js';
+import { personal, runReminders } from './personal.js';
 import { chats, syncSystemChats, scheduleSync, cleanupAttachments } from './chats.js';
 import { requireMe } from './session.js';
 
@@ -109,6 +109,14 @@ function toEmp(r, { includeTelegram = false } = {}) {
   return out;
 }
 
+// photo/colour end up in other people's style attributes → accept only safe shapes.
+const SAFE_PHOTO = /^(data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=\s]+|https:\/\/[^\s"'()\\]+)$/i;
+function sanitizeEmp(b) {
+  if ('photo' in b && b.photo != null && !SAFE_PHOTO.test(String(b.photo))) b.photo = null;
+  if ('color' in b && b.color != null && !/^#[0-9a-f]{3,8}$/i.test(String(b.color))) b.color = null;
+  return b;
+}
+
 // Maps client field name → DB column for scalar fields (seat/telegram handled apart).
 const SCALARS = {
   name: 'name', dept: 'department', position: 'position', email: 'email',
@@ -208,7 +216,7 @@ router.post('/employees/:id/claim', writeAuth, async (req, res, next) => {
 
 router.post('/employees', writeAuth, async (req, res, next) => {
   try {
-    const b = req.body || {};
+    const b = sanitizeEmp(req.body || {});
     if (!b.name || !b.name.toString().trim()) {
       return res.status(400).json({ error: 'name is required' });
     }
@@ -246,7 +254,7 @@ router.post('/employees', writeAuth, async (req, res, next) => {
 
 router.put('/employees/:id', writeAuth, async (req, res, next) => {
   try {
-    const b = req.body || {};
+    const b = sanitizeEmp(req.body || {});
     // Mini App users may edit ONLY their own linked character, and never reassign the tg link.
     if (req.auth.tgId) {
       const { rows: own } = await query('SELECT telegram_id FROM employees WHERE id = $1', [req.params.id]);
@@ -414,11 +422,13 @@ initSchema()
   .then(() => migrateBlobEmployees())
   .then(() => syncSystemChats())
   .then(() => {
-    // Background jobs (spec 004): roster → system chats, expired attachment cleanup.
+    // Background jobs (spec 004): roster → system chats, attachment cleanup, reminders.
     const safe = (name, fn) => () => fn().catch((e) => console.error(`[api] ${name} failed:`, e.message));
     setInterval(safe('chat sync', syncSystemChats), 5 * 60 * 1000);
     setInterval(safe('attachment cleanup', cleanupAttachments), 60 * 60 * 1000);
     safe('attachment cleanup', cleanupAttachments)();
+    // Calendar reminders + task deadlines → Telegram (queued for the bot).
+    setInterval(safe('reminders', runReminders), Number(process.env.JOBS_INTERVAL_MS || 60 * 1000));
     // Bind to all interfaces inside the container; docker-compose maps only
     // 127.0.0.1 on the host, so nothing is exposed publicly (Caddy fronts TLS).
     app.listen(PORT, () => console.log(`[api] listening on :${PORT}`));

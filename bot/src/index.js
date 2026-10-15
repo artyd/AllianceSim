@@ -13,7 +13,8 @@ const CHECKIN_HOUR = Number(process.env.CHECKIN_HOUR || 9);
 const CHECKIN_TZ = process.env.CHECKIN_TZ || 'Europe/Kyiv';
 const WEBAPP_URL = process.env.WEBAPP_URL || ''; // https URL of the site → opened as a Mini App
 
-const bot = new Bot(TOKEN);
+// TELEGRAM_API_ROOT: only for local tests against a fake Bot API server.
+const bot = new Bot(TOKEN, process.env.TELEGRAM_API_ROOT ? { client: { apiRoot: process.env.TELEGRAM_API_ROOT } } : undefined);
 bot.use(session({ initial: () => ({ flow: null, stepIdx: 0, editId: null, draft: {} }) }));
 
 const genId = () => 'tg' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -141,6 +142,23 @@ bot.command('cancel', async (ctx) => {
 // ── callbacks ────────────────────────────────────────────────────────────────
 bot.on('callback_query:data', async (ctx) => {
   const data = ctx.callbackQuery.data;
+
+  // Personal phone buttons on notifications: accept/decline an invite, finish a task.
+  // The API checks the presser actually is the invitee / assignee.
+  const ev = /^ev:(acc|dec):(\d+)$/.exec(data), tk = /^tk:done:(\d+)$/.exec(data);
+  if (ev || tk) {
+    let r;
+    try { r = ev ? await api.respondEvent(ev[2], ctx.from.id, ev[1] === 'acc' ? 'accepted' : 'declined') : await api.taskDone(tk[1], ctx.from.id); }
+    catch (e) { r = { status: 0 }; }
+    if (r.status !== 200) return ctx.answerCallbackQuery({ text: r.status === 404 ? 'Вже недоступно' : 'Не вдалося 😕', show_alert: false }).catch(() => {});
+    const note = ev ? (ev[1] === 'acc' ? '✅ Ти прийняв(ла) запрошення' : '❌ Ти відхилив(ла) запрошення') : '✅ Позначено виконаною';
+    await ctx.answerCallbackQuery({ text: note }).catch(() => {});
+    // Keep the "open" button, drop the action buttons, append the outcome.
+    const msg = ctx.callbackQuery.message;
+    const keep = (msg?.reply_markup?.inline_keyboard || []).map((row) => row.filter((b) => b.web_app)).filter((row) => row.length);
+    return ctx.editMessageText(`${msg?.text || ''}\n\n${note}`, { reply_markup: { inline_keyboard: keep } }).catch(() => {});
+  }
+
   await ctx.answerCallbackQuery().catch(() => {});
 
   // start create
@@ -303,12 +321,29 @@ bot.on('message:document', (ctx) => {
 });
 
 // ── daily check-in (weekday mornings, Kyiv) ──────────────────────────────────
+// "Сьогодні: …" block for the check-in; empty when there is nothing or digest is off.
+const plural = (n, one, few, many) => (n % 10 === 1 && n % 100 !== 11 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? few : many);
+function digestText(d) {
+  if (!d) return '';
+  const lines = [];
+  for (const ev of d.events.slice(0, 6)) lines.push(`• ${ev.time || 'весь день'} — ${ev.title}${ev.place ? ' (' + ev.place + ')' : ''}`);
+  if (d.events.length > 6) lines.push(`• …ще ${d.events.length - 6}`);
+  const late = d.due.filter((t) => t.overdue).length, today = d.due.length - late;
+  const tasks = [today && `${today} з дедлайном сьогодні`, late && `${late} прострочено`].filter(Boolean).join(', ');
+  if (!lines.length && !d.open && !d.invites) return '';
+  return '\n📅 Сьогодні: ' + (d.events.length ? `${d.events.length} ${plural(d.events.length, 'подія', 'події', 'подій')}\n${lines.join('\n')}` : 'подій немає') +
+    (d.open ? `\n📌 Задачі: ${d.open} відкритих${tasks ? ' (' + tasks + ')' : ''}` : '') +
+    (d.invites ? `\n✉️ Запрошень без відповіді: ${d.invites}` : '') + '\n\n';
+}
 async function sendCheckins() {
   let linked = [];
   try { linked = (await api.linked()) || []; } catch (e) { console.error('[bot] check-in list failed:', e.message); return; }
+  // Morning digest from the personal phone, folded into the same message (spec 004).
+  let digests = new Map();
+  try { digests = new Map(((await api.digests()) || []).map((d) => [d.telegram_id, d])); } catch (e) { /* api down → plain check-in */ }
   for (const e of linked) {
     try {
-      await bot.api.sendMessage(e.telegram_id, `Доброго ранку, ${e.name.split(' ')[0]}! ☀️\nЯк ти сьогодні? Обери статус:`, {
+      await bot.api.sendMessage(e.telegram_id, `Доброго ранку, ${e.name.split(' ')[0]}! ☀️\n${digestText(digests.get(e.telegram_id))}Як ти сьогодні? Обери статус:`, {
         reply_markup: statusKeyboard('cst'),
       });
     } catch (err) { /* user may have blocked the bot; skip */ }
@@ -374,6 +409,15 @@ const NOTIF_TEXT = {
   chat: (t, who, me, p) => (p && p.chatTitle
     ? `💬 ${who} у «${p.chatTitle}»:\n${t || '…'}`
     : `💬 ${me}, нове повідомлення від ${who}:\n${t || '…'}`),
+  event_invite: (t, who, me) => `📅 ${me}, ${who} запрошує тебе:\n${t}`,
+  event_changed: (t, who) => `📅 ${who} змінив(ла) подію:\n${t}`,
+  event_cancelled: (t, who) => `🚫 ${who} скасував(ла) подію:\n${t}`,
+  event_response: (t, who, _me, p) => `📅 ${who} ${p && p.status === 'accepted' ? 'прийняв(ла) ✅' : 'відхилив(ла) ❌'} запрошення:\n${t}`,
+  event_reminder: (t, _who, me) => `⏰ ${me}, нагадування:\n${t}`,
+  task_assigned: (t, who, me) => `📌 ${me}, ${who} поставив(ла) тобі задачу:\n${t}`,
+  task_done: (t, who) => `✅ ${who} виконав(ла) задачу:\n${t}`,
+  task_due: (t, _who, me) => `⏰ ${me}, дедлайн сьогодні:\n${t}`,
+  task_overdue: (t, _who, me) => `⚠️ ${me}, задача прострочена:\n${t}`,
 };
 
 // Mini App deep link: WEBAPP_URL?open=chat_12 → the phone opens straight on that screen.

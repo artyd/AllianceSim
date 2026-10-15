@@ -653,7 +653,6 @@ html.tgapp #app #preview{display:none}
       <div class="pscreen" data-scr="chatinfo"></div>
       <div class="pscreen" data-scr="pick"></div>
       <div class="pscreen" data-scr="calls"></div>
-      <div class="pscreen" data-scr="calling"></div>
       <div class="pscreen" data-scr="calendar"></div>
       <div class="pscreen" data-scr="event"></div>
       <div class="pscreen" data-scr="evform"></div>
@@ -1142,7 +1141,7 @@ function renderLabels(rebuild){
   for(const r of ROOMS){let el=roomLabelEls[r.id]; if(!el){el=document.createElement('div'); el.className='rl'; el.dataset.room=r.id; el.addEventListener('click',()=>{if(mode==='builder'&&tab==='zones') openZonePop({room:r.id});}); labelsEl.appendChild(el); roomLabelEls[r.id]=el;}
     const z=state.zones[r.id]; el.classList.toggle('empty',!z); el.innerHTML=(z?`<i style="background:${zoneColor(z)}"></i>`:'')+roomName(r.id); el.style.display=(r.corridor&&!z)?'none':'';}
   const live=new Set(); for(const e of state.employees){if(!e.seat) continue; live.add(e.id); let el=tagEls[e.id]; if(!el){el=document.createElement('div'); el.className='tag'; el.dataset.emp=e.id; el.addEventListener('click',ev=>{ev.stopPropagation(); if(mode==='viewer') focusEmployee(e.id,true);}); labelsEl.appendChild(el); tagEls[e.id]=el;}
-    el.innerHTML=`<div class="b"><i style="background:${e.color}"></i><span class="n">${esc(e.name)}</span><span class="d">${esc(e.position||e.dept)}</span></div>`;}
+    el.innerHTML=`<div class="b"><i style="background:${safeColor(e.color)}"></i><span class="n">${esc(e.name)}</span><span class="d">${esc(e.position||e.dept)}</span></div>`;}
   for(const k in tagEls) if(!live.has(k)){tagEls[k].remove(); delete tagEls[k];}
   for(const rz of state.rects){let el=roomLabelEls['rz'+rz.uid]; if(!el){el=document.createElement('div'); el.className='rl'; labelsEl.appendChild(el); roomLabelEls['rz'+rz.uid]=el; el.addEventListener('click',()=>{if(mode==='builder'&&tab==='zones') openZonePop({rect:rz.uid});});}
     el.innerHTML=`<i style="background:${zoneColor(rz)}"></i>${esc(rz.name||ZONES[rz.type].n)}`;}
@@ -1311,7 +1310,10 @@ function moodBtns(cur){return Object.keys(MOODS).map(k=>`<button type="button" c
 // Photo avatars set background-image + size/position explicitly (the `background`
 // shorthand would reset background-size:cover from CSS → image shown top-left at
 // natural size). This centres & covers any photo aspect ratio.
-const avHTML=(e,cls='av')=>`<div class="${cls}" style="${e.photo?`background-image:url(${e.photo});background-size:cover;background-position:center;background-repeat:no-repeat`:`background:${e.color||"#9AA3AA"}`}">${e.photo?'':initials(e.name)}</div>`;
+// Employee records are user-editable (Mini App / bot) → never trust photo/colour in a style attribute.
+const safePhoto=p=>typeof p==='string'&&(/^data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=\s]+$/i.test(p)||/^https:\/\/[^\s"'()\\]+$/i.test(p))?p:null;
+const safeColor=c=>typeof c==='string'&&/^#[0-9a-f]{3,8}$/i.test(c)?c:'#9AA3AA';
+const avHTML=(e,cls='av')=>{const ph=safePhoto(e.photo); return `<div class="${cls}" style="${ph?`background-image:url(${ph});background-size:cover;background-position:center;background-repeat:no-repeat`:`background:${safeColor(e.color)}`}">${ph?'':esc(initials(e.name||''))}</div>`;};
 const ICO_EDIT='<svg viewBox="0 0 512 512"><path d="M362.7 19.3L314.3 67.7 444.3 197.7l48.4-48.4c25-25 25-65.5 0-90.5L453.3 19.3c-25-25-65.5-25-90.5 0zm-71 71L58.6 323.5c-10.4 10.4-18 23.3-22.2 37.4L1 481.2C-1.5 489.7 .8 498.8 7 505s15.3 8.5 23.7 6.1l120.3-35.4c14.1-4.2 27-11.8 37.4-22.2L421.7 220.3 291.7 90.3z"/></svg>';
 const ICO_UNBIND='<svg viewBox="0 0 512 512"><path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z"/></svg>';
 const ICO_TRASH='<svg viewBox="0 0 448 512"><path d="M135.2 17.7L128 32 32 32C14.3 32 0 46.3 0 64S14.3 96 32 96l384 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-96 0-7.2-14.3C307.4 6.8 296.3 0 284.2 0L163.8 0c-12.1 0-23.2 6.8-28.6 17.7zM416 128L32 128 53.2 467c1.6 25.3 22.6 45 47.9 45l245.8 0c25.3 0 46.3-19.7 47.9-45L416 128z"/></svg>';
@@ -1354,7 +1356,7 @@ $('#fPhoto').onchange=e=>{const f=e.target.files[0]; if(!f) return; const rd=new
 $('#empForm').onsubmit=ev=>{ev.preventDefault(); const name=$('#fName').value.trim(), dept=$('#fDept').value.trim(); if(!name||!dept) return; pushUndo(); state.depts[dept]=fColor; const color=fColor;
   const data={name,dept,position:$('#fPos').value.trim(),email:$('#fMail').value.trim(),phone:$('#fPhone').value.trim(),ext:$('#fExt').value.trim(),color,photo:fPhoto,status:fStatus,mood:fMood};
   if(editingId){const emp=state.employees.find(x=>x.id===editingId); Object.assign(emp,data); empUpsert(emp); editingId=null; markDirty(); closeModal(); syncAvatars(); renderPeople(); renderLabels(); toast(`${name} — оновлено`); return;}
-  const ne=Object.assign({id:uid(),seat:null},data); state.employees.push(ne); if(TG.active&&!TG.me) TG.me=ne; empUpsert(ne); markDirty(); closeModal(); syncAvatars(); renderPeople(); toast(`${name} — додано й ходить офісом. За бажанням перетягніть на місце`); hideWelcome();
+  const ne=Object.assign({id:uid(),seat:null},data); state.employees.push(ne); if(TG.active&&!TG.me){TG.me=ne; setTimeout(()=>PHONE.personalStart&&PHONE.personalStart(),1200);} empUpsert(ne); markDirty(); closeModal(); syncAvatars(); renderPeople(); toast(`${name} — додано й ходить офісом. За бажанням перетягніть на місце`); hideWelcome();
   if(tab!=='people') $('#tabPeople').click();};
 
 /* ---------- viewer ---------- */
@@ -1571,7 +1573,7 @@ initLoad().then(async okServer=>{
     renderFilters();
     setTimeout(()=>{const fab=$('#phoneFab'); if(fab) fab.click();}, 350); // open the phone (only the phone)
     // Precise status so it can be diagnosed on mobile (no console there):
-    if(TG.me) toast(`Вітаю, ${esc(TG.me.name.split(' ')[0])}! 👋`);
+    if(TG.me) toast(`Вітаю, ${TG.me.name.split(' ')[0]}! 👋`);
     else if(TG.tgId) toast('Профіль не знайдено. Створи його в боті: /start');
     else toast('Не вдалося визначити користувача ('+(TG.diag||'?')+'). Онови застосунок.');
     return;
@@ -1614,16 +1616,21 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
   const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k)); return v==null?f:v;}catch(e){return f;}};
   const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}};
   const setBadge=(el,n)=>{el.style.display=n?'grid':'none'; el.textContent=n>99?'99+':n;};
-  function badges(){const n=personal()?unreadTotal():0, t=personal()?tasksDue():0; setBadge($('#phoneDot'),n+t); setBadge($('#chatBadge'),n); setBadge($('#taskBadge'),t);}
+  function badges(){const n=personal()?unreadTotal():0, t=personal()?tasksDue():0, v=personal()?PM.invites||0:0; setBadge($('#phoneDot'),n+t+v); setBadge($('#calBadge'),v); setBadge($('#chatBadge'),n); setBadge($('#taskBadge'),t);}
 
   function tick(){const d=new Date(); $('#pclock').textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
     $('#pdate').textContent=d.toLocaleDateString('uk-UA',{weekday:'long',day:'numeric',month:'long'});}
-  const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
   const wire=s=>s.querySelectorAll('[data-back]').forEach(b=>b.onclick=back);
   const head=t=>`<div class="phead"><button class="bk" data-back>${IC.back}</button><div class="ti">${t}</div><div class="sp"></div></div>`;
   const rowHTML=(e,sub)=>`<div class="prow" data-id="${e.id}">${avHTML(e)}<div class="tx"><div class="nm">${esc(e.name)}</div><div class="sub">${esc(sub||e.position||e.dept)}</div></div><div class="meta">${STATUS[statusOf(e)].icon}</div></div>`;
   const empty=(b,s)=>`<div class="pempty"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M3 19a6 6 0 0 1 12 0M17 5a3.4 3.4 0 0 1 0 6.8M22 19a6 6 0 0 0-4.5-5.8"/></svg><b>${b}</b><span>${s}</span></div>`;
   const fld=(k,v)=>`<div class="pfield"><span class="k">${k}</span><span class="v">${esc(v)}</span></div>`;
+
+  // "Подзвонити": open the colleague in Telegram (call from there), else dial the phone.
+  function callPerson(id){const e=emp(id), u=PM&&PM.contacts&&PM.contacts.get(id);
+    if(u){const l='https://t.me/'+u; try{Telegram.WebApp.openTelegramLink(l);}catch(err){window.open(l,'_blank');} return;}
+    if(e&&e.phone){location.href='tel:'+e.phone.replace(/[^\d+]/g,''); return;}
+    toast('Немає контакту для дзвінка');}
 
   // ── personal mode (spec 004): real per-user data via /me/*, only inside Telegram ──
   // Identity = the verified Telegram user's linked character (TG.me). Nothing here goes
@@ -1639,7 +1646,7 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
     return r.json().catch(()=>null);
   }
   const fail=e=>{if(!e||e.code!==401) toast('Не вдалося зберегти — перевірте зв’язок');};
-  async function session(){try{const s=await meApi('POST','/me/session'); PM.token=s.token; PM.exp=s.exp;}catch(e){}}
+  async function session(tries=1){for(let i=0;i<tries;i++){try{const s=await meApi('POST','/me/session'); PM.token=s.token; PM.exp=s.exp; return true;}catch(e){if(e.code===401) return false; await new Promise(r=>setTimeout(r,2000));}} return false;}
   const pad=n=>String(n).padStart(2,'0');
   const dKey=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
   const hm=d=>pad(d.getHours())+':'+pad(d.getMinutes());
@@ -1657,12 +1664,14 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
   const confirm2=(btn,label,fn)=>{btn.onclick=()=>{if(btn.dataset.armed){fn();return;} btn.dataset.armed='1'; const t=btn.textContent; btn.textContent=label; setTimeout(()=>{delete btn.dataset.armed; btn.textContent=t;},3000);};};
   function locked(s,title){
     s.innerHTML=head(title)+`<div class="plocked"><div class="e">🔒</div><b>${TG.active?'Спочатку створіть персонажа':'Доступно в Telegram'}</b><span>${TG.active?'Напишіть боту /start — і тут з’являться ваші особисті чати, календар і задачі.':'Особисті чати, календар і задачі працюють у застосунку офісу всередині Telegram-бота.'}</span></div>`; wire(s);}
+  async function loadInvites(){try{PM.invites=(await meApi('GET','/me/invites')).length; badges();}catch(e){}}
   async function loadTasks(){try{PM.tasks=await meApi('GET','/me/tasks'); badges(); redraw('tasks');}catch(e){}}
   // ── chats: cache + live stream (SSE). Server is the source of truth; this is a view. ──
   PM.chats=null; PM.typing=new Map(); // chatId → {id, until}
   const chatById=id=>(PM.chats||[]).find(c=>c.id===String(id));
   function upsertChat(c){if(!PM.chats) PM.chats=[]; const i=PM.chats.findIndex(x=>x.id===c.id); if(i>=0) PM.chats[i]=c; else PM.chats.push(c); PM.chats.sort((a,b)=>new Date(b.lastAt)-new Date(a.lastAt));}
-  async function loadChats(){try{PM.chats=await meApi('GET','/me/chats'); badges(); redraw('chatlist');}catch(e){}}
+  // A live update landing while the list request is in flight wins: refetch instead of clobbering it.
+  async function loadChats(){const seq=PM.seq=(PM.seq||0)+1, live=PM.live||0; try{const l=await meApi('GET','/me/chats'); if(seq!==PM.seq) return; if((PM.live||0)!==live){loadChats(); return;} PM.chats=l; badges(); redraw('chatlist');}catch(e){}}
   const unreadTotal=()=>(PM.chats||[]).reduce((n,c)=>n+(c.muted?0:c.unread),0);
   const otherOf=c=>c.kind==='direct'?(c.members.find(m=>m.id!==TG.me.id)||{}).id:null;
   const chatTitle=c=>c.kind==='direct'?nameOf(otherOf(c)):c.kind==='office'?'Весь офіс':c.kind==='dept'?(c.dept||'Відділ'):(c.title||'Група');
@@ -1671,6 +1680,8 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
   const shortTime=iso=>{const d=new Date(iso), now=new Date(); if(d.toDateString()===now.toDateString()) return hm(d); if(now-d<6*864e5) return d.toLocaleDateString('uk-UA',{weekday:'short'}); return pad(d.getDate())+'.'+pad(d.getMonth()+1);};
   const linkify=h=>h.replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>');
   const convOpen=id=>{const s=scr('conv'); return stack.includes('conv')&&s._chat===String(id)?s:null;};
+  PM.presQ=Promise.resolve();
+  const presence=chatId=>{PM.presQ=PM.presQ.then(()=>meApi('POST','/me/presence',{chatId}).catch(()=>{})); return PM.presQ;};
   function openChat(id){while(stack.includes('conv')) pop(); go('conv',x=>P.conv(x,String(id)));}
   async function openDirect(empId){
     const e=emp(empId); if(e&&!e.tg_linked){toast('Колега ще не підключив Telegram-бота'); return;}
@@ -1683,8 +1694,9 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
     const on=(t,f)=>es.addEventListener(t,ev=>{let d; try{d=JSON.parse(ev.data);}catch(e){return;} f(d);});
     es.onopen=()=>{if(PM.down){PM.down=false; loadChats(); const c=scr('conv'); if(stack.includes('conv')&&c._catchup) c._catchup();}};
     // Network blips: EventSource retries by itself. A 401 (expired token) closes it — re-mint.
-    es.onerror=()=>{PM.down=true; if(es.readyState===2) setTimeout(async()=>{await session(); connect();},3000);};
-    on('message',m=>{const c=chatById(m.chatId), cv=convOpen(m.chatId);
+    es.onerror=()=>{PM.down=true; if(es.readyState===2){PM.backoff=Math.min(60000,(PM.backoff||1500)*2); setTimeout(async()=>{await session(); connect();},PM.backoff);}};
+    es.addEventListener('open',()=>{PM.backoff=0;});
+    on('message',m=>{PM.live=(PM.live||0)+1; const c=chatById(m.chatId), cv=convOpen(m.chatId);
       PM.typing.delete(m.chatId);
       if(!c){loadChats(); return;}
       c.last=m; c.lastAt=m.createdAt; if(m.senderId!==TG.me.id&&!(cv&&!document.hidden)) c.unread++;
@@ -1695,12 +1707,16 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
       const cv=convOpen(r.chatId); if(cv&&cv._draw) cv._draw();});
     on('typing',t=>{PM.typing.set(t.chatId,{id:t.employeeId,until:Date.now()+4500}); const cv=convOpen(t.chatId); if(cv&&cv._head) cv._head(); redraw('chatlist');
       setTimeout(()=>{const cv2=convOpen(t.chatId); if(cv2&&cv2._head) cv2._head(); redraw('chatlist');},4700);});
-    on('chat',c=>{upsertChat(c); badges(); redraw('chatlist'); const cv=convOpen(c.id); if(cv&&cv._draw){cv._head(); cv._draw();} redraw('chatinfo');});
+    on('chat',c=>{PM.live=(PM.live||0)+1; upsertChat(c); badges(); redraw('chatlist'); const cv=convOpen(c.id); if(cv&&cv._draw){cv._head(); cv._draw();} redraw('chatinfo');});
+    on('event',e=>{PM.ev.set(e.id,e); redraw('calendar'); const es=scr('event'); if(stack.includes('event')&&es._id===e.id) P.event(es,e.id); loadInvites();});
+    on('event_removed',d=>{PM.ev.delete(d.id); redraw('calendar'); const es=scr('event'); if(stack.includes('event')&&es._id===d.id){while(stack.includes('event')) pop(); toast('Подію скасовано');} loadInvites();});
+    on('task',t=>{if(!PM.tasks) return; const i=PM.tasks.findIndex(x=>x.id===t.id); if(i>=0) PM.tasks[i]=t; else PM.tasks.unshift(t); redraw('tasks'); badges();});
+    on('task_removed',d=>{if(!PM.tasks) return; PM.tasks=PM.tasks.filter(x=>x.id!==d.id); redraw('tasks'); badges();});
     on('chat_removed',d=>{PM.chats=(PM.chats||[]).filter(c=>c.id!==d.chatId); badges(); redraw('chatlist');
       if(convOpen(d.chatId)){while(stack.length&&stack[stack.length-1]!=='chatlist') pop(); toast('Вас більше немає в цьому чаті');}});
   }
   document.addEventListener('visibilitychange',()=>{const s=scr('conv'); if(!personal()||!stack.includes('conv')||!s._chat) return;
-    meApi('POST','/me/presence',{chatId:document.hidden?null:s._chat}).catch(()=>{}); if(!document.hidden&&s._readLast) s._readLast();});
+    presence(document.hidden?null:s._chat); if(!document.hidden&&s._readLast) s._readLast();});
   const tasksDue=()=>{if(!PM.tasks) return 0; const end=new Date(); end.setHours(23,59,59,999); return PM.tasks.filter(t=>!t.done&&t.assigneeId===TG.me.id&&t.dueAt&&new Date(t.dueAt)<=end).length;};
 
   function setZ(){scr('home').style.zIndex=0; stack.forEach((id,i)=>scr(id).style.zIndex=i+1);}
@@ -1708,6 +1724,7 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
   function pop(){const id=stack.pop(); const s=scr(id); if(s._stop){s._stop();s._stop=null;} s.classList.remove('show'); setZ(); return id;}
   function back(){if(!stack.length){close();return;} pop();}
   function home(){while(stack.length)pop();}
+  function popIf(id){if(stack[stack.length-1]===id) pop();}
   function open(){app.dataset.phone='1'; phone.setAttribute('aria-hidden','false'); tick(); badges();}
   function close(){delete app.dataset.phone; phone.setAttribute('aria-hidden','true');}
 
@@ -1725,24 +1742,19 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
       s.innerHTML=head('')+`<div class="pdetail">${avHTML(e,'av big')}<div class="nm">${esc(e.name)}</div><div class="dp">${esc(e.dept)}${e.position?' · '+esc(e.position):''}</div><div class="status" style="color:${st.c}">${st.icon} ${st.n}</div>
         <div class="pactions"><button class="pact" data-call>${IC.phone}Подзвонити</button><button class="pact" data-msg>${IC.chat}Написати</button><button class="pact" data-loc>${IC.pin}Знайти</button></div>
         <div class="pfields">${e.email?fld('Email',e.email):''}${e.phone?fld('Телефон',e.phone):''}${e.ext?fld('Робочий №',e.ext):''}${fld('Відділ',e.dept)}</div></div>`;
-      s.querySelector('[data-call]').onclick=()=>go('calling',x=>R.calling(x,id));
+      s.querySelector('[data-call]').onclick=()=>callPerson(id);
       s.querySelector('[data-msg]').onclick=()=>personal()?openDirect(id):go('chatlist',appFor('chatlist'));
       s.querySelector('[data-loc]').onclick=()=>{notify(id,'mark'); close(); focusEmployee(id,true);}; wire(s);}
 ,
-    calls(s){const es=state.employees;
-      s.innerHTML=head('Дзвінки')+`<div class="pscroll" data-list></div>`;
+    calls(s){
+      const es=state.employees.filter(e=>!TG.me||e.id!==TG.me.id).sort((x,y)=>x.name.localeCompare(y.name,'uk'));
+      s.innerHTML=head('Дзвінки')+'<div class="psearch"><input placeholder="Кому подзвонити?" data-q></div><div class="pscroll" data-list></div>';
       const box=s.querySelector('[data-list]');
-      if(!es.length){box.innerHTML=empty('Немає дзвінків','Додайте колег, щоб телефонувати їм.'); wire(s); return;}
-      const times=['щойно','5 хв тому','Сьогодні','Вчора','Пн'];
-      box.innerHTML=es.map((e,i)=>rowHTML(e,'Вихідний · '+times[i%times.length])).join('');
-      box.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>go('calling',x=>R.calling(x,el.dataset.id))); wire(s);}
-,
-    calling(s,id){const e=emp(id); notify(id,'call');
-      s.innerHTML=`<div class="pcall"><div style="height:6px"></div><div class="who">${avHTML(e,'av big')}<div class="nm">${esc(e.name.split(' ')[0])}</div><div class="state" data-state>виклик…</div></div><div><button class="end" data-end>${IC.phone}</button></div></div>`;
-      let secs=0,t2; const st=s.querySelector('[data-state]');
-      const t1=setTimeout(()=>{st.textContent='00:00'; t2=setInterval(()=>{secs++; st.textContent=fmt(secs);},1000);},2200);
-      s._stop=()=>{clearTimeout(t1); clearInterval(t2);};
-      s.querySelector('[data-end]').onclick=()=>back();}
+      const how=e=>PM.contacts.get(e.id)?'Telegram · @'+PM.contacts.get(e.id):e.phone?'Телефон · '+e.phone:'Немає контакту';
+      const draw=q=>{const r=es.filter(e=>!q||(e.name+' '+(e.dept||'')).toLowerCase().includes(q));
+        box.innerHTML=r.length?r.map(e=>rowHTML(e,how(e))).join(''):empty(es.length?'Нікого не знайшли':'Немає колег','');
+        box.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>callPerson(el.dataset.id));};
+      draw(''); s.querySelector('[data-q]').oninput=e=>draw(e.target.value.trim().toLowerCase()); wire(s);}
 ,
     coffee(s){
       const drinks=[['Еспресо','☕'],['Американо','☕'],['Капучино','🥛'],['Лате','🥛'],['Раф','🥛'],['Чай','🍵']];
@@ -1814,7 +1826,7 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
       let evs=[];
       const evOn=d=>{const d1=new Date(d); d1.setDate(d1.getDate()+1); return evs.filter(e=>{const a=new Date(e.startsAt), b=e.endsAt?new Date(e.endsAt):a; return a<d1&&b>=d;});};
       async function load(){const v=s._view, from=new Date(v); from.setDate(1-wd(v)); const to=new Date(from); to.setDate(to.getDate()+43);
-        try{evs=await meApi('GET',`/me/events?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`); evs.forEach(e=>PM.ev.set(e.id,e)); draw();}catch(e){}}
+        try{const want=s._view; const got=await meApi('GET',`/me/events?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`); got.forEach(e=>PM.ev.set(e.id,e)); if(s._view!==want) return; evs=got; draw();}catch(e){}}
       function draw(){
         const view=s._view, sel=s._sel, y=view.getFullYear(), m=view.getMonth(), lead=wd(new Date(y,m,1)), dim=new Date(y,m+1,0).getDate();
         let cells=''; for(let i=0;i<lead;i++) cells+='<div></div>';
@@ -1855,14 +1867,15 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
         ${e.note?`<div class="r"><span class="k">Нотатка</span><span style="white-space:pre-wrap">${esc(e.note)}</span></div>`:''}
         ${mineOrg?'':`<div class="r"><span class="k">Організатор</span><span>${esc(nameOf(e.organizerId))}</span></div>`}
         <div data-extra></div>
-        <div style="font-size:11.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:16px 0 8px">Нагадування в Telegram</div>
-        ${chipsHTML('data-remind',REMIND,e.remindMin)}
+        ${e.allDay?'':`<div style="font-size:11.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:16px 0 8px">Нагадування в Telegram</div>
+        ${chipsHTML('data-remind',REMIND,e.remindMin)}`}
         <div style="display:flex;flex-direction:column;gap:8px;margin-top:20px">
           ${mineOrg?`<button class="pbtn ghost sm" data-edit>Редагувати</button><button class="pbtn danger sm" data-del>Видалити подію</button>`:''}
         </div></div></div>`;
-      pickChip(s.querySelector('[data-remind]'),async v=>{try{const u=await meApi('PATCH','/me/events/'+id,{remindMin:v?+v:null}); PM.ev.set(id,u); toast(v?'Нагадаю в Telegram':'Нагадування вимкнено');}catch(err){fail(err);}});
+      s._id=id;
+      const rmb=s.querySelector('[data-remind]'); if(rmb) pickChip(rmb,async v=>{try{const u=await meApi('PATCH','/me/events/'+id,{remindMin:v?+v:null}); PM.ev.set(id,u); toast(v?'Нагадаю в Telegram':'Нагадування вимкнено');}catch(err){fail(err);}});
       const ed=s.querySelector('[data-edit]'); if(ed) ed.onclick=()=>go('evform',x=>P.evform(x,id));
-      const del=s.querySelector('[data-del]'); if(del) confirm2(del,'Точно видалити?',async()=>{try{await meApi('DELETE','/me/events/'+id); PM.ev.delete(id); back(); redraw('calendar'); toast('Подію видалено');}catch(err){fail(err);}});
+      const del=s.querySelector('[data-del]'); if(del) confirm2(del,'Точно видалити?',async()=>{try{await meApi('DELETE','/me/events/'+id); PM.ev.delete(id); popIf('event'); redraw('calendar'); toast('Подію видалено');}catch(err){fail(err);}});
       if(P._eventExtra) P._eventExtra(s,e);
       wire(s);}
 ,
@@ -1880,12 +1893,12 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
         <label class="k">Де</label><input type="text" data-place maxlength="200" list="pPlaces" placeholder="Переговорна, кабінет…" value="${esc(e&&e.place||'')}"><datalist id="pPlaces">${places.map(p=>`<option value="${esc(p)}">`).join('')}</datalist>
         <label class="k">Нотатка</label><textarea data-note maxlength="2000" placeholder="Необов’язково">${esc(e&&e.note||'')}</textarea>
         <label class="k">Колір</label><div class="pchips" data-color>${PALETTE.map(c=>`<button type="button" class="pchip" data-c="${c}" style="background:${c};width:30px;height:30px;padding:0;border-radius:50%;border:none${c===color?';outline:3px solid var(--ink);outline-offset:2px':''}"></button>`).join('')}</div>
-        ${e?'':`<label class="k">Нагадування</label>${chipsHTML('data-remind',REMIND,rem)}`}
+        ${e?'':`<div data-remwrap style="display:flex;flex-direction:column;gap:12px"><label class="k">Нагадування</label>${chipsHTML('data-remind',REMIND,rem)}</div>`}
         <div data-invite></div>
         <button class="pbtn" type="submit">${e?'Зберегти':'Створити'}</button>
       </form></div>`;
       const f=s.querySelector('[data-f]'), times=s.querySelector('[data-times]'), tog=s.querySelector('[data-allday]');
-      const syncAD=()=>{tog.setAttribute('aria-pressed',allDay); times.style.display=allDay?'none':'';}; syncAD();
+      const syncAD=()=>{tog.setAttribute('aria-pressed',allDay); times.style.display=allDay?'none':''; const rw=s.querySelector('[data-remwrap]'); if(rw) rw.style.display=allDay?'none':'';}; syncAD();
       tog.onclick=()=>{allDay=!allDay; syncAD();};
       s.querySelectorAll('[data-color] [data-c]').forEach(b=>b.onclick=()=>{color=b.dataset.c; s.querySelectorAll('[data-color] [data-c]').forEach(x=>x.style.outline=x===b?'3px solid var(--ink)':'none'); b.style.outlineOffset='2px';});
       const rb=s.querySelector('[data-remind]'); if(rb) pickChip(rb,v=>{rem=v?+v:null;});
@@ -1897,11 +1910,11 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
         if(allDay) startsAt=fromInputs(date,'00:00');
         else {const sv=s.querySelector('[data-st]').value||'09:00', evv=s.querySelector('[data-en]').value; startsAt=fromInputs(date,sv); if(evv){endsAt=fromInputs(date,evv); if(endsAt<=startsAt){toast('Кінець має бути пізніше початку'); return;}}}
         const body={title,startsAt:startsAt.toISOString(),endsAt:endsAt?endsAt.toISOString():null,allDay,place:s.querySelector('[data-place]').value,note:s.querySelector('[data-note]').value,color};
-        if(!e) body.remindMin=rem;
+        if(!e) body.remindMin=allDay?null:rem;
         if(inv) body.attendeeIds=inv();
         try{const u=e?await meApi('PATCH','/me/events/'+id,body):await meApi('POST','/me/events',body); PM.ev.set(u.id,u);
           const c=scr('calendar'); c._sel=new Date(startsAt); c._sel.setHours(0,0,0,0); c._view=new Date(c._sel.getFullYear(),c._sel.getMonth(),1);
-          back(); if(e){redraw('event'); const es=scr('event'); if(stack.includes('event')) P.event(es,u.id);} redraw('calendar'); toast(e?'Збережено':'Подію створено');
+          popIf('evform'); if(e){const es=scr('event'); if(stack.includes('event')) P.event(es,u.id);} redraw('calendar'); toast(e?'Збережено':'Подію створено');
         }catch(err){fail(err);}};
       wire(s);}
 ,
@@ -1943,9 +1956,9 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
         s.querySelector('[data-sub]').textContent=ty?(c.kind==='direct'?'друкує…':first(ty)+' друкує…'):(e?STATUS[statusOf(e)].n:`${c.members.length} учасників`);
         s.querySelector('[data-hact]').innerHTML=c.kind==='direct'&&P._call?`<button class="bk" data-call>${IC.phone}</button>`:'';
         const cb=s.querySelector('[data-call]'); if(cb) cb.onclick=()=>P._call(otherOf(c));};
-      const tick=m=>{const c=C(), others=c.members.filter(x=>x.id!==TG.me.id), n=others.filter(x=>+x.lastRead>=+m.id).length;
+      const tick=m=>{const c=C(); if(!c) return ''; const others=c.members.filter(x=>x.id!==TG.me.id), n=others.filter(x=>+x.lastRead>=+m.id).length;
         return n?(c.kind==='direct'||others.length<2?' ✓✓':` ✓✓ ${n}`):' ✓';};
-      const bubble=(m,prev)=>{const mine=m.senderId===TG.me.id, c=C();
+      const bubble=(m,prev)=>{const mine=m.senderId===TG.me.id, c=C()||{kind:'direct',members:[]};
         const day=!prev||new Date(prev.createdAt).toDateString()!==new Date(m.createdAt).toDateString()?`<div class="pday">${esc(dayLabel(new Date(m.createdAt)))}</div>`:'';
         const who=!mine&&c.kind!=='direct'&&(!prev||prev.senderId!==m.senderId||day)?`<b class="who">${esc(nameOf(m.senderId))}</b>`:'';
         const body=m.deleted?'<i class="pdel">Повідомлення видалено</i>':((m.attachment&&P._att?P._att(m):'')+(m.text?linkify(esc(m.text)):''));
@@ -1984,10 +1997,10 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
       inp.oninput=()=>{if(Date.now()-lastTyping>3000&&inp.value){lastTyping=Date.now(); meApi('POST',`/me/chats/${chatId}/typing`).catch(()=>{});}};
       s.querySelector('[data-info]').onclick=()=>{const c=C(); if(c.kind==='direct'){const id=otherOf(c); if(emp(id)) go('contact',x=>R.contact(x,id));} else if(P.chatinfo) go('chatinfo',x=>P.chatinfo(x,chatId));};
       if(P._attach) P._attach(s.querySelector('[data-attw]'),chatId,m=>s._onMsg(m));
-      meApi('POST','/me/presence',{chatId}).catch(()=>{});
-      s._stop=()=>{s._chat=null; meApi('POST','/me/presence',{chatId:null}).catch(()=>{});};
+      presence(chatId);
+      s._stop=()=>{s._chat=null; presence(null);};
       s._head(); s._draw();
-      meApi('GET',`/me/chats/${chatId}/messages`).then(r=>{msgs=r.messages; hasMore=r.hasMore; loaded=true; s._draw('bottom'); s._readLast();}).catch(e=>{loaded=true; s._draw(); fail(e);});
+      meApi('GET',`/me/chats/${chatId}/messages`).then(r=>{r.messages.forEach(merge); hasMore=r.hasMore; loaded=true; s._draw('bottom'); s._readLast();}).catch(e=>{loaded=true; s._draw(); fail(e);});
       wire(s);}
 ,
     tasks(s){
@@ -2007,8 +2020,8 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
         box.innerHTML=arr.length?arr.map(t=>`<div class="ptask ${t.done?'done':''}" data-id="${t.id}"><span class="cb"><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg></span><span class="t">${esc(t.text)}${due(t)}${who(t)}</span></div>`).join('')
           :`<div class="pempty"><b>${s._tab==='mine'?'Задач немає 🎉':'Ви ще нікому не ставили задач'}</b><span>${s._tab==='mine'?'Додайте задачу внизу або натисніть «+».':''}</span></div>`;
         box.querySelectorAll('.ptask').forEach(el=>{const t=PM.tasks.find(x=>x.id===el.dataset.id);
-          el.querySelector('.cb').onclick=async()=>{const was=t.done; t.done=!was; draw(); badges();
-            try{Object.assign(t,await meApi('PATCH','/me/tasks/'+t.id,{done:!was}));}catch(err){t.done=was; draw(); badges(); fail(err);}};
+          el.querySelector('.cb').onclick=async()=>{if(t._busy) return; t._busy=true; const was=t.done; t.done=!was; draw(); badges();
+            try{Object.assign(t,await meApi('PATCH','/me/tasks/'+t.id,{done:!was}));}catch(err){t.done=was; fail(err);} t._busy=false; draw(); badges();};
           el.querySelector('.t').onclick=()=>go('taskform',x=>P.taskform(x,t.id));});
       }
       const add=async()=>{const v=inp.value.trim(); if(!v) return; inp.value='';
@@ -2038,9 +2051,9 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
         if(asg&&!t) body.assigneeId=asg();
         try{const u=t?await meApi('PATCH','/me/tasks/'+t.id,body):await meApi('POST','/me/tasks',body); PM.tasks=PM.tasks||[]; upd(u);
           if(!t&&u.assigneeId!==TG.me.id){scr('tasks')._tab='byme'; toast('Задачу поставлено: '+first(u.assigneeId));} else toast(t?'Збережено':'Задачу додано');
-          back(); redraw('tasks'); badges();}catch(err){fail(err);}};
-      const dn=s.querySelector('[data-done]'); if(dn) dn.onclick=async()=>{try{upd(await meApi('PATCH','/me/tasks/'+t.id,{done:!t.done})); back(); redraw('tasks'); badges();}catch(err){fail(err);}};
-      const del=s.querySelector('[data-del]'); if(del) confirm2(del,'Точно видалити?',async()=>{try{await meApi('DELETE','/me/tasks/'+t.id); PM.tasks=PM.tasks.filter(x=>x.id!==t.id); back(); redraw('tasks'); badges(); toast('Задачу видалено');}catch(err){fail(err);}});
+          popIf('taskform'); redraw('tasks'); badges();}catch(err){fail(err);}};
+      const dn=s.querySelector('[data-done]'); if(dn) dn.onclick=async()=>{try{upd(await meApi('PATCH','/me/tasks/'+t.id,{done:!t.done})); popIf('taskform'); redraw('tasks'); badges();}catch(err){fail(err);}};
+      const del=s.querySelector('[data-del]'); if(del) confirm2(del,'Точно видалити?',async()=>{try{await meApi('DELETE','/me/tasks/'+t.id); PM.tasks=PM.tasks.filter(x=>x.id!==t.id); popIf('taskform'); redraw('tasks'); badges(); toast('Задачу видалено');}catch(err){fail(err);}});
       wire(s);}
 ,
     settings(s){
@@ -2076,10 +2089,32 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
       if(b&&b.size<f.size) return {blob:b,name:f.name.replace(/\.\w+$/,'')+'.jpg',type:'image/jpeg'};}catch(e){}}
     return {blob:f,name:f.name||'file',type:f.type||'application/octet-stream'};}
   Object.assign(P,{
+    _call:id=>callPerson(id),
+    _inviteField(el,e){
+      let ids=e?e.attendees.map(a=>a.id).filter(id=>id!==TG.me.id):[];
+      const draw=()=>{el.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px"><label class="k" style="margin:0">Запросити колег</label><div class="pchips">${ids.map(id=>`<button type="button" class="pchip" data-rm="${id}" aria-pressed="true">${esc(first(id))} ✕</button>`).join('')}<button type="button" class="pchip" data-addp>+ Запросити</button></div></div>`;
+        el.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{ids=ids.filter(x=>x!==b.dataset.rm); draw();});
+        el.querySelector('[data-addp]').onclick=()=>go('pick',x=>P.pick(x,{title:'Запросити на подію',exclude:new Set(ids),cta:'Запросити',done:sel=>{ids=[...new Set(ids.concat(sel))]; back(); draw();}}));};
+      draw(); return ()=>ids;},
+    _eventExtra(s,e){
+      const box=s.querySelector('[data-extra]'), guests=e.attendees.filter(a=>a.id!==e.organizerId);
+      const ST={accepted:'✅ буде',declined:'❌ не буде',pending:'⏳ ще не відповів(ла)'};
+      let h='';
+      if(guests.length) h+=`<div class="r" style="flex-direction:column;gap:7px"><span class="k">Учасники · ${guests.length+1}</span>${[{id:e.organizerId,status:'org'},...guests].map(a=>`<div style="display:flex;justify-content:space-between;gap:8px"><span>${esc(nameOf(a.id))}${a.id===TG.me.id?' (ви)':''}</span><span style="color:var(--muted);white-space:nowrap">${a.status==='org'?'організатор':ST[a.status]||''}</span></div>`).join('')}</div>`;
+      if(e.organizerId!==TG.me.id) h+=`<div style="font-size:11.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:16px 0 8px">Ваша відповідь</div><div style="display:flex;gap:8px"><button class="pbtn sm ${e.myStatus==='accepted'?'':'ghost'}" style="flex:1" data-resp="accepted">✅ Буду</button><button class="pbtn sm ${e.myStatus==='declined'?'':'ghost'}" style="flex:1" data-resp="declined">❌ Не буду</button></div>`;
+      box.innerHTML=h;
+      box.querySelectorAll('[data-resp]').forEach(b=>b.onclick=async()=>{try{const u=await meApi('POST',`/me/events/${e.id}/respond`,{status:b.dataset.resp}); PM.ev.set(u.id,u); P.event(s,u.id); redraw('calendar'); loadInvites(); toast(u.myStatus==='accepted'?'Ви підтвердили участь':'Ви відмовилися');}catch(err){fail(err);}});},
+    _assignField(el,t){
+      if(t){if(t.assigneeId!==TG.me.id) el.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px"><label class="k" style="margin:0">Виконавець</label><div style="font-weight:800;font-size:14px">${esc(nameOf(t.assigneeId))}${t.done?' · виконано ✅':''}</div></div>`; return null;}
+      let who=null;
+      const draw=()=>{el.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px"><label class="k" style="margin:0">Кому</label><div class="pchips"><button type="button" class="pchip" data-self aria-pressed="${!who}">Собі</button><button type="button" class="pchip" data-other aria-pressed="${!!who}">${who?esc(nameOf(who))+' ✎':'Колезі…'}</button></div></div>`;
+        el.querySelector('[data-self]').onclick=()=>{who=null; draw();};
+        el.querySelector('[data-other]').onclick=()=>go('pick',x=>P.pick(x,{title:'Кому поставити задачу',cta:'Обрати',single:true,done:sel=>{who=sel[0]; back(); draw();}}));};
+      draw(); return ()=>who;},
     _groupEntry(el){
       el.innerHTML='<div class="prow" data-g><div class="av gav">👥</div><div class="tx"><div class="nm">Нова група</div><div class="sub">Чат для кількох колег</div></div></div>';
       el.querySelector('[data-g]').onclick=()=>go('groupnew',P.groupnew);},
-    pick(s,{title,exclude=new Set(),done,cta='Готово'}){
+    pick(s,{title,exclude=new Set(),done,cta='Готово',single=false}){
       const es=linkedColleagues().filter(e=>!exclude.has(e.id)), sel=new Set();
       s.innerHTML=head(title)+`<div class="psearch"><input placeholder="Пошук колеги" data-q></div><div class="pscroll" data-list></div><div class="pform" style="padding:8px 16px 12px"><button class="pbtn" data-ok>${cta}</button></div>`;
       const box=s.querySelector('[data-list]'), okb=s.querySelector('[data-ok]');
@@ -2087,7 +2122,7 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
       const draw=q=>{const r=es.filter(e=>!q||(e.name+' '+(e.dept||'')).toLowerCase().includes(q));
         box.innerHTML=r.length?r.map(e=>`<div class="prow" data-id="${e.id}" aria-checked="${sel.has(e.id)}">${avHTML(e)}<div class="tx"><div class="nm">${esc(e.name)}</div><div class="sub">${esc(e.dept||'')}</div></div><span class="chk">✓</span></div>`).join('')
           :empty(es.length?'Нікого не знайшли':'Більше нікого додати','Колеги з’являться тут, щойно підключать Telegram-бота.');
-        box.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>{const id=el.dataset.id; sel.has(id)?sel.delete(id):sel.add(id); el.setAttribute('aria-checked',sel.has(id)); label();});};
+        box.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>{const id=el.dataset.id; if(single&&!sel.has(id)){sel.clear(); box.querySelectorAll('[data-id]').forEach(x=>x.setAttribute('aria-checked','false'));} sel.has(id)?sel.delete(id):sel.add(id); el.setAttribute('aria-checked',sel.has(id)); label();});};
       okb.onclick=()=>{if(!sel.size){toast('Оберіть хоча б одного колегу'); return;} done([...sel]);};
       draw(''); s.querySelector('[data-q]').oninput=e=>draw(e.target.value.trim().toLowerCase()); wire(s);},
     groupnew(s){
@@ -2119,7 +2154,7 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
       s.querySelector('[data-mute]').onclick=()=>patch({muted:!c.muted},c.muted?'Сповіщення увімкнено':'Чат без звуку 🔕');
       const rn=s.querySelector('[data-rename]'); if(rn) rn.onclick=()=>{const t=s.querySelector('[data-title]').value.trim(); if(!t){toast('Вкажіть назву'); return;} patch({title:t},'Назву змінено');};
       const ad=s.querySelector('[data-add]'); if(ad) ad.onclick=()=>go('pick',x=>P.pick(x,{title:'Додати учасників',exclude:new Set(c.members.map(m=>m.id)),cta:'Додати',done:sel=>{back(); patch({add:sel},'Учасників додано');}}));
-      s.querySelectorAll('[data-rm]').forEach(b=>{b.onclick=ev=>{ev.stopPropagation(); if(b.dataset.armed){patch({remove:[b.dataset.rm]},'Учасника прибрано'); return;} b.dataset.armed='1'; b.textContent='Точно?';};});
+      s.querySelectorAll('[data-rm]').forEach(b=>{confirm2(b,'Точно?',()=>patch({remove:[b.dataset.rm]},'Учасника прибрано')); const f=b.onclick; b.onclick=ev=>{ev.stopPropagation(); f(ev);};});
       s.querySelectorAll('.members [data-id]').forEach(el=>el.onclick=()=>{if(el.dataset.id!==TG.me.id) go('contact',x=>R.contact(x,el.dataset.id));});
       const lv=s.querySelector('[data-leave]'); if(lv) confirm2(lv,'Точно вийти?',async()=>{try{await meApi('POST',`/me/chats/${chatId}/leave`); PM.chats=PM.chats.filter(x=>x.id!==chatId); while(stack.length&&stack[stack.length-1]!=='chatlist') pop(); redraw('chatlist'); badges(); toast('Ви вийшли з групи');}catch(e){fail(e);}});
       s._redraw=()=>{if(chatById(chatId)) P.chatinfo(s,chatId);};
@@ -2136,7 +2171,8 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
         toast('Надсилаю…');
         try{const p=await prepFile(f);
           if(PM.exp*1000-Date.now()<120e3) await session();
-          const r=await fetch(`${API}/me/attachments?chatId=${chatId}&name=${encodeURIComponent(p.name)}&mime=${encodeURIComponent(p.type)}`,{method:'POST',headers:{'content-type':'application/octet-stream','X-Me-Token':PM.token||'','X-Telegram-Init-Data':TG.initData},body:p.blob});
+          const r=await fetch(`${API}/me/attachments?chatId=${chatId}&name=${encodeURIComponent(p.name)}&mime=${encodeURIComponent(p.type)}`,{method:'POST',headers:Object.assign({'content-type':'application/octet-stream','X-Telegram-Init-Data':TG.initData},PM.token&&PM.exp*1000>Date.now()+60000?{'X-Me-Token':PM.token}:{}),body:p.blob});
+          if(r.status===401){toast('Сесія застаріла — закрийте й відкрийте застосунок знову'); return;}
           if(r.status===413){toast('Файл більший за 20 МБ'); return;}
           if(!r.ok) throw Object.assign(new Error('upload '+r.status),{code:r.status});
           const up=await r.json();
@@ -2149,12 +2185,13 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
   const appFor=id=>personal()&&P[id]?P[id]:(PERSONAL_ONLY[id]?(s=>locked(s,PERSONAL_ONLY[id])):R[id]);
 
   async function personalStart(){
-    if(!personal()) return;
+    if(!personal()||PM.started) return;
+    PM.started=true;
     try{localStorage.removeItem('alliancesim.phone.tasks');}catch(e){}
-    await session();
+    await session(5);
     setInterval(()=>{if(PM.exp*1000-Date.now()<3600e3) session();},10*60e3);
     meApi('GET','/me/contacts').then(l=>{PM.contacts=new Map(l.map(c=>[c.id,c.username]));}).catch(()=>{});
-    loadTasks();
+    loadTasks(); loadInvites();
     await loadChats();
     connect();
     // Deep link from a bot notification: ?open=chat_12 | event_5 | task_3 (or Telegram start_param).

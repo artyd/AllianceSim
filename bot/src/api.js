@@ -27,6 +27,16 @@ async function claim(id, tgId) {
   return { status: r.status, data: await r.json().catch(() => null) };
 }
 
+// Like claim(): returns {status, data} so the bot can tell "not yours / gone" apart.
+async function act(path, body) {
+  const r = await fetch(BASE + path, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'X-Edit-Token': TOKEN },
+    body: JSON.stringify(body),
+  });
+  return { status: r.status, data: await r.json().catch(() => null) };
+}
+
 export const api = {
   byTelegram: (tgId) => req('GET', `/employees/by-telegram/${tgId}`),
   search: (q) => req('GET', `/employees/search?q=${encodeURIComponent(q)}`),
@@ -37,4 +47,8 @@ export const api = {
   claim,
   pending: () => req('GET', '/notifications/pending'),
   markSent: (id) => req('POST', `/notifications/${id}/sent`),
+  // Personal phone (spec 004): inline-button actions on behalf of the presser + morning agenda.
+  respondEvent: (id, tgId, status) => act(`/bot/events/${encodeURIComponent(id)}/respond`, { tgId, status }),
+  taskDone: (id, tgId) => act(`/bot/tasks/${encodeURIComponent(id)}/done`, { tgId }),
+  digests: () => req('GET', '/bot/digests'),
 };

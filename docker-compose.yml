@@ -32,6 +32,8 @@ services:
       UPLOAD_DIR: /data/uploads                    # chat attachments (volume below)
       ATTACHMENT_TTL_DAYS: ${ATTACHMENT_TTL_DAYS:-90}
       ME_INITDATA_MAX_AGE: ${ME_INITDATA_MAX_AGE:-86400}  # private data: initData freshness window (s)
+      CHECKIN_HOUR: ${CHECKIN_HOUR:-9}             # task "deadline today" pings from this hour
+      CHECKIN_TZ: ${CHECKIN_TZ:-Europe/Kyiv}       # reminders / digest timezone
     volumes:
       - uploads:/data/uploads
     # Loopback-only: nothing exposed publicly — Caddy fronts TLS and routing.
