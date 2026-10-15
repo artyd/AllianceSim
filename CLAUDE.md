@@ -4,17 +4,22 @@ Office floor-plan tool for HR: build the layout (rooms, furniture, zones), seat 
 free-roam colleagues, share a read-only link.
 
 ## Shape
-- **Frontend is one file: `public/index.html`** — HTML shell + `<style>` + one
-  `<script type="module">` with all logic. No build step, no framework.
-- **Backend: `api/`** (Express + Postgres). One `state` blob saved to `PUT /layout`
-  (token-gated); public reads; `localStorage` offline fallback.
+- **Frontend: `public/index.html` + `public/phone.js`** — the office app is the HTML shell
+  + `<style>` + one `<script type="module">`; the phone (AllianceOS, personal Mini App) is
+  the ES module `phone.js`, wired in via `initPhone({get state(){…}, …})` — add any new
+  office dependency to that call (`state` stays a getter: the office reassigns it).
+  No build step, no framework.
+- **Backend: `api/`** (Express + Postgres). The office plan is one `state` blob saved to
+  `PUT /layout` (token-gated); employees and all personal phone data (chats, calendar,
+  tasks, desks, snapshots) are DB tables behind `/me/*` (caller-scoped) — specs 004/005.
+- **Bot: `bot/`** (grammy) — check-in, notifications with buttons, replies → chats.
 - Deployed with Docker + Caddy — see `deploy/DEPLOY.md`.
 
 ## How to work here (SDD loop — see `docs/SDD.md`)
 1. For non-trivial changes, write a short spec first (`/spec`, `specs/_template.md`)
    and design in **plan mode**.
-2. Edit `public/index.html` in small steps. A **PostToolUse hook** syntax-checks the
-   module script automatically after each save
+2. Edit `public/index.html` / `public/phone.js` in small steps. A **PostToolUse hook**
+   syntax-checks both automatically after each save
    (`.claude/scripts/check-html.mjs`) — fix any reported error before moving on.
 3. **Verify in the browser** — don't trust parsing alone. Use `/serve`
    (`node .claude/scripts/serve.cjs public 5055`) and the **`app-verify`** agent;
