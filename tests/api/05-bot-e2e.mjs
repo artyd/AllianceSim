@@ -18,9 +18,10 @@ const srv = http.createServer((req, res) => {
       const off = p.offset || 0; const out = updates.filter((u) => u.update_id >= off); updates.length = 0;
       return send(out);
     }
-    calls.push({ method, p });
+    const call = { method, p };
+    calls.push(call);
     if (method === 'getMe') return send({ id: 999, is_bot: true, first_name: 'Bot', username: 'test_bot' });
-    if (method === 'sendMessage' || method === 'editMessageText') return send({ message_id: mid++, date: 0, chat: { id: p.chat_id, type: 'private' }, text: p.text });
+    if (method === 'sendMessage' || method === 'editMessageText') { call.message_id = mid++; return send({ message_id: call.message_id, date: 0, chat: { id: p.chat_id, type: 'private' }, text: p.text }); }
     return send(true);
   });
 });
@@ -74,6 +75,24 @@ try {
   const cm = await waitFor((c) => c.method === 'sendMessage' && c.p.chat_id == 1001 && /Дякую!/.test(c.p.text));
   ok(cm && /нове повідомлення від Богдан Лис/.test(cm.p.text), 'chat ping text');
   ok(cm && btns(cm).some((b) => b.web_app && /open=chat_/.test(b.web_app.url)), 'chat ping opens chat');
+
+  // spec 005: replying to the ping in Telegram posts into the chat
+  ok(cm && /Відповідай на це повідомлення/.test(cm.p.text), 'ping invites a reply');
+  await sleep(500); // markSent(tgMessageId) lands right after sendMessage
+  updates.push({ update_id: uid++, message: { message_id: 9001, date: 0, chat: { id: 1001, type: 'private' }, from: { id: 1001, is_bot: false, first_name: 'Анна' }, text: 'Будь ласка 🙂',
+    reply_to_message: { message_id: cm.message_id, date: 0, chat: { id: 1001, type: 'private' }, from: { id: 999, is_bot: true, first_name: 'Bot' }, text: cm.p.text } } });
+  ok(await waitFor((c) => c.method === 'setMessageReaction' && c.p.message_id === 9001), 'bot reacts 👍 to the reply');
+  const lastMsg = (await call('GET', `/me/chats/${d.id}/messages`, { as: 1002 })).data.messages.pop();
+  ok(lastMsg && lastMsg.text === 'Будь ласка 🙂' && lastMsg.senderId === 'a', 'reply landed in the chat as Anna');
+  // reply to a non-chat message (e.g. the task ping) → explained
+  updates.push({ update_id: uid++, message: { message_id: 9002, date: 0, chat: { id: 1002, type: 'private' }, from: { id: 1002, is_bot: false, first_name: 'B' }, text: 'ок',
+    reply_to_message: { message_id: tm.message_id, date: 0, chat: { id: 1002, type: 'private' }, from: { id: 999, is_bot: true, first_name: 'Bot' }, text: tm.p.text } } });
+  ok(await waitFor((c) => c.method === 'sendMessage' && c.p.chat_id == 1002 && /Відповісти можна лише/.test(c.p.text)), 'reply to non-chat ping explained');
+
+  // HR announcement → 📢 template
+  await call('POST', '/announce', { hr: true, body: { target: 'office', text: 'Свято в пʼятницю' } });
+  const an = await waitFor((c) => c.method === 'sendMessage' && /📢 Оголошення/.test(c.p.text));
+  ok(an && /від HR/.test(an.p.text) && /Свято/.test(an.p.text), 'announcement text');
 } catch (e) { console.error(e); ok(false, 'exception ' + e.message); }
 const f = report();
 bot.kill(); srv.close();

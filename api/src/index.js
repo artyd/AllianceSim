@@ -392,7 +392,9 @@ router.get('/notifications/pending', requireEditToken, async (_req, res, next) =
 
 router.post('/notifications/:id/sent', requireEditToken, async (req, res, next) => {
   try {
-    await query('UPDATE notifications SET sent_at = now() WHERE id = $1', [req.params.id]);
+    // tgMessageId: the bot's Telegram message, so a reply to it can be routed back (spec 005).
+    const tgMsg = Number((req.body || {}).tgMessageId) || null;
+    await query('UPDATE notifications SET sent_at = now(), tg_message_id = COALESCE($2, tg_message_id) WHERE id = $1', [req.params.id, tgMsg]);
     res.json({ ok: true });
   } catch (err) {
     next(err);

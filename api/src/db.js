@@ -170,6 +170,18 @@ CREATE TABLE IF NOT EXISTS attachments (
 );
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS attachment_id uuid REFERENCES attachments(id) ON DELETE SET NULL;
 
+-- Spec 005: replies, reactions, announcements/system posts, reply-from-Telegram.
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS reply_to bigint REFERENCES messages(id) ON DELETE SET NULL;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS kind text;            -- null | 'announce' | 'system'
+CREATE TABLE IF NOT EXISTS message_reactions (
+  message_id bigint NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+  employee_id text NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+  emoji text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (message_id, employee_id, emoji)
+);
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS tg_message_id bigint; -- the bot's Telegram message (reply → chat)
+
 -- Which Telegram notifications a person wants (absent row = all on).
 CREATE TABLE IF NOT EXISTS notify_prefs (
   employee_id text PRIMARY KEY REFERENCES employees(id) ON DELETE CASCADE,

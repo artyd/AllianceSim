@@ -259,6 +259,14 @@ bot.on('message:text', async (ctx, next) => {
   const text = ctx.message.text.trim();
   if (text.startsWith('/')) return next(); // pass on to commands registered further down (/report)
 
+  // Reply to one of my "💬 нове повідомлення" pings → post it into that chat (spec 005).
+  const replied = ctx.message.reply_to_message;
+  if (replied && replied.from && replied.from.is_bot && !ctx.session.flow) {
+    let r; try { r = await api.reply(ctx.from.id, replied.message_id, text); } catch (e) { r = { status: 0 }; }
+    if (r.status === 200) return ctx.react('👍').catch(() => ctx.reply('✅ Надіслано в чат'));
+    return ctx.reply(r.status === 404 ? 'Відповісти можна лише на сповіщення про нове повідомлення 💬' : 'Не вдалося надіслати 😕');
+  }
+
   if (ctx.session.flow === 'claim') {
     let matches = [];
     try { matches = (await api.search(text)) || []; } catch (e) {}
@@ -408,7 +416,8 @@ const NOTIF_TEXT = {
   // Personal phone (spec 004) — `p` is the payload the api queued alongside.
   chat: (t, who, me, p) => (p && p.chatTitle
     ? `💬 ${who} у «${p.chatTitle}»:\n${t || '…'}`
-    : `💬 ${me}, нове повідомлення від ${who}:\n${t || '…'}`),
+    : `💬 ${me}, нове повідомлення від ${who}:\n${t || '…'}`) + '\n\n↩️ Відповідай на це повідомлення — відповідь піде в чат.',
+  announce: (t, who, _me, p) => `📢 Оголошення${p && p.chatTitle ? ' · ' + p.chatTitle : ''}\nвід ${who}:\n\n${t}`,
   event_invite: (t, who, me) => `📅 ${me}, ${who} запрошує тебе:\n${t}`,
   event_changed: (t, who) => `📅 ${who} змінив(ла) подію:\n${t}`,
   event_cancelled: (t, who) => `🚫 ${who} скасував(ла) подію:\n${t}`,
@@ -442,8 +451,10 @@ async function drainNotifications() {
     const who = n.from_name || 'Хтось';
     const me = firstOf(n.name) || 'колего';
     const kb = notifKeyboard(n.payload);
-    try { await bot.api.sendMessage(n.telegram_id, make(n.text, who, me, n.payload), kb ? { reply_markup: kb } : undefined); } catch (e) { /* blocked → still mark sent to avoid a stuck queue */ }
-    await api.markSent(n.id).catch(() => {});
+    let sent = null;
+    try { sent = await bot.api.sendMessage(n.telegram_id, make(n.text, who, me, n.payload), kb ? { reply_markup: kb } : undefined); } catch (e) { /* blocked → still mark sent to avoid a stuck queue */ }
+    // message_id lets a Telegram reply to this ping be routed back into the chat.
+    await api.markSent(n.id, sent && sent.message_id).catch(() => {});
   }
 }
 setInterval(drainNotifications, 8000);

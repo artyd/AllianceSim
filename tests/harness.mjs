@@ -60,7 +60,7 @@ export async function start(extraEnv = {}) {
   const reuse = DEV && fs.existsSync(path.join(dir, 'PG_VERSION'));
   if (!reuse) fs.rmSync(dir, { recursive: true, force: true });
   const EmbeddedPostgres = await loadEmbeddedPostgres();
-  pg = new EmbeddedPostgres({ databaseDir: dir, user: 'postgres', password: 'pw', port: PGPORT, persistent: /* we wipe the dir on start; auto-delete races Windows file locks */ true, initdbFlags: ['--encoding=UTF8', '--locale=C'] });
+  pg = new EmbeddedPostgres({ databaseDir: dir, user: 'postgres', password: 'pw', port: PGPORT, persistent: /* we wipe the dir on start; auto-delete races Windows file locks */ true, initdbFlags: ['--encoding=UTF8', '--locale=C', '--locale-provider=builtin', '--builtin-locale=C.UTF-8'] });
   if (!reuse) await pg.initialise();
   await pg.start();
   if (!reuse) await pg.createDatabase('t');

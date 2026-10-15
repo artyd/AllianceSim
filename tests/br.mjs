@@ -20,7 +20,7 @@ let browser;
 export async function launch() {
   const r = await fetch(new URL('/__reset', URLS.web)); if (!r.ok) throw new Error('reset failed: ' + await r.text());
   if (!CHROME) throw new Error('no Chrome found — set CHROME=/path/to/chrome');
-  browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new', args: ['--no-sandbox'] });
+  browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new', args: ['--no-sandbox', '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', '--autoplay-policy=no-user-gesture-required'] });
   return browser;
 }
 export async function close() { await browser.close(); }

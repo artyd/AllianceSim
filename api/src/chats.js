@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { query } from './db.js';
 import { attach, emit, setViewing, isViewing } from './realtime.js';
 import { queueNotif } from './notify.js';
+import { requireEditToken } from './auth.js';
 
 // Real chats between colleagues (spec 004). Only members can read or write a chat; the
 // HR edit token grants nothing here. Live updates go out over SSE (/me/stream).
@@ -25,13 +26,40 @@ const isId = (v) => /^\d+$/.test(String(v));
 const MSG_SELECT = `SELECT m.*, a.filename AS a_name, a.mime AS a_mime, a.size AS a_size, a.deleted_at AS a_deleted
   FROM messages m LEFT JOIN attachments a ON a.id = m.attachment_id`;
 const toMsg = (r) => ({
-  id: String(r.id), chatId: String(r.chat_id), senderId: r.sender_id,
+  id: String(r.id), chatId: String(r.chat_id), senderId: r.sender_id, kind: r.kind || null,
   text: r.deleted_at ? null : r.text, createdAt: r.created_at, editedAt: r.edited_at, deleted: !!r.deleted_at,
   attachment: r.attachment_id && !r.deleted_at
     ? { id: r.attachment_id, name: r.a_name, mime: r.a_mime, size: r.a_size, expired: !!r.a_deleted }
     : null,
+  replyTo: r.reply_to ? String(r.reply_to) : null,
+  reactions: [],
 });
-const msgById = async (id) => toMsg((await query(`${MSG_SELECT} WHERE m.id = $1`, [id])).rows[0]);
+export const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+
+// Add the quoted message (for replies) and reaction groups to a page of messages.
+async function enrich(msgs) {
+  const ids = msgs.map((m) => m.id), quoted = [...new Set(msgs.map((m) => m.replyTo).filter(Boolean))];
+  if (!ids.length) return msgs;
+  const [{ rows: reacts }, { rows: src }] = await Promise.all([
+    query(
+      `SELECT message_id, emoji, array_agg(employee_id ORDER BY created_at) AS ids, min(created_at) AS t
+       FROM message_reactions WHERE message_id = ANY($1::bigint[]) GROUP BY message_id, emoji ORDER BY t`, [ids]),
+    quoted.length ? query(`${MSG_SELECT} WHERE m.id = ANY($1::bigint[])`, [quoted]) : { rows: [] },
+  ]);
+  const srcBy = new Map(src.map((r) => [String(r.id), r]));
+  for (const m of msgs) {
+    m.reactions = reacts.filter((r) => String(r.message_id) === m.id).map((r) => ({ emoji: r.emoji, ids: r.ids }));
+    if (m.replyTo) {
+      const q = srcBy.get(m.replyTo);
+      m.quote = q ? {
+        id: String(q.id), senderId: q.sender_id, deleted: !!q.deleted_at,
+        text: q.deleted_at ? null : (q.text || '').slice(0, 140), attachment: q.attachment_id && !q.deleted_at ? q.a_name : null,
+      } : { id: m.replyTo, deleted: true, text: null };
+    }
+  }
+  return msgs;
+}
+const msgById = async (id) => (await enrich([toMsg((await query(`${MSG_SELECT} WHERE m.id = $1`, [id])).rows[0])]))[0];
 
 export async function memberIds(chatId) {
   const { rows } = await query('SELECT employee_id FROM chat_members WHERE chat_id = $1', [chatId]);
@@ -276,7 +304,20 @@ chats.get('/me/chats/:id/messages', async (req, res, next) => {
       ));
       rows.reverse();
     }
-    res.json({ messages: rows.map(toMsg), hasMore: !after && rows.length === PAGE });
+    res.json({ messages: await enrich(rows.map(toMsg)), hasMore: !after && rows.length === PAGE });
+  } catch (err) { next(err); }
+});
+
+// Search my chats: message text (not deleted) — newest first.
+chats.get('/me/search', async (req, res, next) => {
+  try {
+    const q = String(req.query.q || '').trim();
+    if (q.length < 2) return res.json([]);
+    const like = '%' + q.replace(/[\\%_]/g, (c) => '\\' + c) + '%';
+    const { rows } = await query(
+      `${MSG_SELECT} JOIN chat_members cm ON cm.chat_id = m.chat_id AND cm.employee_id = $1
+       WHERE m.deleted_at IS NULL AND m.text ILIKE $2 ORDER BY m.id DESC LIMIT 50`, [req.me.id, like]);
+    res.json(rows.map(toMsg));
   } catch (err) { next(err); }
 });
 
@@ -284,35 +325,46 @@ chats.get('/me/chats/:id/messages', async (req, res, next) => {
 const lastPing = new Map();
 const PING_GAP = 60 * 1000;
 
+// Announcements reach everyone (muted chats too, no throttle); normal messages respect
+// mute, "currently reading" and the 1/min throttle.
 async function notifyMembers(chat, msg, sender) {
   const { rows } = await query(
-    'SELECT employee_id, muted FROM chat_members WHERE chat_id = $1 AND employee_id <> $2',
+    'SELECT employee_id, muted FROM chat_members WHERE chat_id = $1 AND employee_id IS DISTINCT FROM $2',
     [chat.id, sender.id]
   );
+  const loud = msg.kind === 'announce';
   const preview = msg.text || (msg.attachment ? `📎 ${msg.attachment.name}` : '…');
   const title = chat.kind === 'direct' ? null : chat.kind === 'office' ? 'Весь офіс' : chat.title || chat.dept || null;
   for (const r of rows) {
-    if (r.muted || isViewing(r.employee_id, chat.id)) continue;
+    if (!loud && (r.muted || isViewing(r.employee_id, chat.id))) continue;
     const k = `${chat.id}:${r.employee_id}`;
-    if (Date.now() - (lastPing.get(k) || 0) < PING_GAP) continue;
+    if (!loud && Date.now() - (lastPing.get(k) || 0) < PING_GAP) continue;
     lastPing.set(k, Date.now());
-    await queueNotif(r.employee_id, 'chat', {
+    await queueNotif(r.employee_id, loud ? 'announce' : 'chat', {
       text: preview, fromName: sender.name, pref: 'messages',
-      payload: { open: `chat_${chat.id}`, chatTitle: title },
+      payload: { open: `chat_${chat.id}`, chatTitle: title, reply: !loud },
     });
   }
 }
 
-export async function postMessage(chat, sender, { text = null, attachmentId = null } = {}) {
+// sender = {id, name}; id null for HR (web) / system posts.
+export async function postMessage(chat, sender, { text = null, attachmentId = null, replyTo = null, kind = null } = {}) {
   const { rows: [m] } = await query(
-    'INSERT INTO messages (chat_id, sender_id, text, attachment_id) VALUES ($1, $2, $3, $4) RETURNING id',
-    [chat.id, sender.id, text, attachmentId]
+    'INSERT INTO messages (chat_id, sender_id, text, attachment_id, reply_to, kind) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+    [chat.id, sender.id, text, attachmentId, replyTo, kind]
   );
-  await query('UPDATE chat_members SET last_read_id = $3 WHERE chat_id = $1 AND employee_id = $2', [chat.id, sender.id, m.id]);
+  if (sender.id) await query('UPDATE chat_members SET last_read_id = $3 WHERE chat_id = $1 AND employee_id = $2', [chat.id, sender.id, m.id]);
   const msg = await msgById(m.id);
   emit(await memberIds(chat.id), 'message', msg);
-  notifyMembers(chat, msg, sender).catch((e) => console.error('[api] notify failed:', e.message));
+  if (kind !== 'system') notifyMembers(chat, msg, sender).catch((e) => console.error('[api] notify failed:', e.message));
   return msg;
+}
+
+async function replyTarget(chatId, id) {
+  if (id == null || id === '') return null;
+  if (!isId(id)) return undefined;
+  const { rows: [r] } = await query('SELECT id FROM messages WHERE id = $1 AND chat_id = $2', [id, chatId]);
+  return r ? r.id : undefined;
 }
 
 chats.post('/me/chats/:id/messages', async (req, res, next) => {
@@ -333,9 +385,79 @@ chats.post('/me/chats/:id/messages', async (req, res, next) => {
       attachmentId = a.id;
     }
     if (!text && !attachmentId) return bad(res, 'text required');
-    res.status(201).json(await postMessage(chat, req.me, { text, attachmentId }));
+    const replyTo = await replyTarget(chat.id, b.replyTo);
+    if (replyTo === undefined) return bad(res, 'replyTo invalid');
+    res.status(201).json(await postMessage(chat, req.me, { text, attachmentId, replyTo }));
   } catch (err) { next(err); }
 });
+
+// Toggle a reaction (one of each emoji per person).
+chats.post('/me/messages/:id/react', async (req, res, next) => {
+  try {
+    const emoji = String((req.body || {}).emoji || '');
+    if (!REACTIONS.includes(emoji)) return bad(res, 'unknown reaction');
+    if (!isId(req.params.id)) return nf(res);
+    const { rows: [m] } = await query(
+      `SELECT m.id, m.chat_id FROM messages m JOIN chat_members cm ON cm.chat_id = m.chat_id AND cm.employee_id = $2
+       WHERE m.id = $1 AND m.deleted_at IS NULL`, [req.params.id, req.me.id]);
+    if (!m) return nf(res);
+    const del = await query('DELETE FROM message_reactions WHERE message_id = $1 AND employee_id = $2 AND emoji = $3', [m.id, req.me.id, emoji]);
+    if (!del.rowCount) await query('INSERT INTO message_reactions (message_id, employee_id, emoji) VALUES ($1, $2, $3)', [m.id, req.me.id, emoji]);
+    const msg = await msgById(m.id);
+    emit(await memberIds(m.chat_id), 'message_update', msg);
+    res.json(msg);
+  } catch (err) { next(err); }
+});
+
+// ── announcements ────────────────────────────────────────────────────────────
+// Mini App: into the office chat or my department chat (ANNOUNCE_ALLOWED = names, '*' or
+// empty = everyone). HR (edit token, web): into the office chat or any department chat.
+const words = (s) => String(s || '').toLocaleLowerCase('uk').replace(/[’'ʼ`]/g, '').split(/[\s,]+/).filter(Boolean);
+const ANNOUNCERS = String(process.env.ANNOUNCE_ALLOWED || '').split(',').map((s) => s.trim()).filter(Boolean);
+export const canAnnounce = (name) => !ANNOUNCERS.length || ANNOUNCERS.includes('*') ||
+  ANNOUNCERS.some((e) => { const have = new Set(words(name)), need = words(e); return need.length && need.every((w) => have.has(w)); });
+
+async function systemChat(target) {
+  const { rows: [c] } = target === 'office'
+    ? await query(`SELECT * FROM chats WHERE kind = 'office'`)
+    : await query(`SELECT * FROM chats WHERE kind = 'dept' AND dept = $1`, [String(target || '').trim()]);
+  return c || null;
+}
+chats.post('/me/announce', async (req, res, next) => {
+  try {
+    const b = req.body || {};
+    const text = String(b.text || '').trim().slice(0, MSG_MAX);
+    if (!text) return bad(res, 'text required');
+    if (!canAnnounce(req.me.name)) return res.status(403).json({ error: 'announcements not allowed' });
+    const chat = await systemChat(b.target === 'office' ? 'office' : req.me.dept);
+    if (!chat || !(await membership(chat.id, req.me.id))) return nf(res);
+    res.status(201).json(await postMessage(chat, req.me, { text, kind: 'announce' }));
+  } catch (err) { next(err); }
+});
+export async function hrAnnounce(target, text) {
+  const chat = await systemChat(target);
+  if (!chat) return null;
+  return postMessage(chat, { id: null, name: 'HR' }, { text, kind: 'announce' });
+}
+// Bot-authored posts (birthday greetings…): no Telegram ping, sender = null.
+export async function systemPost(target, text) {
+  const chat = await systemChat(target);
+  return chat ? postMessage(chat, { id: null, name: 'AllianceSim' }, { text, kind: 'system' }) : null;
+}
+
+// ── reply from Telegram: the bot forwards a reply to one of its chat pings ───
+export async function replyFromTelegram(tgId, tgMessageId, text) {
+  const { rows: [n] } = await query(
+    `SELECT n.payload, e.id AS emp_id, e.name FROM notifications n JOIN employees e ON e.id = n.employee_id
+     WHERE e.telegram_id = $1 AND n.tg_message_id = $2 AND n.kind = 'chat'`, [String(tgId), tgMessageId]);
+  const m = n && /^chat_(\d+)$/.exec((n.payload || {}).open || '');
+  if (!m) return null;
+  const chat = await membership(m[1], n.emp_id);
+  if (!chat) return null;
+  const body = String(text || '').trim().slice(0, MSG_MAX);
+  if (!body) return null;
+  return { chat, msg: await postMessage(chat, { id: n.emp_id, name: n.name }, { text: body }) };
+}
 
 async function ownMessage(id, meId) {
   if (!isId(id)) return null;
@@ -419,9 +541,10 @@ chats.post('/me/attachments', express.raw({ type: () => true, limit: FILE_MAX })
   } catch (err) { next(err); }
 });
 
-// Only plain raster images render inline; everything else downloads with an opaque type,
+// Only plain raster images (and audio for voice notes) render inline; everything else downloads with an opaque type,
 // so an uploaded .html/.svg can never run script on this origin.
-const INLINE = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+const INLINE = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp',
+  'audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/aac', 'audio/wav']); // voice messages
 chats.get('/me/attachments/:id', async (req, res, next) => {
   try {
     const { rows: [a] } = await query(
@@ -439,7 +562,10 @@ chats.get('/me/attachments/:id', async (req, res, next) => {
       'Content-Security-Policy': "default-src 'none'; sandbox",
       'Cache-Control': 'private, max-age=86400',
     });
-    fs.createReadStream(path.join(UPLOAD_DIR, a.path)).on('error', () => res.status(410).end()).pipe(res);
+    // sendFile handles Range requests (Safari won't play audio without them).
+    res.sendFile(path.resolve(UPLOAD_DIR, a.path), { cacheControl: false, lastModified: false, acceptRanges: true }, (err) => {
+      if (err && !res.headersSent) res.status(410).json({ error: 'gone' });
+    });
   } catch (err) { next(err); }
 });
 
@@ -458,3 +584,23 @@ export async function cleanupAttachments() {
     `(expires_at < now() OR (created_at < now() - interval '1 day' AND NOT EXISTS (SELECT 1 FROM messages WHERE attachment_id = attachments.id)))`, []);
   if (n) console.log(`[api] removed ${n} expired attachment(s)`);
 }
+
+// ── token-gated: HR web announcements, bot reply forwarding ─────────────────
+chats.post('/announce', requireEditToken, async (req, res, next) => {
+  try {
+    const b = req.body || {};
+    const text = String(b.text || '').trim().slice(0, MSG_MAX);
+    if (!text) return bad(res, 'text required');
+    const msg = await hrAnnounce(b.target === 'office' || !b.target ? 'office' : b.target, text);
+    if (!msg) return nf(res);
+    res.status(201).json(msg);
+  } catch (err) { next(err); }
+});
+chats.post('/bot/reply', requireEditToken, async (req, res, next) => {
+  try {
+    const b = req.body || {};
+    const r = await replyFromTelegram(String(b.tgId || '').replace(/\D/g, ''), Number(b.replyTo) || 0, b.text);
+    if (!r) return nf(res);
+    res.json({ ok: true, chatId: String(r.chat.id) });
+  } catch (err) { next(err); }
+});

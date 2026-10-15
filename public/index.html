@@ -443,6 +443,25 @@ html.tgapp #app #preview{display:none}
 .pbub .pfile .fn{font-weight:800;font-size:13px;word-break:break-all}.pbub .pfile .fs{font-size:11px;opacity:.7}
 .pbub .pgone{font-size:12px;font-style:italic;opacity:.75}
 .pinfo .members .prow{padding:9px 0}
+.pquote{border-left:3px solid currentColor;padding:3px 8px;margin:0 0 5px;border-radius:6px;background:rgba(0,0,0,.07);font-size:12px;font-weight:600;opacity:.85;cursor:pointer;max-height:3.6em;overflow:hidden}
+.pquote b{display:block;font-size:11px}
+.pbub.me .pquote{background:rgba(255,255,255,.18)}
+.prxs{display:flex;gap:4px;flex-wrap:wrap;margin:-4px 0 2px;align-self:flex-start}.prxs.me{align-self:flex-end}
+.prx{padding:2px 8px;border-radius:999px;background:var(--chip);font-size:12px;font-weight:800;cursor:pointer;border:1.5px solid transparent}
+.prx.on{border-color:var(--red);background:var(--red-soft)}
+.prxpick{display:flex;gap:2px;flex:1}.prxpick button{padding:4px 5px!important;font-size:18px!important;background:none!important}
+.pbub.ann{align-self:stretch;max-width:100%;box-sizing:border-box;background:linear-gradient(135deg,#FFF3D6,#FFE4E1);color:#3b2a1a;border:1.5px solid #F2C036}
+.pbub.ann .who{color:#B5651D}
+.psys{align-self:center;max-width:90%;text-align:center;font-size:12.5px;font-weight:700;padding:7px 12px;border-radius:14px;background:var(--chip);color:var(--ink)}
+@keyframes phl{0%,60%{box-shadow:0 0 0 3px #F2C036}100%{box-shadow:0 0 0 0 transparent}}
+.phl{animation:phl 1.8s ease-out}
+.psec{padding:12px 16px 4px;font-size:11.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.pvoice{display:flex;align-items:center;gap:6px}.pvoice audio{height:34px;max-width:210px}
+.prec{flex:none;display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--line);font-weight:800}
+.prec .dot{width:10px;height:10px;border-radius:50%;background:var(--red);animation:recb 1s infinite}
+.prec button{width:40px;height:40px;border-radius:50%;background:var(--chip);font-size:16px;font-weight:900}
+.prec .send{background:var(--red);color:#fff}
+@keyframes recb{50%{opacity:.25}}
 .pinput .att{width:40px;height:40px;border-radius:50%;background:var(--chip);display:grid;place-items:center;flex:none;cursor:pointer;font-size:18px}
 .pcalbar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 8px}
 .pcalbar .ti{font-weight:900}
@@ -1676,13 +1695,15 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
   const otherOf=c=>c.kind==='direct'?(c.members.find(m=>m.id!==TG.me.id)||{}).id:null;
   const chatTitle=c=>c.kind==='direct'?nameOf(otherOf(c)):c.kind==='office'?'Весь офіс':c.kind==='dept'?(c.dept||'Відділ'):(c.title||'Група');
   const chatAv=c=>{if(c.kind==='direct'){const e=emp(otherOf(c)); if(e) return avHTML(e);} return `<div class="av gav">${c.kind==='office'?'🏢':c.kind==='dept'?'🏷️':'👥'}</div>`;};
+  const REACT=['👍','❤️','😂','😮','😢','🙏'];
+  const senderName=id=>id?nameOf(id):'HR'; // HR web announcements have no sender
   const typingIn=id=>{const t=PM.typing.get(String(id)); return t&&t.until>Date.now()?t.id:null;};
   const shortTime=iso=>{const d=new Date(iso), now=new Date(); if(d.toDateString()===now.toDateString()) return hm(d); if(now-d<6*864e5) return d.toLocaleDateString('uk-UA',{weekday:'short'}); return pad(d.getDate())+'.'+pad(d.getMonth()+1);};
   const linkify=h=>h.replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>');
   const convOpen=id=>{const s=scr('conv'); return stack.includes('conv')&&s._chat===String(id)?s:null;};
   PM.presQ=Promise.resolve();
   const presence=chatId=>{PM.presQ=PM.presQ.then(()=>meApi('POST','/me/presence',{chatId}).catch(()=>{})); return PM.presQ;};
-  function openChat(id){while(stack.includes('conv')) pop(); go('conv',x=>P.conv(x,String(id)));}
+  function openChat(id,focusId){while(stack.includes('conv')) pop(); go('conv',x=>P.conv(x,String(id),focusId||null));}
   async function openDirect(empId){
     const e=emp(empId); if(e&&!e.tg_linked){toast('Колега ще не підключив Telegram-бота'); return;}
     try{const c=await meApi('POST','/me/chats/direct',{employeeId:empId}); upsertChat(c); if(!stack.includes('chatlist')) go('chatlist',P.chatlist); openChat(c.id);}
@@ -1774,11 +1795,22 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
         try{const h={'content-type':'application/json'}; if(TG.active) h['X-Telegram-Init-Data']=TG.initData; fetch(API+'/coffee',{method:'POST',headers:h,body:JSON.stringify({drink:pick,size})}).then(r=>{ if(r.status===403) toast('Замовлення кави доступне лише керівництву 🔒'); }).catch(()=>{});}catch(e){}
         toast(`Замовлено: ${pick} (${size}) ☕`); home(); close();}; wire(s);}
 ,
-    broadcast(s){const depts=[...new Set(state.employees.map(e=>e.dept).filter(Boolean))];
-      let aud='Усім';
-      s.innerHTML=head('Оголошення')+`<div class="pbroad"><div style="font-size:12px;font-weight:800;color:var(--muted)">Кому</div><div class="pchips" data-aud><button class="pchip" data-a="Усім" aria-pressed="true">Усім</button>${depts.map(d=>`<button class="pchip" data-a="${esc(d)}">${esc(d)}</button>`).join('')}</div><textarea placeholder="Напишіть оголошення для команди…" data-txt></textarea><button class="pbtn" data-send>${IC.send}Надіслати</button></div>`;
+    // Announcements (spec 005): in Telegram → office or my department chat; on the web → HR
+    // with the access code, to the office or any department. Delivered as a 📢 chat post +
+    // a Telegram push to everyone (muted chats too).
+    broadcast(s){
+      const tg=personal(), depts=tg?[TG.me.dept||(emp(TG.me.id)||{}).dept].filter(Boolean):[...new Set(state.employees.map(e=>(e.dept||'').trim()).filter(Boolean))];
+      let aud='office';
+      s.innerHTML=head('Оголошення')+`<div class="pbroad"><div style="font-size:12px;font-weight:800;color:var(--muted)">Кому</div><div class="pchips" data-aud><button class="pchip" data-a="office" aria-pressed="true">🏢 Весь офіс</button>${depts.map(d=>`<button class="pchip" data-a="${esc(d)}">🏷️ ${esc(d)}</button>`).join('')}</div><textarea placeholder="Напишіть оголошення для команди…" data-txt maxlength="4000"></textarea><div style="font-size:11.5px;color:var(--muted);font-weight:600">Прийде всім у чат і сповіщенням у Telegram.</div><button class="pbtn" data-send>${IC.send}Надіслати</button></div>`;
       s.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{aud=b.dataset.a; s.querySelectorAll('[data-a]').forEach(x=>x.setAttribute('aria-pressed',x===b));});
-      s.querySelector('[data-send]').onclick=()=>{const v=s.querySelector('[data-txt]').value.trim(); if(!v){toast('Напишіть текст оголошення'); return;} toast(`Оголошення надіслано · ${aud}`); home(); close();}; wire(s);}
+      s.querySelector('[data-send]').onclick=async()=>{const v=s.querySelector('[data-txt]').value.trim(); if(!v){toast('Напишіть текст оголошення'); return;}
+        try{
+          if(tg) await meApi('POST','/me/announce',{target:aud==='office'?'office':'dept',text:v});
+          else{const tok=getToken(); if(!tok){toast('Оголошення надсилає HR — увійдіть з кодом доступу'); return;}
+            const r=await fetch(API+'/announce',{method:'POST',headers:{'content-type':'application/json','X-Edit-Token':tok},body:JSON.stringify({target:aud,text:v})});
+            if(r.status===401||r.status===503){toast('Невірний код доступу'); return;} if(r.status===404){toast('У цьому відділі ще ніхто не підключив бота'); return;} if(!r.ok) throw new Error('http '+r.status);}
+          toast('📢 Оголошення надіслано'); home();}
+        catch(e){if(e.code===403) toast('Оголошення можуть надсилати лише відповідальні особи'); else fail(e);}}; wire(s);}
 ,
     profile(s){
       const me=TG.me?(emp(TG.me.id)||TG.me):null;
@@ -1919,17 +1951,25 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
       wire(s);}
 ,
     chatlist(s){
-      s.innerHTML=headP('Чати','<button class="act" data-new aria-label="Новий чат">+</button>')+`<div class="psearch"><input placeholder="Пошук чату" data-q></div><div class="pscroll" data-list></div>`;
-      const box=s.querySelector('[data-list]'); let q='';
+      s.innerHTML=headP('Чати','<button class="act" data-new aria-label="Новий чат">+</button>')+`<div class="psearch"><input placeholder="Пошук чатів і повідомлень" data-q></div><div class="pscroll" data-list></div>`;
+      const box=s.querySelector('[data-list]'); let q='', found=[], st=null;
+      const preview=(c,l)=>{if(!l) return 'Немає повідомлень'; if(l.deleted) return 'Повідомлення видалено';
+        const txt=esc(l.text||(l.attachment?(/^audio\//.test(l.attachment.mime)?'🎤 Голосове':'📎 '+l.attachment.name):'…'));
+        if(l.kind==='announce') return '📢 '+txt; if(l.kind==='system') return txt;
+        return (l.senderId===TG.me.id?'Ви: ':(c.kind!=='direct'&&l.senderId?esc(first(l.senderId))+': ':''))+txt;};
       function draw(){
         if(!PM.chats){box.innerHTML=empty('Завантаження…',''); return;}
         const list=PM.chats.filter(c=>!q||chatTitle(c).toLowerCase().includes(q));
-        if(!list.length){box.innerHTML=empty(q?'Нічого не знайшли':'Ще немає чатів',q?'':'Натисніть «+», щоб написати колезі.'); return;}
-        box.innerHTML=list.map(c=>{const l=c.last, ty=typingIn(c.id);
-          const prev=ty?`<i>${esc(first(ty))} друкує…</i>`:l?(l.senderId===TG.me.id?'Ви: ':(c.kind!=='direct'&&l.senderId?esc(first(l.senderId))+': ':''))+(l.deleted?'Повідомлення видалено':esc(l.text||'📎 Вкладення')):'Немає повідомлень';
+        let h=list.map(c=>{const l=c.last, ty=typingIn(c.id);
+          const prev=ty?`<i>${esc(first(ty))} друкує…</i>`:preview(c,l);
           return `<div class="prow" data-c="${c.id}">${chatAv(c)}<div class="tx"><div class="nm">${esc(chatTitle(c))}${c.muted?' 🔕':''}</div><div class="sub">${prev}</div></div><div class="meta pcm"><span>${l?shortTime(l.createdAt):''}</span>${c.unread?`<b class="pun${c.muted?' m':''}">${c.unread}</b>`:''}</div></div>`;}).join('');
-        box.querySelectorAll('[data-c]').forEach(el=>el.onclick=()=>openChat(el.dataset.c));}
-      s.querySelector('[data-q]').oninput=e=>{q=e.target.value.trim().toLowerCase(); draw();};
+        // Message hits (server search) under the chat matches.
+        const hits=found.map(m=>{const c=chatById(m.chatId); return c?`<div class="prow" data-c="${c.id}" data-f="${m.id}">${chatAv(c)}<div class="tx"><div class="nm">${esc(chatTitle(c))}</div><div class="sub">${m.senderId===TG.me.id?'Ви: ':esc(first(m.senderId||''))+': '}${esc(m.text)}</div></div><div class="meta pcm"><span>${shortTime(m.createdAt)}</span></div></div>`:'';}).join('');
+        if(q&&hits) h+=`<div class="psec">Повідомлення</div>`+hits;
+        box.innerHTML=h||empty(q?'Нічого не знайшли':'Ще немає чатів',q?'':'Натисніть «+», щоб написати колезі.');
+        box.querySelectorAll('[data-c]').forEach(el=>el.onclick=()=>openChat(el.dataset.c,el.dataset.f));}
+      s.querySelector('[data-q]').oninput=e=>{q=e.target.value.trim().toLowerCase(); found=[]; draw(); clearTimeout(st);
+        if(q.length>=2){const want=q; st=setTimeout(async()=>{try{const r=await meApi('GET','/me/search?q='+encodeURIComponent(want)); if(want===q){found=r; draw();}}catch(err){}},300);}};
       s.querySelector('[data-new]').onclick=()=>go('chatnew',P.chatnew);
       s._redraw=draw; draw(); loadChats(); wire(s);}
 ,
@@ -1943,13 +1983,13 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
         box.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>{pop(); openDirect(el.dataset.id);});};
       draw(''); s.querySelector('[data-q]').oninput=e=>draw(e.target.value.trim().toLowerCase()); wire(s);}
 ,
-    conv(s,chatId){
+    conv(s,chatId,focusId){
       const C=()=>chatById(chatId);
       if(!C()){s.innerHTML=head('Чат')+empty('Чат недоступний',''); wire(s); return;}
-      s._chat=chatId; let msgs=[], hasMore=false, editing=null, loaded=false, lastTyping=0;
+      s._chat=chatId; let msgs=[], hasMore=false, editing=null, replying=null, loaded=false, lastTyping=0;
       s.innerHTML=`<div class="phead"><button class="bk" data-back>${IC.back}</button><span data-hav></span><div style="min-width:0;flex:1;cursor:pointer" data-info><div class="ti" style="font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" data-title></div><div class="sub" style="font-size:11px;color:var(--muted);font-weight:700" data-sub></div></div><span data-hact></span></div>
         <div class="pconv" data-conv></div><div class="pactbar" data-actbar style="display:none"></div>
-        <div class="pinput"><span data-attw></span><input placeholder="Повідомлення…" data-in maxlength="4000" enterkeyhint="send"><button class="send" data-send>${IC.send}</button></div>`;
+        <div class="pinput" data-inbar><span data-attw></span><input placeholder="Повідомлення…" data-in maxlength="4000" enterkeyhint="send"><span data-voice></span><button class="send" data-send>${IC.send}</button></div>`;
       const box=s.querySelector('[data-conv]'), inp=s.querySelector('[data-in]'), bar=s.querySelector('[data-actbar]');
       s._head=()=>{const c=C(); if(!c) return; s.querySelector('[data-hav]').innerHTML=chatAv(c); s.querySelector('[data-title]').textContent=chatTitle(c)+(c.muted?' 🔕':'');
         const ty=typingIn(chatId), e=c.kind==='direct'?emp(otherOf(c)):null;
@@ -1958,49 +1998,72 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
         const cb=s.querySelector('[data-call]'); if(cb) cb.onclick=()=>P._call(otherOf(c));};
       const tick=m=>{const c=C(); if(!c) return ''; const others=c.members.filter(x=>x.id!==TG.me.id), n=others.filter(x=>+x.lastRead>=+m.id).length;
         return n?(c.kind==='direct'||others.length<2?' ✓✓':` ✓✓ ${n}`):' ✓';};
-      const bubble=(m,prev)=>{const mine=m.senderId===TG.me.id, c=C()||{kind:'direct',members:[]};
+      const quoteHTML=q=>`<div class="pquote" data-jump="${q.id}"><b>${esc(senderName(q.senderId))}</b>${q.deleted?'<i>Повідомлення видалено</i>':esc(q.text||(q.attachment?'📎 '+q.attachment:'…'))}</div>`;
+      const rxHTML=m=>m.reactions&&m.reactions.length?`<div class="prxs ${m.senderId===TG.me.id?'me':''}">${m.reactions.map(r=>`<span class="prx${r.ids.includes(TG.me.id)?' on':''}" data-rx="${r.emoji}" data-m="${m.id}" title="${esc(r.ids.map(id=>first(id)).join(', '))}">${r.emoji} ${r.ids.length}</span>`).join('')}</div>`:'';
+      const bubble=(m,prev)=>{const mine=!!m.senderId&&m.senderId===TG.me.id, c=C()||{kind:'direct',members:[]};
         const day=!prev||new Date(prev.createdAt).toDateString()!==new Date(m.createdAt).toDateString()?`<div class="pday">${esc(dayLabel(new Date(m.createdAt)))}</div>`:'';
-        const who=!mine&&c.kind!=='direct'&&(!prev||prev.senderId!==m.senderId||day)?`<b class="who">${esc(nameOf(m.senderId))}</b>`:'';
-        const body=m.deleted?'<i class="pdel">Повідомлення видалено</i>':((m.attachment&&P._att?P._att(m):'')+(m.text?linkify(esc(m.text)):''));
-        return day+`<div class="pbub ${mine?'me':'them'}${m.deleted?' del':''}${editing&&editing.id===m.id?' sel':''}" data-m="${m.id}">${who}${body}<span class="tm">${m.editedAt&&!m.deleted?'ред. · ':''}${hm(new Date(m.createdAt))}${mine&&!m.deleted?tick(m):''}</span></div>`;};
+        if(m.kind==='system') return day+`<div class="psys" data-m="${m.id}">${linkify(esc(m.text||''))}</div>`;
+        const ann=m.kind==='announce';
+        const who=ann?`<b class="who">📢 Оголошення · ${esc(senderName(m.senderId))}</b>`:(!mine&&c.kind!=='direct'&&(!prev||prev.senderId!==m.senderId||day||prev.kind)?`<b class="who">${esc(senderName(m.senderId))}</b>`:'');
+        const body=m.deleted?'<i class="pdel">Повідомлення видалено</i>':((m.quote?quoteHTML(m.quote):'')+(m.attachment&&P._att?P._att(m):'')+(m.text?linkify(esc(m.text)):''));
+        const sel=(editing&&editing.id===m.id)||(replying&&replying.id===m.id);
+        return day+`<div class="pbub ${mine?'me':'them'}${ann?' ann':''}${m.deleted?' del':''}${sel?' sel':''}" data-m="${m.id}">${who}${body}<span class="tm">${m.editedAt&&!m.deleted?'ред. · ':''}${hm(new Date(m.createdAt))}${mine&&!m.deleted?tick(m):''}</span></div>${m.deleted?'':rxHTML(m)}`;};
       const nearBottom=()=>box.scrollHeight-box.scrollTop-box.clientHeight<80;
       s._draw=(keep)=>{const stick=keep===undefined?nearBottom():false, h0=box.scrollHeight, t0=box.scrollTop;
         box.innerHTML=!loaded?empty('Завантаження…',''):(hasMore?'<button class="pmore" data-more>Попередні повідомлення</button>':'')+(msgs.length?msgs.map((m,i)=>bubble(m,msgs[i-1])).join(''):empty('Почніть розмову','Повідомлення бачите лише ви та учасники чату.'));
-        if(keep==='top') box.scrollTop=box.scrollHeight-h0+t0; else if(stick||keep==='bottom') box.scrollTop=box.scrollHeight;
+        if(keep==='top') box.scrollTop=box.scrollHeight-h0+t0; else if(stick||keep==='bottom') box.scrollTop=box.scrollHeight; else box.scrollTop=t0;
         // Lazy images grow the list after layout — keep the view pinned to the bottom if it was.
         box.querySelectorAll('img.pimg').forEach(i=>{if(!i.complete) i.onload=()=>{if(box.scrollHeight-box.scrollTop-box.clientHeight<i.clientHeight+120) box.scrollTop=box.scrollHeight;};});};
+      const jump=id=>{const el=box.querySelector(`.pbub[data-m="${id}"],.psys[data-m="${id}"]`); if(!el){toast('Повідомлення далеко в історії'); return false;}
+        // Scroll only the message list (scrollIntoView would also shift the overflow:hidden phone frame).
+        box.scrollTop+=el.getBoundingClientRect().top-box.getBoundingClientRect().top-(box.clientHeight-el.offsetHeight)/2; el.classList.remove('phl'); void el.offsetWidth; el.classList.add('phl'); return true;};
       const readUpTo=id=>{const c=C(); if(c){c.unread=0; badges(); redraw('chatlist');} meApi('POST',`/me/chats/${chatId}/read`,{upTo:id}).catch(()=>{});};
       s._readLast=()=>{const m=msgs[msgs.length-1]; if(m) readUpTo(m.id);};
       const merge=m=>{const i=msgs.findIndex(x=>x.id===m.id); if(i>=0) msgs[i]=m; else {msgs.push(m); msgs.sort((a,b)=>a.id-b.id);}};
       s._onMsg=m=>{const bottom=nearBottom()||m.senderId===TG.me.id; merge(m); s._draw(bottom?'bottom':null); if(m.senderId!==TG.me.id&&!document.hidden) readUpTo(m.id); s._head();};
-      s._onUpd=m=>{merge(m); if(editing&&editing.id===m.id&&m.deleted) endEdit(); s._draw(null);};
+      s._onUpd=m=>{merge(m); if(editing&&editing.id===m.id&&m.deleted) endMode(); s._draw(null);};
       s._catchup=async()=>{const last=msgs[msgs.length-1]; try{const r=await meApi('GET',`/me/chats/${chatId}/messages${last?'?after='+last.id:''}`); r.messages.forEach(merge); s._draw(); s._readLast();}catch(e){}};
-      async function loadOlder(){try{const r=await meApi('GET',`/me/chats/${chatId}/messages?before=${msgs[0].id}`); msgs=r.messages.concat(msgs); hasMore=r.hasMore; s._draw('top');}catch(e){fail(e);}}
-      function endEdit(){editing=null; bar.style.display='none'; inp.value=''; s._draw(null);}
+      async function loadOlder(){try{const r=await meApi('GET',`/me/chats/${chatId}/messages?before=${msgs[0].id}`); r.messages.forEach(merge); hasMore=r.hasMore; s._draw('top');}catch(e){fail(e);}}
+      function endMode(){editing=null; replying=null; bar.style.display='none'; inp.value=''; s._draw(null);}
+      function showReply(m){replying=m; editing=null; bar.style.display='flex';
+        bar.innerHTML=`<span class="lbl">↩️ ${esc(senderName(m.senderId))}: ${esc((m.text||(m.attachment?'📎 '+m.attachment.name:'')).slice(0,60))}</span><button data-a="x">✕</button>`;
+        bar.querySelector('[data-a=x]').onclick=endMode; inp.focus(); s._draw(null);}
       function select(m){
-        if(editing) endEdit();
+        if(editing||replying) endMode();
+        const mine=m.senderId===TG.me.id;
         bar.style.display='flex';
-        bar.innerHTML=`<span class="lbl">Повідомлення</span>${m.text?'<button data-a="edit">✏️ Змінити</button>':''}<button data-a="del">🗑 Видалити</button><button data-a="x">✕</button>`;
+        bar.innerHTML=`<span class="prxpick">${REACT.map(e=>`<button data-r="${e}">${e}</button>`).join('')}</span><button data-a="reply" title="Відповісти">↩️</button>${mine&&m.text?'<button data-a="edit" title="Змінити">✏️</button>':''}${mine?'<button data-a="del" title="Видалити">🗑</button>':''}<button data-a="x">✕</button>`;
         bar.querySelector('[data-a=x]').onclick=()=>{bar.style.display='none';};
-        const eb=bar.querySelector('[data-a=edit]'); if(eb) eb.onclick=()=>{editing=m; inp.value=m.text; inp.focus(); bar.innerHTML='<span class="lbl">✏️ Редагування</span><button data-a="x">✕</button>'; bar.querySelector('[data-a=x]').onclick=endEdit; s._draw(null);};
-        confirm2(bar.querySelector('[data-a=del]'),'Точно?',async()=>{bar.style.display='none'; try{s._onUpd(await meApi('DELETE','/me/messages/'+m.id));}catch(e){fail(e);}});}
+        bar.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{bar.style.display='none'; react(m.id,b.dataset.r);});
+        bar.querySelector('[data-a=reply]').onclick=()=>showReply(m);
+        const eb=bar.querySelector('[data-a=edit]'); if(eb) eb.onclick=()=>{editing=m; inp.value=m.text; inp.focus(); bar.innerHTML='<span class="lbl">✏️ Редагування</span><button data-a="x">✕</button>'; bar.querySelector('[data-a=x]').onclick=endMode; s._draw(null);};
+        const db=bar.querySelector('[data-a=del]'); if(db) confirm2(db,'Точно?',async()=>{bar.style.display='none'; try{s._onUpd(await meApi('DELETE','/me/messages/'+m.id));}catch(e){fail(e);}});}
+      async function react(id,emoji){try{s._onUpd(await meApi('POST',`/me/messages/${id}/react`,{emoji}));}catch(e){fail(e);}}
       box.onclick=ev=>{const im=ev.target.closest('img.pimg'); if(im){openExt(im.src); return;}
         const a=ev.target.closest('a'); if(a){ev.preventDefault(); openExt(a.href); return;}
+        if(ev.target.closest('audio')) return;
         if(ev.target.closest('[data-more]')){loadOlder(); return;}
-        const b=ev.target.closest('.pbub.me:not(.del)'); if(b){const m=msgs.find(x=>x.id===b.dataset.m); if(m) select(m);}};
+        const rx=ev.target.closest('[data-rx]'); if(rx){react(rx.dataset.m,rx.dataset.rx); return;}
+        const q=ev.target.closest('[data-jump]'); if(q){jump(q.dataset.jump); return;}
+        const b=ev.target.closest('.pbub:not(.del)'); if(b){const m=msgs.find(x=>x.id===b.dataset.m); if(m) select(m);}};
       async function send(){const v=inp.value.trim(); if(!v) return;
-        if(editing){const m=editing; endEdit(); try{s._onUpd(await meApi('PATCH','/me/messages/'+m.id,{text:v}));}catch(e){inp.value=v; fail(e);} return;}
-        inp.value='';
-        try{s._onMsg(await meApi('POST',`/me/chats/${chatId}/messages`,{text:v}));}catch(e){inp.value=v; fail(e);}}
+        if(editing){const m=editing; endMode(); try{s._onUpd(await meApi('PATCH','/me/messages/'+m.id,{text:v}));}catch(e){inp.value=v; fail(e);} return;}
+        const rep=replying; inp.value=''; if(rep){replying=null; bar.style.display='none';}
+        try{s._onMsg(await meApi('POST',`/me/chats/${chatId}/messages`,{text:v,replyTo:rep?rep.id:null}));}catch(e){inp.value=v; if(rep) showReply(rep); fail(e);}}
       s.querySelector('[data-send]').onclick=send;
       inp.onkeydown=ev=>{if(ev.key==='Enter'){ev.preventDefault(); send();}};
       inp.oninput=()=>{if(Date.now()-lastTyping>3000&&inp.value){lastTyping=Date.now(); meApi('POST',`/me/chats/${chatId}/typing`).catch(()=>{});}};
       s.querySelector('[data-info]').onclick=()=>{const c=C(); if(c.kind==='direct'){const id=otherOf(c); if(emp(id)) go('contact',x=>R.contact(x,id));} else if(P.chatinfo) go('chatinfo',x=>P.chatinfo(x,chatId));};
       if(P._attach) P._attach(s.querySelector('[data-attw]'),chatId,m=>s._onMsg(m));
+      if(P._voice) P._voice(s.querySelector('[data-voice]'),s.querySelector('[data-inbar]'),chatId,m=>s._onMsg(m));
       presence(chatId);
       s._stop=()=>{s._chat=null; presence(null);};
       s._head(); s._draw();
-      meApi('GET',`/me/chats/${chatId}/messages`).then(r=>{r.messages.forEach(merge); hasMore=r.hasMore; loaded=true; s._draw('bottom'); s._readLast();}).catch(e=>{loaded=true; s._draw(); fail(e);});
+      // From search: the page ending at the found message + everything after it, then jump there.
+      const initial=focusId
+        ?meApi('GET',`/me/chats/${chatId}/messages?before=${+focusId+1}`).then(async r=>{r.messages.forEach(merge); hasMore=r.hasMore; (await meApi('GET',`/me/chats/${chatId}/messages?after=${focusId}`)).messages.forEach(merge);})
+        :meApi('GET',`/me/chats/${chatId}/messages`).then(r=>{r.messages.forEach(merge); hasMore=r.hasMore;});
+      initial.then(()=>{loaded=true; s._draw('bottom'); s._readLast(); if(focusId) setTimeout(()=>jump(focusId),50);}).catch(e=>{loaded=true; s._draw(); fail(e);});
       wire(s);}
 ,
     tasks(s){
@@ -2088,6 +2151,16 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
       const b=await new Promise(r=>c.toBlob(r,'image/jpeg',.82));
       if(b&&b.size<f.size) return {blob:b,name:f.name.replace(/\.\w+$/,'')+'.jpg',type:'image/jpeg'};}catch(e){}}
     return {blob:f,name:f.name||'file',type:f.type||'application/octet-stream'};}
+  // Upload a blob as a chat attachment and post it as a message (photos, files, voice).
+  async function sendBlob(chatId,blob,name,type){
+    if(PM.exp*1000-Date.now()<120e3) await session();
+    const r=await fetch(`${API}/me/attachments?chatId=${chatId}&name=${encodeURIComponent(name)}&mime=${encodeURIComponent(type)}`,{method:'POST',headers:Object.assign({'content-type':'application/octet-stream','X-Telegram-Init-Data':TG.initData},PM.token&&PM.exp*1000>Date.now()+60000?{'X-Me-Token':PM.token}:{}),body:blob});
+    if(r.status===401){toast('Сесія застаріла — закрийте й відкрийте застосунок знову'); return null;}
+    if(r.status===413){toast('Файл більший за 20 МБ'); return null;}
+    if(!r.ok) throw Object.assign(new Error('upload '+r.status),{code:r.status});
+    const up=await r.json();
+    return meApi('POST',`/me/chats/${chatId}/messages`,{attachmentId:up.id});
+  }
   Object.assign(P,{
     _call:id=>callPerson(id),
     _inviteField(el,e){
@@ -2162,6 +2235,7 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
     _att(m){const a=m.attachment;
       if(a.expired) return `<div class="pgone">📎 ${esc(a.name)} — файл більше недоступний</div>`;
       if(/^image\/(jpeg|png|gif|webp)$/.test(a.mime)) return `<img class="pimg" src="${attUrl(a)}" alt="${esc(a.name)}" loading="lazy">`;
+      if(/^audio\//.test(a.mime)) return `<div class="pvoice">🎤 <audio controls preload="none" src="${attUrl(a)}"></audio></div>`;
       return `<a class="pfile" href="${attUrl(a,1)}"><span class="ic">📄</span><span><span class="fn">${esc(a.name)}</span><br><span class="fs">${fsize(a.size)}</span></span></a>`;},
     _attach(el,chatId,onSent){
       el.innerHTML='<label class="att" title="Надіслати фото чи файл">📎<input type="file" style="display:none"></label>';
@@ -2169,15 +2243,28 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
       fi.onchange=async()=>{const f=fi.files[0]; fi.value=''; if(!f) return;
         if(f.size>FILE_MAX){toast('Файл більший за 20 МБ'); return;}
         toast('Надсилаю…');
-        try{const p=await prepFile(f);
-          if(PM.exp*1000-Date.now()<120e3) await session();
-          const r=await fetch(`${API}/me/attachments?chatId=${chatId}&name=${encodeURIComponent(p.name)}&mime=${encodeURIComponent(p.type)}`,{method:'POST',headers:Object.assign({'content-type':'application/octet-stream','X-Telegram-Init-Data':TG.initData},PM.token&&PM.exp*1000>Date.now()+60000?{'X-Me-Token':PM.token}:{}),body:p.blob});
-          if(r.status===401){toast('Сесія застаріла — закрийте й відкрийте застосунок знову'); return;}
-          if(r.status===413){toast('Файл більший за 20 МБ'); return;}
-          if(!r.ok) throw Object.assign(new Error('upload '+r.status),{code:r.status});
-          const up=await r.json();
-          onSent(await meApi('POST',`/me/chats/${chatId}/messages`,{attachmentId:up.id}));
-        }catch(e){fail(e);}};}
+        try{const p=await prepFile(f); const m=await sendBlob(chatId,p.blob,p.name,p.type); if(m) onSent(m);}catch(e){fail(e);}};},
+    // Voice notes: tap 🎤 → recording bar (timer, ✕ cancel, ➤ send). Max 5 minutes.
+    _voice(el,inbar,chatId,onSent){
+      if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&window.MediaRecorder)){el.innerHTML=''; return;}
+      el.innerHTML='<button class="att" type="button" data-mic title="Голосове повідомлення">🎤</button>';
+      el.querySelector('[data-mic]').onclick=async()=>{
+        let stream;
+        try{stream=await navigator.mediaDevices.getUserMedia({audio:true});}catch(e){toast('Мікрофон недоступний — дозвольте доступ у налаштуваннях'); return;}
+        const type=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'].find(t=>MediaRecorder.isTypeSupported(t))||'';
+        const rec=new MediaRecorder(stream,type?{mimeType:type}:undefined), parts=[]; let cancel=false;
+        const bar=document.createElement('div'); bar.className='prec';
+        bar.innerHTML='<span class="dot"></span><span data-t>0:00</span><span style="flex:1"></span><button type="button" data-c title="Скасувати">✕</button><button type="button" class="send" data-ok title="Надіслати">➤</button>';
+        inbar.style.display='none'; inbar.after(bar);
+        const t0=Date.now(), tick=setInterval(()=>{const sec=Math.floor((Date.now()-t0)/1000); bar.querySelector('[data-t]').textContent=Math.floor(sec/60)+':'+pad(sec%60); if(sec>=300) rec.stop();},250);
+        const done=()=>{clearInterval(tick); stream.getTracks().forEach(t=>t.stop()); bar.remove(); inbar.style.display='';};
+        rec.ondataavailable=e=>{if(e.data&&e.data.size) parts.push(e.data);};
+        rec.onstop=async()=>{done(); if(cancel||!parts.length) return;
+          const mime=(rec.mimeType||type||'audio/webm').split(';')[0], ext=mime.includes('mp4')?'m4a':mime.includes('ogg')?'ogg':'webm';
+          try{const m=await sendBlob(chatId,new Blob(parts,{type:mime}),`голосове-${dKey(new Date())}.${ext}`,mime); if(m) onSent(m);}catch(e){fail(e);}};
+        bar.querySelector('[data-c]').onclick=()=>{cancel=true; rec.stop();};
+        bar.querySelector('[data-ok]').onclick=()=>rec.stop();
+        rec.start();};},
   });
 
   // Personal-only apps show a lock screen outside Telegram / before the character exists.

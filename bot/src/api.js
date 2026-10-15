@@ -46,7 +46,8 @@ export const api = {
   update: (id, patch) => req('PUT', `/employees/${encodeURIComponent(id)}`, patch),
   claim,
   pending: () => req('GET', '/notifications/pending'),
-  markSent: (id) => req('POST', `/notifications/${id}/sent`),
+  markSent: (id, tgMessageId) => req('POST', `/notifications/${id}/sent`, tgMessageId ? { tgMessageId } : undefined),
+  reply: (tgId, replyTo, text) => act('/bot/reply', { tgId, replyTo, text }),
   // Personal phone (spec 004): inline-button actions on behalf of the presser + morning agenda.
   respondEvent: (id, tgId, status) => act(`/bot/events/${encodeURIComponent(id)}/respond`, { tgId, status }),
   taskDone: (id, tgId) => act(`/bot/tasks/${encodeURIComponent(id)}/done`, { tgId }),
