@@ -91,7 +91,7 @@ export async function loadChats(meId, onlyId = null) {
       `SELECT msg.chat_id, count(*)::int AS n FROM messages msg
        JOIN chat_members m ON m.chat_id = msg.chat_id AND m.employee_id = $1
        WHERE msg.chat_id = ANY($2::bigint[]) AND msg.id > m.last_read_id
-         AND msg.sender_id IS DISTINCT FROM $1 AND msg.deleted_at IS NULL
+         AND msg.sender_id IS DISTINCT FROM $1 AND msg.deleted_at IS NULL AND msg.kind IS DISTINCT FROM 'system'
        GROUP BY msg.chat_id`,
       [meId, ids]
     ),
@@ -160,6 +160,19 @@ export async function syncSystemChats() {
   }
   for (const [chatId, ids] of removed) pushRemoved(chatId, ids);
   for (const [chatId, ids] of added) await pushChat(chatId, ids);
+  // Onboarding (spec 005): a newcomer joining their department chat gets a welcome post, once.
+  for (const d of depts) {
+    const ids = added.get(String(d.id)) || [];
+    if (!ids.length) continue;
+    const { rows: fresh } = await query(
+      `SELECT e.id, e.name, e.position FROM employees e
+       WHERE e.id = ANY($1::text[]) AND e.created_at > now() - interval '3 days'
+         AND NOT EXISTS (SELECT 1 FROM system_posts s WHERE s.kind = 'welcome' AND s.employee_id = e.id)`, [ids]);
+    for (const e of fresh) {
+      await query(`INSERT INTO system_posts (day, kind, employee_id) VALUES (CURRENT_DATE, 'welcome', $1) ON CONFLICT DO NOTHING`, [e.id]);
+      await systemPost(d.dept, `👋 Вітаємо в команді: ${e.name}${e.position ? ' — ' + e.position : ''}! Напишіть привіт 🙂`);
+    }
+  }
 }
 let syncT = null;
 export function scheduleSync() {
@@ -316,7 +329,7 @@ chats.get('/me/search', async (req, res, next) => {
     const like = '%' + q.replace(/[\\%_]/g, (c) => '\\' + c) + '%';
     const { rows } = await query(
       `${MSG_SELECT} JOIN chat_members cm ON cm.chat_id = m.chat_id AND cm.employee_id = $1
-       WHERE m.deleted_at IS NULL AND m.text ILIKE $2 ORDER BY m.id DESC LIMIT 50`, [req.me.id, like]);
+       WHERE m.deleted_at IS NULL AND m.kind IS DISTINCT FROM 'system' AND m.text ILIKE $2 ORDER BY m.id DESC LIMIT 50`, [req.me.id, like]);
     res.json(rows.map(toMsg));
   } catch (err) { next(err); }
 });

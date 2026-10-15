@@ -465,6 +465,12 @@ html.tgapp #app #preview{display:none}
 .prec button{width:40px;height:40px;border-radius:50%;background:var(--chip);font-size:16px;font-weight:900}
 .prec .send{background:var(--red);color:#fff}
 @keyframes recb{50%{opacity:.25}}
+.ptour{position:absolute;inset:0;z-index:50;background:rgba(20,14,24,.55);display:grid;place-items:center;padding:22px;animation:ptin .25s}
+@keyframes ptin{from{opacity:0}}
+.ptour .card{background:var(--panel-solid);border-radius:22px;padding:24px 20px 16px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.ptour .ic{font-size:44px}.ptour b{font-size:17px;font-weight:900}.ptour span{font-size:13px;font-weight:600;color:var(--muted);line-height:1.5}
+.ptour .dots{display:flex;gap:6px;margin:6px 0}.ptour .dots i{width:7px;height:7px;border-radius:50%;background:var(--line)}.ptour .dots i.on{background:var(--red)}
+.ptour .pbtn{width:100%}.ptour .skip{font-size:12.5px;font-weight:800;color:var(--muted);padding:6px}
 .pinput .att{width:40px;height:40px;border-radius:50%;background:var(--chip);display:grid;place-items:center;flex:none;cursor:pointer;font-size:18px}
 .pcalbar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 8px}
 .pcalbar .ti{font-weight:900}
@@ -660,6 +666,7 @@ html.tgapp #app #preview{display:none}
             <button class="papp" data-go="calls"><span class="ic" style="background:var(--red)"><svg viewBox="0 0 24 24"><path d="M6.5 3h3l1.6 4-2 1.4a12 12 0 0 0 5 5l1.4-2 4 1.6v3a2 2 0 0 1-2.1 2A16 16 0 0 1 4 5.1 2 2 0 0 1 6.5 3Z"/></svg></span><span class="lb">Дзвінки</span></button>
             <button class="papp" data-go="calendar"><span class="ic" style="background:#3EA8C9"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9.5h16M8 3v4M16 3v4"/></svg></span><span class="lb">Календар</span><span class="badge" id="calBadge" style="display:none">0</span></button>
             <button class="papp" data-go="tasks"><span class="ic" style="background:#F2A03D"><svg viewBox="0 0 24 24"><path d="M9 4h6v2.5H9zM8 5H5v15h14V5h-3M8.5 13l2.2 2.2L15 11"/></svg></span><span class="lb">Задачі</span><span class="badge" id="taskBadge" style="display:none">0</span></button>
+            <button class="papp" data-go="desk"><span class="ic" style="background:#2EAD8B"><svg viewBox="0 0 24 24"><path d="M3 10h18M5 10v9M19 10v9M8 10V6h8v4"/></svg></span><span class="lb">Моє місце</span></button>
             <button class="papp" data-go="broadcast"><span class="ic" style="background:#A36BE0"><svg viewBox="0 0 24 24"><path d="M4 10v4h3l8 4V6l-8 4H4Z"/><path d="M18 9a4 4 0 0 1 0 6"/></svg></span><span class="lb">Оголошення</span></button>
             <button class="papp" data-go="coffee"><span class="ic" style="background:#B5714E"><svg viewBox="0 0 24 24"><path d="M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Z"/><path d="M17 9h2.2a2.5 2.5 0 0 1 0 5H17"/><path d="M7.5 3v2M11 3v2"/></svg></span><span class="lb">Кава</span></button>
             <button class="papp" data-go="settings"><span class="ic" style="background:#7C8590"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 13a1.7 1.7 0 0 0 .3 1.9 2 2 0 1 1-2.8 2.8 1.7 1.7 0 0 0-2.9 1.2 2 2 0 0 1-4 0 1.7 1.7 0 0 0-2.9-1.2 2 2 0 1 1-2.8-2.8A1.7 1.7 0 0 0 4.6 13a2 2 0 0 1 0-4 1.7 1.7 0 0 0 1.2-2.9 2 2 0 1 1 2.8-2.8A1.7 1.7 0 0 0 11 4.6a2 2 0 0 1 4 0 1.7 1.7 0 0 0 2.9 1.2 2 2 0 1 1 2.8 2.8A1.7 1.7 0 0 0 19.4 11a2 2 0 0 1 0 4Z"/></svg></span><span class="lb">Налаштування</span></button>
@@ -681,6 +688,7 @@ html.tgapp #app #preview{display:none}
       <div class="pscreen" data-scr="coffee"></div>
       <div class="pscreen" data-scr="tasks"></div>
       <div class="pscreen" data-scr="taskform"></div>
+      <div class="pscreen" data-scr="desk"></div>
       <div class="pscreen" data-scr="broadcast"></div>
       <div class="pscreen" data-scr="profile"></div>
       <div class="pscreen" data-scr="settings"></div>
@@ -1075,7 +1083,9 @@ let LIVE={rooms:{},busy:{},at:0};
 const liveUntil=x=>x&&new Date(x.until)>new Date()?new Date(x.until):null;
 const hhmm=d=>String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
 const busyOf=e=>liveUntil(LIVE.busy[e.id]);
-const badgeOf=e=>(LIVE.extraBadge&&LIVE.extraBadge(e))||(busyOf(e)?'📅':'');
+const badgeOf=e=>busyOf(e)?'📅':(LIVE.birthdays||[]).includes(e.id)?'🎂':(LIVE.anniversaries||[]).some(a=>a.id===e.id)?'🏅':'';
+// Seat for today: the permanent one wins; otherwise a hot desk booked in the Mini App (in office only).
+const seatRef=e=>e.seat||(statusOf(e)==='office'&&LIVE.desks&&LIVE.desks[e.id])||null;
 const roomBusy=key=>liveUntil(LIVE.rooms[key]);
 async function refreshLive(){try{const r=await fetch(API+'/office/now'); if(!r.ok) return; LIVE=Object.assign(LIVE,await r.json()); applyLive();}catch(e){}}
 function applyLive(){renderLabels(); syncAvatars(); dirty2d=true; if(LIVE.onUpdate) LIVE.onUpdate();}
@@ -1138,7 +1148,7 @@ function magnetSnap(f){const D=FURN[f.type]; if(D.onDesk||D.underlay) return; co
   if(hits(nx,nz)){ if(!hits(f.x,nz)) nx=f.x; else if(!hits(nx,f.z)) nz=f.z; else {nx=f.x; nz=f.z;} } // never magnet into an overlap
   f.x=nx; f.z=nz;}
 function seatWorld(f,i){const s=FURN[f.type].seats[i]; const a=f.rot*Math.PI/2; const c=Math.cos(a),sn=Math.sin(a); return {x:f.x+s.x*c+s.z*sn, z:f.z-s.x*sn+s.z*c, y:s.y, ry:a+s.ry};}
-const seatTaken=(fu,i)=>state.employees.some(e=>e.seat&&e.seat.f===fu&&e.seat.i===i);
+const seatTaken=(fu,i)=>state.employees.some(e=>{const s=seatRef(e); return s&&s.f===fu&&s.i===i;});
 function roomName(id){const r=ROOMS.find(r=>r.id===id); if(!r) return ''; const z=state.zones[id]; return z?(z.name||ZONES[z.type].n):(r.label||('Кімната '+r.n));}
 function liveRoomName(key){if(String(key).startsWith('rz:')){const rz=state.rects.find(x=>'rz:'+x.uid===key); return rz?(rz.name||ZONES[rz.type].n):'';} return roomName(key);}
 function roomCenter(r){const rc=r.rects[0]; return new THREE.Vector3((rc[0]+rc[2])/2,0,(rc[1]+rc[3])/2);}
@@ -1152,10 +1162,10 @@ function syncFurniture(){dirty2d=true; if(view==='2d') return; const live=new Se
 function syncAvatars(){dirty2d=true; const live=new Set();
   for(const e of state.employees){ if(e.seat && !state.furniture.find(x=>x.uid===e.seat.f)) e.seat=null;
     // present in the office if seated OR simply in-office (unassigned people wander freely)
-    if(!e.seat && statusOf(e)!=='office') continue; live.add(e.id);
+    if(!seatRef(e) && statusOf(e)!=='office') continue; live.add(e.id);
     if(view==='2d') continue; // light 2D mode: no 3D avatar objects (draw2D reads state directly)
     let g=avObjs[e.id]; const key=e.color; if(g&&g.userData.key!==key){avRoot.remove(g); disposeAvatar(g); g=null;}
-    if(!g){g=buildAvatar(settings.avatar,e.color,!!e.seat,true); g.userData.key=key; g.userData.emp=e.id; avRoot.add(g); avObjs[e.id]=g;}
+    if(!g){g=buildAvatar(settings.avatar,e.color,!!seatRef(e),true); g.userData.key=key; g.userData.emp=e.id; avRoot.add(g); avObjs[e.id]=g;}
     setAvatarMood(g,(MOODS[e.mood]||MOODS.good).e);
     setAvatarPhoto(g,e);
     setAvatarBadge(g,badgeOf(e));
@@ -1178,7 +1188,7 @@ const labelsEl=$('#labels'); const roomLabelEls={}, tagEls={}; let hlEmp=null, f
 function renderLabels(rebuild){
   for(const r of ROOMS){let el=roomLabelEls[r.id]; if(!el){el=document.createElement('div'); el.className='rl'; el.dataset.room=r.id; el.addEventListener('click',()=>{if(mode==='builder'&&tab==='zones') openZonePop({room:r.id});}); labelsEl.appendChild(el); roomLabelEls[r.id]=el;}
     const z=state.zones[r.id], bz=roomBusy(r.id); el.classList.toggle('empty',!z); el.classList.toggle('busy',!!bz); el.innerHTML=(z?`<i style="background:${zoneColor(z)}"></i>`:'')+esc(roomName(r.id))+(bz?`<b class="bz">🔴 до ${hhmm(bz)}</b>`:''); el.style.display=(r.corridor&&!z)?'none':'';}
-  const live=new Set(); for(const e of state.employees){if(!e.seat) continue; live.add(e.id); let el=tagEls[e.id]; if(!el){el=document.createElement('div'); el.className='tag'; el.dataset.emp=e.id; el.addEventListener('click',ev=>{ev.stopPropagation(); if(mode==='viewer') focusEmployee(e.id,true);}); labelsEl.appendChild(el); tagEls[e.id]=el;}
+  const live=new Set(); for(const e of state.employees){if(!seatRef(e)) continue; live.add(e.id); let el=tagEls[e.id]; if(!el){el=document.createElement('div'); el.className='tag'; el.dataset.emp=e.id; el.addEventListener('click',ev=>{ev.stopPropagation(); if(mode==='viewer') focusEmployee(e.id,true);}); labelsEl.appendChild(el); tagEls[e.id]=el;}
     el.innerHTML=`<div class="b"><i style="background:${safeColor(e.color)}"></i><span class="n">${esc(e.name)}</span><span class="d">${esc(e.position||e.dept)}</span></div>`;}
   for(const k in tagEls) if(!live.has(k)){tagEls[k].remove(); delete tagEls[k];}
   for(const rz of state.rects){let el=roomLabelEls['rz'+rz.uid]; if(!el){el=document.createElement('div'); el.className='rl'; labelsEl.appendChild(el); roomLabelEls['rz'+rz.uid]=el; el.addEventListener('click',()=>{if(mode==='builder'&&tab==='zones') openZonePop({rect:rz.uid});});}
@@ -1408,10 +1418,10 @@ function showHighlight(g){clearHighlight(); const p=g.position;
     const glow=new THREE.Mesh(new THREE.CircleGeometry(1.1,40).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:'#E2001A',transparent:true,opacity:.18,depthWrite:false})); glow.position.set(p.x,.035,p.z); fxRoot.add(glow);}
   if(settings.hl!=='glow'){hlArrow=new THREE.Mesh(new THREE.ConeGeometry(.22,.5,20),new THREE.MeshStandardMaterial({color:'#E2001A',roughness:.5})); hlArrow.rotation.x=Math.PI; hlArrow.position.set(p.x,p.y+g.userData.tagY+1.1,p.z); hlArrow.castShadow=true; fxRoot.add(hlArrow);}}
 function clearHighlight(){while(fxRoot.children.length) fxRoot.remove(fxRoot.children[0]); hlRing=hlArrow=null;}
-function showCard(e){const c=$('#empcard'); const f=e.seat&&state.furniture.find(x=>x.uid===e.seat.f); let where; if(f){const sw=seatWorld(f,e.seat.i); where=roomName(roomAt(sw.x,sw.z))||'В офісі';} else where=statusOf(e)==='office'?'Ходить офісом':'Не в офісі';
+function showCard(e){const c=$('#empcard'); const sr=seatRef(e), f=sr&&state.furniture.find(x=>x.uid===sr.f); let where; if(f){const sw=seatWorld(f,sr.i); where=roomName(roomAt(sw.x,sw.z))||'В офісі';} else where=statusOf(e)==='office'?'Ходить офісом':'Не в офісі';
   const st=STATUS[statusOf(e)], md=MOODS[e.mood]||MOODS.good;
   c.innerHTML=`<div class="top">${avHTML(e)}<div><div class="nm" style="font-size:16px">${esc(e.name)}</div><div class="dp">${esc(e.dept)}${e.position?' · '+esc(e.position):''}</div></div></div>`+
-    `<div class="badges"><span class="pill" style="color:${st.c}">${st.icon} ${st.n}</span><span class="pill">${md.e} ${md.n}</span><span class="pill">📍 ${esc(where)}</span>${busyOf(e)?`<span class="pill" style="color:#5B76E6">📅 На зустрічі до ${hhmm(busyOf(e))}${LIVE.busy[e.id].room?' · '+esc(liveRoomName(LIVE.busy[e.id].room)):''}</span>`:''}${e.tg_linked?'<span class="pill" style="color:#229ED9" title="Прив\'язано через Telegram">✈️ TG</span>':''}</div>`+
+    `<div class="badges"><span class="pill" style="color:${st.c}">${st.icon} ${st.n}</span><span class="pill">${md.e} ${md.n}</span><span class="pill">📍 ${esc(where)}</span>${(LIVE.birthdays||[]).includes(e.id)?'<span class="pill" style="color:#E06CA6">🎂 День народження сьогодні!</span>':''}${(()=>{const a=(LIVE.anniversaries||[]).find(x=>x.id===e.id); return a?`<span class="pill" style="color:#B5651D">🏅 ${a.years} р. з нами</span>`:'';})()}${!e.seat&&seatRef(e)?'<span class="pill">🪑 Місце на сьогодні</span>':''}${busyOf(e)?`<span class="pill" style="color:#5B76E6">📅 На зустрічі до ${hhmm(busyOf(e))}${LIVE.busy[e.id].room?' · '+esc(liveRoomName(LIVE.busy[e.id].room)):''}</span>`:''}${e.tg_linked?'<span class="pill" style="color:#229ED9" title="Прив\'язано через Telegram">✈️ TG</span>':''}</div>`+
     `<dl>${e.email?`<dt>Email</dt><dd>${esc(e.email)}</dd>`:''}${e.phone?`<dt>Телефон</dt><dd>${esc(e.phone)}</dd>`:''}${e.ext?`<dt>Роб. номер</dt><dd>${esc(e.ext)}</dd>`:''}</dl>`+
     // Status/mood/edit controls write to the DB. Shown to HR (builder) and — in the
     // Telegram Mini App — to the owner of this card only. Everyone else sees it read-only.
@@ -1441,7 +1451,7 @@ function renderFilters(){const f=$('#filters'); const depts=Object.keys(state.de
 function statusOf(e){return STATUS[e.status]?e.status:'office';}
 function refreshAvatarLook(){for(const e of state.employees){const g=avObjs[e.id]; if(!g) continue; const st=statusOf(e); let op=1; if(filterDept&&e.dept!==filterDept&&mode==='viewer') op=.22; setOpacity(g,op); if(g.userData.gem){const c=STATUS[st].c; g.userData.gem.material.color.set(c); g.userData.gem.material.emissive.set(c);}}}
 function applyFilter(){refreshAvatarLook();}
-function seatOfEmp(e){if(!e.seat) return null; const f=state.furniture.find(x=>x.uid===e.seat.f); return f?seatWorld(f,e.seat.i):null;}
+function seatOfEmp(e){const sr=seatRef(e); if(!sr) return null; const f=state.furniture.find(x=>x.uid===sr.f); return f?seatWorld(f,sr.i):null;}
 function pointBlocked(x,z){return state.furniture.some(o=>{if(FURN[o.type].underlay||FURN[o.type].onDesk) return false; const p=fp(o); return Math.abs(o.x-x)<p.w/2+.28&&Math.abs(o.z-z)<p.d/2+.28;});}
 // ── Office-wide roaming (renderer-agnostic): a per-employee ephemeral position EP ──
 const EP={}; // {x,z,ry,pose,roam} keyed by employee id; not persisted
@@ -1475,15 +1485,36 @@ function stepAvoid(ep,tgt,step){const base=Math.atan2(tgt.x-ep.x,tgt.z-ep.z); co
   for(const strict of [true,false]) for(const off of offs){const a=base+off,nx=ep.x+Math.sin(a)*step,nz=ep.z+Math.cos(a)*step; if(!nearWall(nx,nz)&&(!strict||!pointBlocked(nx,nz))){ep.x=nx;ep.z=nz;ep.ry=a;return true;}}
   return false;}
 function spawnPoint(){return pickRoamTarget({x:CORRIDOR_X,z:OD/2});}
+// One step along r.path → 'moving' | 'arrived' | 'stuck' (no progress for a while).
+function walkStep(ep,r,dt){const p=r.path&&r.path.length?r.path:[ep]; const wp=p[Math.min(r.wi,p.length-1)]; const d=Math.hypot(wp.x-ep.x,wp.z-ep.z); ep.pose='walk'; dirty2d=true;
+  if(d<.4){r.wi++; r.bestD=1e9; r.noProg=0; return r.wi>=p.length?'arrived':'moving';}
+  stepAvoid(ep,wp,Math.min(d,(r.speed||1.2)*dt)); if(d<(r.bestD??1e9)-.03){r.bestD=d; r.noProg=0;} else if((r.noProg=(r.noProg||0)+1)>60){r.noProg=0; r.bestD=1e9; return 'stuck';} return 'moving';}
+// Where each person in a room-booked meeting stands/sits: chairs of meeting tables in that room,
+// then a ring around the room centre. Stable order (by id) so nobody swaps places.
+function meetingSpots(){const out={}, byRoom={}; for(const id in LIVE.busy){const b=LIVE.busy[id]; if(b&&b.room&&liveUntil(b)) (byRoom[b.room]=byRoom[b.room]||[]).push(id);}
+  for(const key in byRoom){const ids=byRoom[key].sort(); let c=null, inRoom=null;
+    if(key.startsWith('rz:')){const rz=state.rects.find(x=>'rz:'+x.uid===key); if(!rz) continue; c={x:(rz.x0+rz.x1)/2,z:(rz.z0+rz.z1)/2}; inRoom=(x,z)=>x>=rz.x0&&x<=rz.x1&&z>=rz.z0&&z<=rz.z1;}
+    else {const R=ROOMS.find(x=>x.id===key); if(!R) continue; const v=roomCenter(R); c={x:v.x,z:v.z}; inRoom=(x,z)=>roomAt(x,z)===key;}
+    const chairs=[]; for(const f of state.furniture){const fd=FURN[f.type]; if(fd&&fd.cat==='meeting'&&fd.seats&&inRoom(f.x,f.z)) fd.seats.forEach((_,i)=>chairs.push({...seatWorld(f,i),sit:true}));}
+    ids.forEach((id,k)=>{out[id]=Object.assign({key},chairs[k]||{x:c.x+Math.cos(k*2.4)*(1+.35*k),z:c.z+Math.sin(k*2.4)*(1+.35*k),ry:0,sit:false});});}
+  return out;}
+// Read-only probe for the e2e tests (tests/ui): where is a person right now.
+window.__where=id=>{const ep=EP[id]; return ep?{x:ep.x,z:ep.z,pose:ep.pose,room:roomAt(ep.x,ep.z)}:null;};
 function roamArrive(ep,r,seat,out){ if(out){r.phase='pause'; r.t=2+Math.random()*4; ep.pose='stand';}
   else if(seat){ep.x=seat.x; ep.z=seat.z; ep.ry=seat.ry; ep.pose='sit'; r.phase='sitting'; r.t=4+Math.random()*8;}
   else {r.phase='sitting'; r.t=1+Math.random()*3;} }
 // An employee appears in the office if seated OR just "in office" (status). Seat-binding is optional:
 // unassigned in-office employees wander the whole office endlessly, like living people.
-function updateRoam(dt){const on=settings.move==='on'; if(!DOORS) DOORS=computeDoors();
+function updateRoam(dt){const on=settings.move==='on'; if(!DOORS) DOORS=computeDoors(); const spots=meetingSpots();
   for(const e of state.employees){ const seat=seatOfEmp(e), inOffice=statusOf(e)==='office';
     if(!seat && !inOffice){ delete EP[e.id]; continue; }
     let ep=EP[e.id]; if(!ep){ const sp=seat||spawnPoint(); ep=EP[e.id]={x:sp.x,z:sp.z,ry:seat?seat.ry:0,pose:seat?'sit':'stand'}; }
+    // Meeting (spec 005): walk to the booked room and stay until it ends (regardless of the move setting).
+    const mt=inOffice?spots[e.id]:null;
+    if(mt){ let mr=ep.roam; if(!mr||mr.meet!==mt.key){ mr=ep.roam={phase:'go',meet:mt.key,speed:1.3,path:buildPath(ep,mt),wi:0,bestD:1e9,noProg:0}; }
+      if(mr.phase==='there'){ if(ep.x!==mt.x||ep.z!==mt.z){ep.x=mt.x; ep.z=mt.z; dirty2d=true;} ep.ry=mt.ry??ep.ry; ep.pose=mt.sit?'sit':'stand'; continue; }
+      const st=walkStep(ep,mr,dt); if(st==='arrived'||st==='stuck'){ mr.phase='there'; dirty2d=true; } continue; }
+    if(ep.roam&&ep.roam.meet){ ep.roam=seat?{phase:'back',path:buildPath(ep,seat),wi:0,bestD:1e9,noProg:0,speed:1.2}:null; } // meeting over → back to the desk
     if(seat && !on){ ep.x=seat.x; ep.z=seat.z; ep.ry=seat.ry; ep.pose='sit'; ep.roam=null; continue; } // seated + static → stay put
     const hasHome=!!seat; let r=ep.roam; if(!r){r=ep.roam={phase:'sitting',t:1+Math.random()*5};}
     if(r.phase==='sitting'){ep.pose=hasHome?'sit':'stand'; r.t-=dt; if(r.t<=0){r.phase='out'; r.speed=1.0+Math.random()*.6; r.path=buildPath(ep,pickRoamTarget(seat||ep)); r.wi=0; r.bestD=1e9; r.noProg=0;}}
@@ -1849,7 +1880,11 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
           ${ttl('Статус')}<div class="pchips" data-status>${Object.keys(STATUS).map(k=>chip(k,`${STATUS[k].icon} ${STATUS[k].n}`,statusOf(e)===k)).join('')}</div>
           ${ttl('Настрій')}<div class="pchips" data-mood>${Object.keys(MOODS).map(k=>chip(k,`${MOODS[k].e} ${MOODS[k].n}`,(e.mood||'good')===k)).join('')}</div>
           ${ttl('Колір аватара')}<div class="pchips" data-color>${DEPT_COLORS.map(c=>`<button class="pchip" data-c="${c}" title="колір" style="background:${c};width:32px;height:32px;padding:0;border-radius:50%;border:none${(e.color===c&&!e.photo)?';outline:3px solid var(--ink);outline-offset:2px':''}"></button>`).join('')}</div>
+          ${TG.active?`${ttl('День народження')}<div class="row2" style="display:flex;gap:8px"><input class="field" data-bday placeholder="ДД.ММ" inputmode="numeric" maxlength="5" value="${TG.me&&TG.me.birthday?TG.me.birthday.slice(3)+'.'+TG.me.birthday.slice(0,2):''}" style="flex:1;height:40px;border-radius:12px;border:1.5px solid var(--line);padding:0 12px;font:inherit;font-weight:700;background:var(--panel-solid);color:var(--ink)"><button class="pbtn sm" data-bdsave style="padding:0 16px">Зберегти</button></div><div style="font-size:11.5px;color:var(--muted);font-weight:600;margin-top:6px">Привітаємо в чаті офісу 🎂 Рік не потрібен і нікому не показується.</div>`:''}
         </div></div>`;
+      const bs=s.querySelector('[data-bdsave]'); if(bs) bs.onclick=async()=>{const v=s.querySelector('[data-bday]').value.trim();
+        try{const u=await apiEmpWrite('PUT','/employees/'+e.id,{birthday:v||null}); if(TG.me) TG.me.birthday=u&&u.birthday||null;
+          toast(v&&!(u&&u.birthday)?'Не схоже на дату — формат ДД.ММ':v?'Збережено 🎂':'День народження прибрано'); R.profile(s);}catch(err){toast('Не вдалося зберегти');}};
       const save=()=>{ empUpsert(e); syncAvatars(); renderPeople(); renderLabels(); };
       s.querySelectorAll('[data-status] .pchip').forEach(b=>b.onclick=()=>{ e.status=b.dataset.v; save(); R.profile(s); });
       s.querySelectorAll('[data-mood] .pchip').forEach(b=>b.onclick=()=>{ e.mood=b.dataset.v; save(); R.profile(s); });
@@ -2211,7 +2246,35 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
     const up=await r.json();
     return meApi('POST',`/me/chats/${chatId}/messages`,{attachmentId:up.id});
   }
+  // First run in the Mini App: a 3-step tour of the phone (spec 005 D), once per device.
+  function showTour(){
+    try{if(localStorage.getItem('alliancesim.tour.v1')) return;}catch(e){return;}
+    const steps=[['👋','Вітаємо в AllianceOS!','Це ваш особистий телефон офісу: тут листування з колегами, календар, задачі та ваше місце.'],
+      ['💬','Чати й оголошення','Пишіть колегам, у чат відділу чи всього офісу. Відповідати можна й прямо з Telegram — на сповіщення бота.'],
+      ['📅','Календар і переговорні','Створюйте зустрічі, бронюйте переговорні та запрошуйте колег. Бот нагадає заздалегідь.'],
+      ['🪑','Ваш профіль і місце','У «Мій профіль» — статус, настрій і день народження. «Моє місце» — стіл на сьогодні.']];
+    let k=0; const el=document.createElement('div'); el.className='ptour';
+    const draw=()=>{const [ic,t,d]=steps[k]; el.innerHTML=`<div class="card"><div class="ic">${ic}</div><b>${t}</b><span>${d}</span><div class="dots">${steps.map((_,i)=>`<i${i===k?' class="on"':''}></i>`).join('')}</div><button class="pbtn" data-next>${k<steps.length-1?'Далі':'Почати'}</button>${k<steps.length-1?'<button class="skip" data-skip>Пропустити</button>':''}</div>`;
+      const done=()=>{try{localStorage.setItem('alliancesim.tour.v1','1');}catch(e){} el.remove();};
+      el.querySelector('[data-next]').onclick=()=>{if(++k>=steps.length) done(); else draw();};
+      const sk=el.querySelector('[data-skip]'); if(sk) sk.onclick=done;};
+    draw(); $('#pbody').appendChild(el);}
   Object.assign(P,{
+    desk(s){
+      s.innerHTML=head('Моє місце')+'<div class="pscroll" data-list></div>';
+      const box=s.querySelector('[data-list]'); box.innerHTML=empty('Завантаження…','');
+      const me=emp(TG.me.id)||TG.me;
+      async function load(){let d; try{d=await meApi('GET','/me/desks');}catch(err){box.innerHTML=empty('Не вдалося завантажити',''); return;}
+        if(me.seat){box.innerHTML='<div class="pnote">🪑 У вас є постійне робоче місце — бронювати стіл на день не потрібно.</div>'; return;}
+        if(!d.desks.length){box.innerHTML=empty('Немає столів для бронювання','HR ще не розставив столи на плані офісу.'); return;}
+        const rows=d.desks.map((x,k)=>{const room=roomName(roomAt(x.x,x.z))||'Офіс', mine=!!d.mine&&d.mine.f===x.f&&d.mine.i===x.i, owner=x.owner&&!mine?x.owner:null;
+          return `<div class="prow" data-f="${esc(x.f)}" data-i="${x.i}"><div class="av gav">🪑</div><div class="tx"><div class="nm">Стіл ${k+1}${x.i?' · місце '+(x.i+1):''}</div><div class="sub">${esc(room)} · ${mine?'<b style="color:#2e9b57">ваше на сьогодні</b>':owner?esc(owner.name)+(owner.permanent?' (постійне)':''):'вільний'}</div></div>${mine?'<button class="rm" data-rel>Звільнити</button>':owner?'':'<button class="rm" data-book style="color:#2e9b57">Сісти тут</button>'}</div>`;}).join('');
+        box.innerHTML='<div class="pnote">Оберіть стіл на сьогодні — в офісі ви з’явитесь саме там. Бронь діє до кінця дня.</div>'+rows;
+        box.querySelectorAll('[data-book]').forEach(b=>b.onclick=async()=>{const row=b.closest('[data-f]');
+          try{await meApi('POST','/me/desk',{f:row.dataset.f,i:+row.dataset.i}); toast('🪑 Місце на сьогодні ваше'); refreshLive(); load();}
+          catch(err){if(err.code===409){toast('Це місце вже зайняте'); load();} else fail(err);}});
+        box.querySelectorAll('[data-rel]').forEach(b=>b.onclick=async()=>{try{await meApi('DELETE','/me/desk'); toast('Місце звільнено'); refreshLive(); load();}catch(err){fail(err);}});}
+      load(); wire(s);},
     _call:id=>callPerson(id),
     _inviteField(el,e){
       let ids=e?e.attendees.map(a=>a.id).filter(id=>id!==TG.me.id):[];
@@ -2318,7 +2381,7 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
   });
 
   // Personal-only apps show a lock screen outside Telegram / before the character exists.
-  const PERSONAL_ONLY={calendar:'Календар',tasks:'Задачі',chatlist:'Чати'};
+  const PERSONAL_ONLY={calendar:'Календар',tasks:'Задачі',chatlist:'Чати',desk:'Моє місце'};
   const appFor=id=>personal()&&P[id]?P[id]:(PERSONAL_ONLY[id]?(s=>locked(s,PERSONAL_ONLY[id])):R[id]);
 
   async function personalStart(){
@@ -2331,6 +2394,7 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
     loadTasks(); loadInvites();
     await loadChats();
     connect();
+    showTour();
     // Deep link from a bot notification: ?open=chat_12 | event_5 | task_3 (or Telegram start_param).
     let deep=params.get('open'); try{deep=deep||(Telegram.WebApp.initDataUnsafe||{}).start_param;}catch(e){}
     const m=/^(chat|event|task)_(\d+)$/.exec(deep||'');

@@ -37,6 +37,7 @@ const TEXT_STEPS = [
   { k: 'email',    q: 'Робочий email?',                     skip: true },
   { k: 'phone',    q: 'Робочий телефон?',                   skip: true },
   { k: 'ext',      q: 'Внутрішній (робочий) номер?',        skip: true },
+  { k: 'birthday', q: 'Коли твій день народження? (ДД.ММ — привітаємо в офісі 🎂)', skip: true },
 ];
 const STEPS = [...TEXT_STEPS.map((s) => s.k), 'avatar', 'status', 'mood'];
 
@@ -81,6 +82,7 @@ async function finishWizard(ctx) {
   const emp = {
     name: fullName, dept: d.dept, position: d.position || null, email: d.email || null,
     phone: d.phone || null, ext: d.ext || null, photo: d.photo || null,
+    ...(d.birthday ? { birthday: d.birthday } : {}), // api normalizes ДД.ММ, drops nonsense
     color: d.color || COLORS[Math.floor(Math.random() * COLORS.length)],
     status: d.status || 'office', mood: d.mood || 'good',
     telegram_id: ctx.from.id,
@@ -427,6 +429,7 @@ const NOTIF_TEXT = {
   task_done: (t, who) => `✅ ${who} виконав(ла) задачу:\n${t}`,
   task_due: (t, _who, me) => `⏰ ${me}, дедлайн сьогодні:\n${t}`,
   task_overdue: (t, _who, me) => `⚠️ ${me}, задача прострочена:\n${t}`,
+  birthday: (_t, _who, me) => `🎂 ${me}, з днем народження! 🎉\nУся команда AllianceSim вітає тебе — гарного дня!`,
 };
 
 // Mini App deep link: WEBAPP_URL?open=chat_12 → the phone opens straight on that screen.

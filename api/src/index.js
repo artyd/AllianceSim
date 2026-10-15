@@ -5,7 +5,7 @@ import { verifyInitData } from './telegram.js';
 import { personal, runReminders } from './personal.js';
 import { chats, syncSystemChats, scheduleSync, cleanupAttachments } from './chats.js';
 import { requireMe } from './session.js';
-import { office } from './office.js';
+import { office, runDailyPosts, snapshotDay } from './office.js';
 
 const app = express();
 app.use(express.json({ limit: '25mb' })); // layout blob embeds employees (+ optional base64 photos)
@@ -87,7 +87,7 @@ router.put('/layout', requireEditToken, async (req, res, next) => {
 // shape so the renderer code stays untouched. telegram_id is never exposed publicly
 // (only a `tg_linked` boolean); the bot reads it via /employees/by-telegram.
 const EMP_COLS =
-  'id, name, department, position, email, phone, ext, photo, color, status, mood, desk_id, seat_i, telegram_id, created_at, updated_at';
+  'id, name, department, position, email, phone, ext, photo, color, status, mood, desk_id, seat_i, telegram_id, birthday, hired_on, created_at, updated_at';
 
 function toEmp(r, { includeTelegram = false } = {}) {
   if (!r) return null;
@@ -106,7 +106,12 @@ function toEmp(r, { includeTelegram = false } = {}) {
     seat: r.desk_id != null ? { f: r.desk_id, i: r.seat_i } : null,
     tg_linked: r.telegram_id != null,
   };
-  if (includeTelegram) out.telegram_id = r.telegram_id != null ? String(r.telegram_id) : null;
+  if (includeTelegram) {
+    out.telegram_id = r.telegram_id != null ? String(r.telegram_id) : null;
+    // Private dates: only for the person themselves / the bot / HR, never on the public list.
+    out.birthday = r.birthday || null;
+    out.hired_on = ymd(r.hired_on);
+  }
   return out;
 }
 
@@ -115,14 +120,29 @@ const SAFE_PHOTO = /^(data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=\s]+|https:\/
 function sanitizeEmp(b) {
   if ('photo' in b && b.photo != null && !SAFE_PHOTO.test(String(b.photo))) b.photo = null;
   if ('color' in b && b.color != null && !/^#[0-9a-f]{3,8}$/i.test(String(b.color))) b.color = null;
+  // birthday: 'MM-DD' (also accepts 'DD.MM' / 'YYYY-MM-DD'); hired_on: 'YYYY-MM-DD'
+  if ('birthday' in b) b.birthday = normBirthday(b.birthday);
+  if ('hired_on' in b) b.hired_on = /^\d{4}-\d\d-\d\d$/.test(String(b.hired_on || '')) && !Number.isNaN(Date.parse(b.hired_on)) ? b.hired_on : null;
   return b;
+}
+
+// pg parses DATE as local midnight → format from local parts (toISOString would shift the day).
+const ymd = (d) => (d instanceof Date ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : d || null);
+function normBirthday(v) {
+  const s = String(v || '').trim();
+  let m = /^(\d{1,2})\.(\d{1,2})(?:\.\d{2,4})?$/.exec(s), mm, dd;
+  if (m) { dd = +m[1]; mm = +m[2]; }
+  else if ((m = /^(?:\d{4}-)?(\d{1,2})-(\d{1,2})$/.exec(s))) { mm = +m[1]; dd = +m[2]; }
+  else return null;
+  const t = new Date(Date.UTC(2000, mm - 1, dd)); // 2000 is a leap year → 02-29 allowed
+  return t.getUTCMonth() === mm - 1 && t.getUTCDate() === dd ? `${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}` : null;
 }
 
 // Maps client field name → DB column for scalar fields (seat/telegram handled apart).
 const SCALARS = {
   name: 'name', dept: 'department', position: 'position', email: 'email',
   phone: 'phone', ext: 'ext', photo: 'photo', color: 'color',
-  status: 'status', mood: 'mood',
+  status: 'status', mood: 'mood', birthday: 'birthday', hired_on: 'hired_on',
 };
 
 router.get('/employees', async (_req, res, next) => {
@@ -230,21 +250,24 @@ router.post('/employees', writeAuth, async (req, res, next) => {
     // link is only ever set through claim/create, never cleared by a plain upsert.
     const { rows } = await query(
       `INSERT INTO employees
-         (id, name, department, position, email, phone, ext, photo, color, status, mood, desk_id, seat_i, telegram_id)
-       VALUES (COALESCE($1, gen_random_uuid()::text),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+         (id, name, department, position, email, phone, ext, photo, color, status, mood, desk_id, seat_i, telegram_id, birthday, hired_on)
+       VALUES (COALESCE($1, gen_random_uuid()::text),$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
        ON CONFLICT (id) DO UPDATE SET
          name=EXCLUDED.name, department=EXCLUDED.department, position=EXCLUDED.position,
          email=EXCLUDED.email, phone=EXCLUDED.phone, ext=EXCLUDED.ext, photo=EXCLUDED.photo,
          color=EXCLUDED.color, status=EXCLUDED.status, mood=EXCLUDED.mood,
          desk_id=EXCLUDED.desk_id, seat_i=EXCLUDED.seat_i,
          telegram_id=COALESCE(EXCLUDED.telegram_id, employees.telegram_id),
+         -- private dates are absent from the public object the web re-sends → keep them
+         birthday=COALESCE(EXCLUDED.birthday, employees.birthday),
+         hired_on=COALESCE(EXCLUDED.hired_on, employees.hired_on),
          updated_at=now()
        RETURNING ${EMP_COLS}`,
       [
         b.id || null, b.name.toString().trim(), b.dept ?? null, b.position ?? null,
         b.email ?? null, b.phone ?? null, b.ext ?? null, b.photo ?? null, b.color ?? null,
         b.status ?? null, b.mood ?? null, seat ? seat.f : null, seat ? seat.i : null,
-        telegramId,
+        telegramId, b.birthday ?? null, b.hired_on ?? null,
       ]
     );
     res.status(201).json(toEmp(rows[0], { includeTelegram: true }));
@@ -432,6 +455,10 @@ initSchema()
     safe('attachment cleanup', cleanupAttachments)();
     // Calendar reminders + task deadlines → Telegram (queued for the bot).
     setInterval(safe('reminders', runReminders), Number(process.env.JOBS_INTERVAL_MS || 60 * 1000));
+    // Spec 005: birthday/anniversary posts (once a day from CHECKIN_HOUR), HR analytics snapshots.
+    setInterval(safe('daily posts', runDailyPosts), Number(process.env.JOBS_INTERVAL_MS || 60 * 1000));
+    setInterval(safe('snapshot', snapshotDay), Number(process.env.SNAPSHOT_MS || process.env.JOBS_INTERVAL_MS || 10 * 60 * 1000));
+    safe('snapshot', snapshotDay)();
     // Bind to all interfaces inside the container; docker-compose maps only
     // 127.0.0.1 on the host, so nothing is exposed publicly (Caddy fronts TLS).
     app.listen(PORT, () => console.log(`[api] listening on :${PORT}`));

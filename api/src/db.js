@@ -186,6 +186,34 @@ CREATE TABLE IF NOT EXISTS message_reactions (
 );
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS tg_message_id bigint; -- the bot's Telegram message (reply → chat)
 
+-- Spec 005 D/E: birthdays, hot desks, one-off system posts, daily snapshots for HR analytics.
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS birthday text;    -- 'MM-DD' (year is nobody's business)
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS hired_on date;    -- work anniversary
+CREATE TABLE IF NOT EXISTS desk_bookings (
+  day date NOT NULL,
+  furniture_uid text NOT NULL,
+  seat_i integer NOT NULL DEFAULT 0,
+  employee_id text NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (day, furniture_uid, seat_i),
+  UNIQUE (day, employee_id)
+);
+CREATE TABLE IF NOT EXISTS system_posts (
+  day date NOT NULL,
+  kind text NOT NULL,                -- birthday | anniversary | welcome
+  employee_id text NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+  PRIMARY KEY (day, kind, employee_id)
+);
+CREATE TABLE IF NOT EXISTS daily_snapshots (
+  day date NOT NULL,
+  employee_id text NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+  department text,
+  status text,
+  mood text,
+  checked_in boolean NOT NULL DEFAULT false, -- profile updated that day (answered the check-in)
+  PRIMARY KEY (day, employee_id)
+);
+
 -- Which Telegram notifications a person wants (absent row = all on).
 CREATE TABLE IF NOT EXISTS notify_prefs (
   employee_id text PRIMARY KEY REFERENCES employees(id) ON DELETE CASCADE,

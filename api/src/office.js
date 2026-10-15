@@ -1,6 +1,8 @@
 import express from 'express';
 import { query } from './db.js';
-import { occurrences, TZ } from './recur.js';
+import { occurrences, parts, TZ } from './recur.js';
+import { systemPost } from './chats.js';
+import { queueNotif } from './notify.js';
 
 // "Live office" data derived from calendars (spec 005): who is in a meeting right now and
 // which rooms are booked. The public view gets only times and room keys — never titles.
@@ -43,9 +45,27 @@ export async function officeNow(force = false) {
       if (!b || s.end > b.until) busy[a.employee_id] = { until: s.end, room: s.ev.room || null };
     }
   }
-  cache = { at: now, rooms, busy };
+  // Hot desks booked for today, birthdays / work anniversaries today (office time zone).
+  const today = localDay(now);
+  const { rows: desks } = await query('SELECT employee_id, furniture_uid, seat_i FROM desk_bookings WHERE day = $1', [today]);
+  const md = today.slice(5);
+  const { rows: bd } = await query('SELECT id FROM employees WHERE birthday = $1', [md]);
+  const { rows: an } = await query(
+    `SELECT id, extract(year FROM $1::date)::int - extract(year FROM hired_on)::int AS years FROM employees
+     WHERE hired_on IS NOT NULL AND to_char(hired_on, 'MM-DD') = $2 AND hired_on < $1::date`, [today, md]);
+  cache = {
+    at: now, rooms, busy,
+    desks: Object.fromEntries(desks.map((d) => [d.employee_id, { f: d.furniture_uid, i: d.seat_i }])),
+    birthdays: bd.map((r) => r.id),
+    anniversaries: an.map((r) => ({ id: r.id, years: r.years })),
+  };
   cacheAt = Date.now();
   return cache;
+}
+// 'YYYY-MM-DD' of an instant in the office time zone.
+export function localDay(d = new Date()) {
+  const p = parts(d, TZ);
+  return `${p.y}-${String(p.m).padStart(2, '0')}-${String(p.d).padStart(2, '0')}`;
 }
 
 // Public: rooms booked now + people in a meeting now (until, room key).
@@ -69,3 +89,87 @@ office.get('/me/rooms', async (req, res, next) => {
 });
 
 export const validRoom = (r) => ROOM_RE.test(String(r || ''));
+
+// ── hot desks (spec 005 D): "my place for today" ─────────────────────────────
+const DESK_SEATS = { desk: 1, doubleDesk: 2 };
+async function layoutFurniture() {
+  const { rows: [l] } = await query('SELECT data FROM office_layout WHERE id = 1');
+  return (l && l.data && Array.isArray(l.data.furniture)) ? l.data.furniture : [];
+}
+// Bookable desks with who holds them today: permanent seat (employees.desk_id) or a booking.
+office.get('/me/desks', async (req, res, next) => {
+  try {
+    const day = localDay();
+    const furn = (await layoutFurniture()).filter((f) => DESK_SEATS[f.type]);
+    const { rows: perm } = await query('SELECT id, name, desk_id, seat_i FROM employees WHERE desk_id IS NOT NULL');
+    const { rows: book } = await query(
+      'SELECT b.furniture_uid, b.seat_i, b.employee_id, e.name FROM desk_bookings b JOIN employees e ON e.id = b.employee_id WHERE b.day = $1', [day]);
+    const out = [];
+    for (const f of furn) for (let i = 0; i < DESK_SEATS[f.type]; i++) {
+      const p = perm.find((x) => x.desk_id === f.uid && Number(x.seat_i ?? 0) === i);
+      const b = book.find((x) => x.furniture_uid === f.uid && x.seat_i === i);
+      out.push({ f: f.uid, i, x: f.x, z: f.z, owner: p ? { id: p.id, name: p.name, permanent: true } : b ? { id: b.employee_id, name: b.name } : null });
+    }
+    const mine = book.find((x) => x.employee_id === req.me.id);
+    res.json({ day, desks: out, mine: mine ? { f: mine.furniture_uid, i: mine.seat_i } : null });
+  } catch (err) { next(err); }
+});
+office.post('/me/desk', async (req, res, next) => {
+  try {
+    const f = String((req.body || {}).f || ''), i = Number((req.body || {}).i || 0);
+    const desk = (await layoutFurniture()).find((x) => x.uid === f && DESK_SEATS[x.type]);
+    if (!desk || !Number.isInteger(i) || i < 0 || i >= DESK_SEATS[desk.type]) return res.status(400).json({ error: 'not a bookable desk' });
+    const { rows: [me] } = await query('SELECT desk_id FROM employees WHERE id = $1', [req.me.id]);
+    if (me && me.desk_id) return res.status(409).json({ error: 'you already have a permanent seat' });
+    const { rows: [perm] } = await query('SELECT id FROM employees WHERE desk_id = $1 AND COALESCE(seat_i, 0) = $2', [f, i]);
+    if (perm) return res.status(409).json({ error: 'desk is someone\'s permanent seat' });
+    const day = localDay();
+    await query('DELETE FROM desk_bookings WHERE day = $1 AND employee_id = $2', [day, req.me.id]); // one desk per day
+    const r = await query(
+      'INSERT INTO desk_bookings (day, furniture_uid, seat_i, employee_id) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING RETURNING furniture_uid', [day, f, i, req.me.id]);
+    if (!r.rowCount) return res.status(409).json({ error: 'desk already taken today' });
+    invalidateOffice();
+    res.status(201).json({ ok: true, day, f, i });
+  } catch (err) { next(err); }
+});
+office.delete('/me/desk', async (req, res, next) => {
+  try {
+    await query('DELETE FROM desk_bookings WHERE day = $1 AND employee_id = $2', [localDay(), req.me.id]);
+    invalidateOffice();
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// ── daily jobs: birthday / anniversary posts, HR snapshots ───────────────────
+const CHECKIN_HOUR = Number(process.env.CHECKIN_HOUR || 9);
+async function once(day, kind, empId) {
+  const r = await query('INSERT INTO system_posts (day, kind, employee_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', [day, kind, empId]);
+  return r.rowCount > 0;
+}
+const plural = (n, one, few, many) => (n % 10 === 1 && n % 100 !== 11 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? few : many);
+export async function runDailyPosts(now = new Date()) {
+  if (parts(now, TZ).h < CHECKIN_HOUR) return;
+  const day = localDay(now), md = day.slice(5);
+  const { rows: bd } = await query('SELECT id, name FROM employees WHERE birthday = $1 AND telegram_id IS NOT NULL', [md]);
+  for (const e of bd) {
+    if (!(await once(day, 'birthday', e.id))) continue;
+    await systemPost('office', `🎂 Сьогодні день народження у ${e.name}! Привітаймо 🎉`);
+    await queueNotif(e.id, 'birthday', { text: e.name.split(' ')[0] });
+  }
+  const { rows: an } = await query(
+    `SELECT id, name, extract(year FROM $1::date)::int - extract(year FROM hired_on)::int AS years FROM employees
+     WHERE telegram_id IS NOT NULL AND hired_on IS NOT NULL AND to_char(hired_on, 'MM-DD') = $2 AND hired_on < $1::date`, [day, md]);
+  for (const e of an) {
+    if (!(await once(day, 'anniversary', e.id))) continue;
+    await systemPost('office', `🏅 ${e.name} з нами вже ${e.years} ${plural(e.years, 'рік', 'роки', 'років')}! Дякуємо 💛`);
+  }
+}
+// Today's status/mood per person (upserted all day → the last value wins) for HR analytics.
+export async function snapshotDay(now = new Date()) {
+  const day = localDay(now);
+  await query(
+    `INSERT INTO daily_snapshots (day, employee_id, department, status, mood, checked_in)
+     SELECT $1::date, id, department, status, mood, (updated_at AT TIME ZONE $2)::date = $1::date FROM employees
+     ON CONFLICT (day, employee_id) DO UPDATE SET department = EXCLUDED.department, status = EXCLUDED.status,
+       mood = EXCLUDED.mood, checked_in = daily_snapshots.checked_in OR EXCLUDED.checked_in`, [day, TZ]);
+}

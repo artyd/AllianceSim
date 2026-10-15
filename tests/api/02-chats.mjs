@@ -53,7 +53,7 @@ try {
   await sleep(300);
   ok(sb.events.some((e) => e.type === 'message' && e.data.text === 'Привіт, Богдане!'), 'B got message over SSE');
   ok(sa.events.some((e) => e.type === 'message'), 'A (sender) also got echo');
-  ok(!sc.events.some((e) => e.type === 'message'), 'C got nothing');
+  ok(!sc.events.some((e) => e.type === 'message' && e.data.chatId === ch.id), 'C got nothing from the A–B chat');
   eq((await pending()).filter((n) => n.kind === 'chat').length, 0, 'no ping while viewing');
 
   // B leaves chat → notification queued once (throttle)
