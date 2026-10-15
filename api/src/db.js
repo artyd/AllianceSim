@@ -154,6 +154,22 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 CREATE INDEX IF NOT EXISTS messages_chat ON messages (chat_id, id);
 
+-- Chat attachments: files on disk (UPLOAD_DIR volume), served only to chat members.
+-- Removed after ATTACHMENT_TTL_DAYS (deleted_at set, file unlinked; message stays).
+CREATE TABLE IF NOT EXISTS attachments (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id text REFERENCES employees(id) ON DELETE SET NULL,
+  chat_id bigint NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
+  filename text NOT NULL,
+  mime text NOT NULL,
+  size integer NOT NULL,
+  path text NOT NULL,
+  expires_at timestamptz NOT NULL,
+  deleted_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS attachment_id uuid REFERENCES attachments(id) ON DELETE SET NULL;
+
 -- Which Telegram notifications a person wants (absent row = all on).
 CREATE TABLE IF NOT EXISTS notify_prefs (
   employee_id text PRIMARY KEY REFERENCES employees(id) ON DELETE CASCADE,

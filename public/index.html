@@ -434,6 +434,15 @@ html.tgapp #app #preview{display:none}
 .pun.m{background:var(--muted)}
 .prow .sub i{color:var(--red);font-style:normal;font-weight:700}
 .av.gav{background:var(--chip);color:var(--ink);font-size:19px}
+.prow .chk{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);flex:none;display:grid;place-items:center;color:#fff;font-size:13px;font-weight:900}
+.prow[aria-checked="true"] .chk{background:var(--red);border-color:var(--red)}
+.prow .rm,.pinfo .rm{padding:5px 10px;border-radius:999px;background:var(--chip);font-size:11px;font-weight:800;color:var(--red)}
+.pbub .pimg{display:block;max-width:220px;max-height:260px;border-radius:12px;margin:-2px -4px 4px;cursor:zoom-in;background:rgba(0,0,0,.06)}
+.pbub .pfile{display:flex;align-items:center;gap:9px;padding:6px 2px;text-decoration:none!important;color:inherit;min-width:160px}
+.pbub .pfile .ic{width:36px;height:36px;border-radius:10px;background:rgba(0,0,0,.1);display:grid;place-items:center;font-size:18px;flex:none}
+.pbub .pfile .fn{font-weight:800;font-size:13px;word-break:break-all}.pbub .pfile .fs{font-size:11px;opacity:.7}
+.pbub .pgone{font-size:12px;font-style:italic;opacity:.75}
+.pinfo .members .prow{padding:9px 0}
 .pinput .att{width:40px;height:40px;border-radius:50%;background:var(--chip);display:grid;place-items:center;flex:none;cursor:pointer;font-size:18px}
 .pcalbar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 8px}
 .pcalbar .ti{font-weight:900}
@@ -640,6 +649,9 @@ html.tgapp #app #preview{display:none}
       <div class="pscreen" data-scr="chatlist"></div>
       <div class="pscreen" data-scr="conv"></div>
       <div class="pscreen" data-scr="chatnew"></div>
+      <div class="pscreen" data-scr="groupnew"></div>
+      <div class="pscreen" data-scr="chatinfo"></div>
+      <div class="pscreen" data-scr="pick"></div>
       <div class="pscreen" data-scr="calls"></div>
       <div class="pscreen" data-scr="calling"></div>
       <div class="pscreen" data-scr="calendar"></div>
@@ -1941,7 +1953,9 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
       const nearBottom=()=>box.scrollHeight-box.scrollTop-box.clientHeight<80;
       s._draw=(keep)=>{const stick=keep===undefined?nearBottom():false, h0=box.scrollHeight, t0=box.scrollTop;
         box.innerHTML=!loaded?empty('Завантаження…',''):(hasMore?'<button class="pmore" data-more>Попередні повідомлення</button>':'')+(msgs.length?msgs.map((m,i)=>bubble(m,msgs[i-1])).join(''):empty('Почніть розмову','Повідомлення бачите лише ви та учасники чату.'));
-        if(keep==='top') box.scrollTop=box.scrollHeight-h0+t0; else if(stick||keep==='bottom') box.scrollTop=box.scrollHeight;};
+        if(keep==='top') box.scrollTop=box.scrollHeight-h0+t0; else if(stick||keep==='bottom') box.scrollTop=box.scrollHeight;
+        // Lazy images grow the list after layout — keep the view pinned to the bottom if it was.
+        box.querySelectorAll('img.pimg').forEach(i=>{if(!i.complete) i.onload=()=>{if(box.scrollHeight-box.scrollTop-box.clientHeight<i.clientHeight+120) box.scrollTop=box.scrollHeight;};});};
       const readUpTo=id=>{const c=C(); if(c){c.unread=0; badges(); redraw('chatlist');} meApi('POST',`/me/chats/${chatId}/read`,{upTo:id}).catch(()=>{});};
       s._readLast=()=>{const m=msgs[msgs.length-1]; if(m) readUpTo(m.id);};
       const merge=m=>{const i=msgs.findIndex(x=>x.id===m.id); if(i>=0) msgs[i]=m; else {msgs.push(m); msgs.sort((a,b)=>a.id-b.id);}};
@@ -1957,7 +1971,8 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
         bar.querySelector('[data-a=x]').onclick=()=>{bar.style.display='none';};
         const eb=bar.querySelector('[data-a=edit]'); if(eb) eb.onclick=()=>{editing=m; inp.value=m.text; inp.focus(); bar.innerHTML='<span class="lbl">✏️ Редагування</span><button data-a="x">✕</button>'; bar.querySelector('[data-a=x]').onclick=endEdit; s._draw(null);};
         confirm2(bar.querySelector('[data-a=del]'),'Точно?',async()=>{bar.style.display='none'; try{s._onUpd(await meApi('DELETE','/me/messages/'+m.id));}catch(e){fail(e);}});}
-      box.onclick=ev=>{const a=ev.target.closest('a'); if(a){ev.preventDefault(); try{Telegram.WebApp.openLink(a.href);}catch(e){window.open(a.href,'_blank');} return;}
+      box.onclick=ev=>{const im=ev.target.closest('img.pimg'); if(im){openExt(im.src); return;}
+        const a=ev.target.closest('a'); if(a){ev.preventDefault(); openExt(a.href); return;}
         if(ev.target.closest('[data-more]')){loadOlder(); return;}
         const b=ev.target.closest('.pbub.me:not(.del)'); if(b){const m=msgs.find(x=>x.id===b.dataset.m); if(m) select(m);}};
       async function send(){const v=inp.value.trim(); if(!v) return;
@@ -2046,6 +2061,89 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
       if(!p) meApi('GET','/me/prefs').then(v=>{PM.prefs=v; if(stack.includes('settings')) P.settings(s);}).catch(()=>{});
       wire(s);}
   };
+  // ── groups, chat info, people picker, attachments ──
+  const linkedColleagues=()=>state.employees.filter(e=>e.tg_linked&&e.id!==TG.me.id).sort((a,b)=>a.name.localeCompare(b.name,'uk'));
+  const fsize=n=>n<1024?n+' Б':n<1048576?Math.round(n/1024)+' КБ':(n/1048576).toFixed(1)+' МБ';
+  const attUrl=(a,dl)=>`${API}/me/attachments/${a.id}?t=${encodeURIComponent(PM.token||'')}${dl?'&dl=1':''}`;
+  const openExt=url=>{const u=new URL(url,location.href).href; try{Telegram.WebApp.openLink(u);}catch(e){window.open(u,'_blank');}};
+  const FILE_MAX=20*1024*1024;
+  // Big photos are downscaled on the device before upload (max 1600px, JPEG).
+  async function prepFile(f){
+    if(/^image\/(jpeg|png|webp)$/.test(f.type)&&f.size>400*1024){try{
+      const bmp=await createImageBitmap(f), k=Math.min(1,1600/Math.max(bmp.width,bmp.height)), c=document.createElement('canvas');
+      c.width=Math.round(bmp.width*k); c.height=Math.round(bmp.height*k); c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
+      const b=await new Promise(r=>c.toBlob(r,'image/jpeg',.82));
+      if(b&&b.size<f.size) return {blob:b,name:f.name.replace(/\.\w+$/,'')+'.jpg',type:'image/jpeg'};}catch(e){}}
+    return {blob:f,name:f.name||'file',type:f.type||'application/octet-stream'};}
+  Object.assign(P,{
+    _groupEntry(el){
+      el.innerHTML='<div class="prow" data-g><div class="av gav">👥</div><div class="tx"><div class="nm">Нова група</div><div class="sub">Чат для кількох колег</div></div></div>';
+      el.querySelector('[data-g]').onclick=()=>go('groupnew',P.groupnew);},
+    pick(s,{title,exclude=new Set(),done,cta='Готово'}){
+      const es=linkedColleagues().filter(e=>!exclude.has(e.id)), sel=new Set();
+      s.innerHTML=head(title)+`<div class="psearch"><input placeholder="Пошук колеги" data-q></div><div class="pscroll" data-list></div><div class="pform" style="padding:8px 16px 12px"><button class="pbtn" data-ok>${cta}</button></div>`;
+      const box=s.querySelector('[data-list]'), okb=s.querySelector('[data-ok]');
+      const label=()=>{okb.textContent=sel.size?`${cta} · ${sel.size}`:cta;};
+      const draw=q=>{const r=es.filter(e=>!q||(e.name+' '+(e.dept||'')).toLowerCase().includes(q));
+        box.innerHTML=r.length?r.map(e=>`<div class="prow" data-id="${e.id}" aria-checked="${sel.has(e.id)}">${avHTML(e)}<div class="tx"><div class="nm">${esc(e.name)}</div><div class="sub">${esc(e.dept||'')}</div></div><span class="chk">✓</span></div>`).join('')
+          :empty(es.length?'Нікого не знайшли':'Більше нікого додати','Колеги з’являться тут, щойно підключать Telegram-бота.');
+        box.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>{const id=el.dataset.id; sel.has(id)?sel.delete(id):sel.add(id); el.setAttribute('aria-checked',sel.has(id)); label();});};
+      okb.onclick=()=>{if(!sel.size){toast('Оберіть хоча б одного колегу'); return;} done([...sel]);};
+      draw(''); s.querySelector('[data-q]').oninput=e=>draw(e.target.value.trim().toLowerCase()); wire(s);},
+    groupnew(s){
+      let ids=[];
+      s.innerHTML=head('Нова група')+`<div class="pscroll"><div class="pform"><label class="k">Назва</label><input type="text" data-title maxlength="80" placeholder="Напр. «Корпоратив»"><label class="k">Учасники</label><div data-mem></div><button class="pbtn ghost sm" type="button" data-add>+ Додати учасників</button><button class="pbtn" type="button" data-create>Створити групу</button></div></div>`;
+      const mem=s.querySelector('[data-mem]');
+      const drawMem=()=>{mem.innerHTML=ids.length?ids.map(id=>{const e=emp(id); return e?`<div class="prow" style="padding:6px 0">${avHTML(e)}<div class="tx"><div class="nm">${esc(e.name)}</div></div><button class="rm" type="button" data-rm="${id}">Прибрати</button></div>`:'';}).join(''):'<div style="font-size:12.5px;color:var(--muted);font-weight:600">Поки нікого не додано</div>';
+        mem.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{ids=ids.filter(x=>x!==b.dataset.rm); drawMem();});};
+      drawMem();
+      s.querySelector('[data-add]').onclick=()=>go('pick',x=>P.pick(x,{title:'Учасники групи',exclude:new Set(ids),cta:'Додати',done:sel=>{ids=[...new Set(ids.concat(sel))]; back(); drawMem();}}));
+      s.querySelector('[data-create]').onclick=async()=>{const title=s.querySelector('[data-title]').value.trim();
+        if(!title){toast('Вкажіть назву групи'); return;} if(!ids.length){toast('Додайте учасників'); return;}
+        try{const c=await meApi('POST','/me/chats',{title,memberIds:ids}); upsertChat(c); while(stack.length&&stack[stack.length-1]!=='chatlist') pop(); redraw('chatlist'); openChat(c.id); toast('Групу створено');}catch(e){fail(e);}};
+      wire(s);},
+    chatinfo(s,chatId){
+      const c=chatById(chatId); if(!c){s.innerHTML=head('Чат')+empty('Чат недоступний',''); wire(s); return;}
+      const admin=c.kind==='group'&&c.createdBy===TG.me.id;
+      const kindTxt=c.kind==='group'?`Група · створив(ла) ${esc(c.createdBy===TG.me.id?'ви':nameOf(c.createdBy))}`:c.kind==='dept'?'Чат відділу — учасники оновлюються автоматично':'Чат усього офісу — для всіх, хто підключив бота';
+      const ms=c.members.map(m=>emp(m.id)).filter(Boolean).sort((a,b)=>a.id===TG.me.id?-1:b.id===TG.me.id?1:a.name.localeCompare(b.name,'uk'));
+      s.innerHTML=head('Про чат')+`<div class="pscroll"><div class="pinfo">
+        <div style="display:flex;align-items:center;gap:12px;margin-top:10px">${chatAv(c)}<div><div class="h" style="margin:0">${esc(chatTitle(c))}</div><div style="font-size:12px;color:var(--muted);font-weight:700">${kindTxt}</div></div></div>
+        ${admin?`<div class="pform" style="padding:14px 0 0"><label class="k">Назва групи</label><div class="row2"><input type="text" data-title maxlength="80" value="${esc(c.title||'')}"><button class="pbtn sm" type="button" data-rename style="flex:0 0 auto;width:auto;padding:0 16px">Зберегти</button></div></div>`:''}
+        <div class="psetrow" style="padding:14px 0"><div><div class="lb">Без звуку</div><div class="sub">Не надсилати сповіщення з цього чату в Telegram</div></div><div class="ptog" data-mute aria-pressed="${c.muted}"></div></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin:14px 0 4px"><div style="font-size:11.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Учасники · ${c.members.length}</div>${admin?'<button class="rm" data-add style="color:var(--ink)">+ Додати</button>':''}</div>
+        <div class="members">${ms.map(e=>`<div class="prow" data-id="${e.id}">${avHTML(e)}<div class="tx"><div class="nm">${esc(e.name)}${e.id===TG.me.id?' (ви)':''}</div><div class="sub">${e.id===c.createdBy&&c.kind==='group'?'адмін':esc(e.dept||'')}</div></div>${admin&&e.id!==TG.me.id?`<button class="rm" data-rm="${e.id}">Прибрати</button>`:''}</div>`).join('')}</div>
+        ${c.kind==='group'?'<button class="pbtn danger sm" data-leave style="width:100%;margin-top:18px">Вийти з групи</button>':''}
+      </div></div>`;
+      const patch=async(body,msg)=>{try{const u=await meApi('PATCH','/me/chats/'+chatId,body); upsertChat(u); P.chatinfo(s,chatId); const cv=convOpen(chatId); if(cv) cv._head(); redraw('chatlist'); if(msg) toast(msg);}catch(e){fail(e);}};
+      s.querySelector('[data-mute]').onclick=()=>patch({muted:!c.muted},c.muted?'Сповіщення увімкнено':'Чат без звуку 🔕');
+      const rn=s.querySelector('[data-rename]'); if(rn) rn.onclick=()=>{const t=s.querySelector('[data-title]').value.trim(); if(!t){toast('Вкажіть назву'); return;} patch({title:t},'Назву змінено');};
+      const ad=s.querySelector('[data-add]'); if(ad) ad.onclick=()=>go('pick',x=>P.pick(x,{title:'Додати учасників',exclude:new Set(c.members.map(m=>m.id)),cta:'Додати',done:sel=>{back(); patch({add:sel},'Учасників додано');}}));
+      s.querySelectorAll('[data-rm]').forEach(b=>{b.onclick=ev=>{ev.stopPropagation(); if(b.dataset.armed){patch({remove:[b.dataset.rm]},'Учасника прибрано'); return;} b.dataset.armed='1'; b.textContent='Точно?';};});
+      s.querySelectorAll('.members [data-id]').forEach(el=>el.onclick=()=>{if(el.dataset.id!==TG.me.id) go('contact',x=>R.contact(x,el.dataset.id));});
+      const lv=s.querySelector('[data-leave]'); if(lv) confirm2(lv,'Точно вийти?',async()=>{try{await meApi('POST',`/me/chats/${chatId}/leave`); PM.chats=PM.chats.filter(x=>x.id!==chatId); while(stack.length&&stack[stack.length-1]!=='chatlist') pop(); redraw('chatlist'); badges(); toast('Ви вийшли з групи');}catch(e){fail(e);}});
+      s._redraw=()=>{if(chatById(chatId)) P.chatinfo(s,chatId);};
+      wire(s);},
+    _att(m){const a=m.attachment;
+      if(a.expired) return `<div class="pgone">📎 ${esc(a.name)} — файл більше недоступний</div>`;
+      if(/^image\/(jpeg|png|gif|webp)$/.test(a.mime)) return `<img class="pimg" src="${attUrl(a)}" alt="${esc(a.name)}" loading="lazy">`;
+      return `<a class="pfile" href="${attUrl(a,1)}"><span class="ic">📄</span><span><span class="fn">${esc(a.name)}</span><br><span class="fs">${fsize(a.size)}</span></span></a>`;},
+    _attach(el,chatId,onSent){
+      el.innerHTML='<label class="att" title="Надіслати фото чи файл">📎<input type="file" style="display:none"></label>';
+      const fi=el.querySelector('input');
+      fi.onchange=async()=>{const f=fi.files[0]; fi.value=''; if(!f) return;
+        if(f.size>FILE_MAX){toast('Файл більший за 20 МБ'); return;}
+        toast('Надсилаю…');
+        try{const p=await prepFile(f);
+          if(PM.exp*1000-Date.now()<120e3) await session();
+          const r=await fetch(`${API}/me/attachments?chatId=${chatId}&name=${encodeURIComponent(p.name)}&mime=${encodeURIComponent(p.type)}`,{method:'POST',headers:{'content-type':'application/octet-stream','X-Me-Token':PM.token||'','X-Telegram-Init-Data':TG.initData},body:p.blob});
+          if(r.status===413){toast('Файл більший за 20 МБ'); return;}
+          if(!r.ok) throw Object.assign(new Error('upload '+r.status),{code:r.status});
+          const up=await r.json();
+          onSent(await meApi('POST',`/me/chats/${chatId}/messages`,{attachmentId:up.id}));
+        }catch(e){fail(e);}};}
+  });
+
   // Personal-only apps show a lock screen outside Telegram / before the character exists.
   const PERSONAL_ONLY={calendar:'Календар',tasks:'Задачі',chatlist:'Чати'};
   const appFor=id=>personal()&&P[id]?P[id]:(PERSONAL_ONLY[id]?(s=>locked(s,PERSONAL_ONLY[id])):R[id]);

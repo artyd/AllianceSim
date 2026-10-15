@@ -3,13 +3,20 @@ import { query, initSchema, migrateBlobEmployees } from './db.js';
 import { requireEditToken, writeAuth } from './auth.js';
 import { verifyInitData } from './telegram.js';
 import { personal } from './personal.js';
-import { chats } from './chats.js';
+import { chats, syncSystemChats, scheduleSync, cleanupAttachments } from './chats.js';
 import { requireMe } from './session.js';
 
 const app = express();
 app.use(express.json({ limit: '25mb' })); // layout blob embeds employees (+ optional base64 photos)
 
 const router = express.Router();
+
+// Any successful employee write may change who is linked / in which department →
+// re-sync the office and department chats (debounced).
+router.use('/employees', (req, res, next) => {
+  if (req.method !== 'GET') res.on('finish', () => { if (res.statusCode < 300) scheduleSync(); });
+  next();
+});
 
 // ── Utility ────────────────────────────────────────────────────────────────
 router.get('/health', (_req, res) => {
@@ -395,6 +402,8 @@ for (const r of [personal, chats]) { app.use(r); app.use('/api', r); }
 
 // Central error handler
 app.use((err, _req, res, _next) => {
+  // Body-parser errors (too large, bad JSON) carry their own 4xx status.
+  if (err.status >= 400 && err.status < 500) return res.status(err.status).json({ error: err.type || 'bad request' });
   console.error('[api] error:', err);
   res.status(500).json({ error: 'internal server error' });
 });
@@ -403,7 +412,13 @@ const PORT = Number(process.env.PORT || 8011);
 
 initSchema()
   .then(() => migrateBlobEmployees())
+  .then(() => syncSystemChats())
   .then(() => {
+    // Background jobs (spec 004): roster → system chats, expired attachment cleanup.
+    const safe = (name, fn) => () => fn().catch((e) => console.error(`[api] ${name} failed:`, e.message));
+    setInterval(safe('chat sync', syncSystemChats), 5 * 60 * 1000);
+    setInterval(safe('attachment cleanup', cleanupAttachments), 60 * 60 * 1000);
+    safe('attachment cleanup', cleanupAttachments)();
     // Bind to all interfaces inside the container; docker-compose maps only
     // 127.0.0.1 on the host, so nothing is exposed publicly (Caddy fronts TLS).
     app.listen(PORT, () => console.log(`[api] listening on :${PORT}`));
