@@ -391,8 +391,37 @@ html.tgapp #app #preview{display:none}
 #phoneClose:hover{transform:scale(1.1)}
 #phoneClose svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.7;stroke-linecap:round}
 #app[data-phone] #phoneClose{display:grid}
+/* ---- personal phone (spec 004): forms, lists, badges ---- */
+.phead .act{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:var(--red);color:#fff;font-size:20px;font-weight:900;line-height:1}
+.pform{padding:12px 16px 20px;display:flex;flex-direction:column;gap:12px}
+.pform label.k{font-size:11.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:-6px}
+.pform input[type=text],.pform input[type=date],.pform input[type=time],.pform input[type=datetime-local],.pform textarea,.pform select{width:100%;min-height:40px;border-radius:12px;border:1.5px solid var(--line);background:var(--panel-solid);padding:8px 12px;font:inherit;font-size:14px;font-weight:600;outline:0;color:var(--ink)}
+.pform textarea{min-height:70px;resize:vertical}
+.pform input:focus,.pform textarea:focus,.pform select:focus{border-color:var(--red)}
+.pform .row2{display:flex;gap:8px}.pform .row2>*{flex:1;min-width:0}
+.pform .pbtn{width:100%}
+.pbtn.ghost{background:var(--chip);color:var(--ink)}.pbtn.ghost svg{stroke:var(--ink)}
+.pbtn.danger{background:none;color:var(--red);border:1.5px solid var(--red)}
+.pbtn.sm{height:38px;font-size:13px;border-radius:12px}
+.ptabs{display:flex;gap:6px;padding:10px 14px 4px}
+.ptabs .pchip{flex:1;text-align:center}
+.pev{display:flex;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line);cursor:pointer}
+.pev .bar{width:4px;border-radius:3px;flex:none}
+.pev .tm{font-size:11px;font-weight:800;color:var(--muted)}.pev .tt{font-size:13.5px;font-weight:800}.pev .pl{font-size:11px;color:var(--muted);font-weight:700}
+.pev.declined{opacity:.5}.pev.declined .tt{text-decoration:line-through}
+.ptag{display:inline-block;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--red-soft);color:var(--red);margin-left:4px;vertical-align:middle}
+.ptag.muted{background:var(--chip);color:var(--muted)}
+.ptask .meta{display:block;font-size:11px;font-weight:700;color:var(--muted);text-decoration:none!important;margin-top:2px}
+.ptask .meta.late{color:var(--red)}
+.ptask .t{cursor:pointer}
+.plocked{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:30px;text-align:center}
+.plocked .e{font-size:42px}.plocked b{font-size:15px;font-weight:800}.plocked span{font-size:12.5px;font-weight:600;color:var(--muted);line-height:1.5}
+.pnote{margin:14px 16px;padding:12px 14px;border-radius:14px;background:var(--chip);font-size:12px;font-weight:600;color:var(--muted);line-height:1.5}
+.pinfo{padding:6px 18px 18px}.pinfo .h{font-size:20px;font-weight:900;margin:6px 0 4px}.pinfo .r{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px;font-weight:700}.pinfo .r .k{color:var(--muted);width:84px;flex:none}
 .pcalbar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 8px}
 .pcalbar .ti{font-weight:900}
+.pcalbar .bk{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:var(--chip)}
+.pcalbar .bk svg{width:17px;height:17px;stroke:var(--ink);fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 .pcalgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:0 10px}
 .pdowc{text-align:center;font-size:10.5px;font-weight:800;color:var(--muted);padding-bottom:4px}
 .pcell{position:relative;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--ink);background:none;transition:background .12s}
@@ -581,8 +610,8 @@ html.tgapp #app #preview{display:none}
             <button class="papp" data-go="contacts"><span class="ic" style="background:#5B76E6"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3.4"/><path d="M2 19a6 6 0 0 1 12 0"/><path d="M16 5a3.4 3.4 0 0 1 0 6.8M22 19a6 6 0 0 0-4.5-5.8"/></svg></span><span class="lb">Контакти</span></button>
             <button class="papp" data-go="chatlist"><span class="ic" style="background:#5DBE7C"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4V5Z"/></svg></span><span class="lb">Чат</span><span class="badge" id="chatBadge" style="display:none">0</span></button>
             <button class="papp" data-go="calls"><span class="ic" style="background:var(--red)"><svg viewBox="0 0 24 24"><path d="M6.5 3h3l1.6 4-2 1.4a12 12 0 0 0 5 5l1.4-2 4 1.6v3a2 2 0 0 1-2.1 2A16 16 0 0 1 4 5.1 2 2 0 0 1 6.5 3Z"/></svg></span><span class="lb">Дзвінки</span></button>
-            <button class="papp" data-go="calendar"><span class="ic" style="background:#3EA8C9"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9.5h16M8 3v4M16 3v4"/></svg></span><span class="lb">Календар</span></button>
-            <button class="papp" data-go="tasks"><span class="ic" style="background:#F2A03D"><svg viewBox="0 0 24 24"><path d="M9 4h6v2.5H9zM8 5H5v15h14V5h-3M8.5 13l2.2 2.2L15 11"/></svg></span><span class="lb">Задачі</span></button>
+            <button class="papp" data-go="calendar"><span class="ic" style="background:#3EA8C9"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9.5h16M8 3v4M16 3v4"/></svg></span><span class="lb">Календар</span><span class="badge" id="calBadge" style="display:none">0</span></button>
+            <button class="papp" data-go="tasks"><span class="ic" style="background:#F2A03D"><svg viewBox="0 0 24 24"><path d="M9 4h6v2.5H9zM8 5H5v15h14V5h-3M8.5 13l2.2 2.2L15 11"/></svg></span><span class="lb">Задачі</span><span class="badge" id="taskBadge" style="display:none">0</span></button>
             <button class="papp" data-go="broadcast"><span class="ic" style="background:#A36BE0"><svg viewBox="0 0 24 24"><path d="M4 10v4h3l8 4V6l-8 4H4Z"/><path d="M18 9a4 4 0 0 1 0 6"/></svg></span><span class="lb">Оголошення</span></button>
             <button class="papp" data-go="coffee"><span class="ic" style="background:#B5714E"><svg viewBox="0 0 24 24"><path d="M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Z"/><path d="M17 9h2.2a2.5 2.5 0 0 1 0 5H17"/><path d="M7.5 3v2M11 3v2"/></svg></span><span class="lb">Кава</span></button>
             <button class="papp" data-go="settings"><span class="ic" style="background:#7C8590"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 13a1.7 1.7 0 0 0 .3 1.9 2 2 0 1 1-2.8 2.8 1.7 1.7 0 0 0-2.9 1.2 2 2 0 0 1-4 0 1.7 1.7 0 0 0-2.9-1.2 2 2 0 1 1-2.8-2.8A1.7 1.7 0 0 0 4.6 13a2 2 0 0 1 0-4 1.7 1.7 0 0 0 1.2-2.9 2 2 0 1 1 2.8-2.8A1.7 1.7 0 0 0 11 4.6a2 2 0 0 1 4 0 1.7 1.7 0 0 0 2.9 1.2 2 2 0 1 1 2.8 2.8A1.7 1.7 0 0 0 19.4 11a2 2 0 0 1 0 4Z"/></svg></span><span class="lb">Налаштування</span></button>
@@ -596,8 +625,11 @@ html.tgapp #app #preview{display:none}
       <div class="pscreen" data-scr="calls"></div>
       <div class="pscreen" data-scr="calling"></div>
       <div class="pscreen" data-scr="calendar"></div>
+      <div class="pscreen" data-scr="event"></div>
+      <div class="pscreen" data-scr="evform"></div>
       <div class="pscreen" data-scr="coffee"></div>
       <div class="pscreen" data-scr="tasks"></div>
+      <div class="pscreen" data-scr="taskform"></div>
       <div class="pscreen" data-scr="broadcast"></div>
       <div class="pscreen" data-scr="profile"></div>
       <div class="pscreen" data-scr="settings"></div>
@@ -1505,6 +1537,7 @@ initLoad().then(async okServer=>{
   if(okServer) startEmpPolling(); // reflect bot-created people & daily check-ins live
   if(TG.active){
     await tgVerify();                                   // who am I (linked character)?
+    if(PHONE.personalStart) PHONE.personalStart();      // personal phone: session, tasks, chats
     renderFilters();
     setTimeout(()=>{const fab=$('#phoneFab'); if(fab) fab.click();}, 350); // open the phone (only the phone)
     // Precise status so it can be diagnosed on mobile (no console there):
@@ -1532,6 +1565,7 @@ function loop(now){requestAnimationFrame(loop); const dt=Math.min(.05,(now-lastT
   updateLabels();
   if(backdrop.classList.contains('open')&&pAv){pRenderer.render(pScene,pCam); const pv=$('#preview').getBoundingClientRect(), cr=$('#pc').getBoundingClientRect(); const v=new THREE.Vector3(0,pAv.userData.tagY+.1,0).project(pCam); const t=$('#ptag'); t.style.left=(cr.left-pv.left+(v.x+1)/2*cr.width)+'px'; t.style.top=(cr.top-pv.top+(1-v.y)/2*cr.height)+'px';}}
 /* ---------- phone (AllianceOS) ---------- */
+const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
 (function(){
   const phone=$('#phone'), body=$('#pbody');
   const scr=id=>body.querySelector(`[data-scr="${id}"]`);
@@ -1547,25 +1581,17 @@ function loop(now){requestAnimationFrame(loop); const dt=Math.min(.05,(now-lastT
     pin:'<svg viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.4"/></svg>',
     coffee:'<svg viewBox="0 0 24 24"><path d="M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Z"/><path d="M17 9h2.2a2.5 2.5 0 0 1 0 5H17"/><path d="M7.5 3v2M11 3v2"/></svg>'
   };
-  const WEEK=[
-    [{t:'09:30',ti:'Стендап',r:'Переговорна',c:'#5B76E6'},{t:'14:00',ti:'Огляд закупівель',r:'Кабінет',c:'#F2A03D'}],
-    [{t:'11:00',ti:'1:1 з керівником',r:'Акустична кабіна',c:'#5DBE7C'},{t:'16:30',ti:'Демо клієнту',r:'Переговорна',c:'#E2001A'}],
-    [{t:'10:00',ti:'Планерка IT',r:'Опен-спейс',c:'#3EA8C9'}],
-    [{t:'09:30',ti:'Стендап',r:'Переговорна',c:'#5B76E6'},{t:'13:00',ti:'Співбесіда',r:'Кабінет',c:'#A36BE0'},{t:'15:00',ti:'Навчання HR',r:'Кухня',c:'#F2A03D'}],
-    [{t:'12:00',ti:'Обід команди',r:'Кухня',c:'#F2C036'},{t:'16:00',ti:'Ретро тижня',r:'Опен-спейс',c:'#3EA8C9'}],
-    [],[]
-  ];
   const REPLIES=['Добре, зрозумів 👍','Зараз буду','Дякую, що написав!','Ок, домовились','Хвилинку, гляну','Так, все вірно'];
-  const LS_T='alliancesim.phone.tasks', LS_C='alliancesim.phone.chats', LS_R='alliancesim.phone.read';
+  const LS_C='alliancesim.phone.chats', LS_R='alliancesim.phone.read';
   const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k)); return v==null?f:v;}catch(e){return f;}};
   const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}};
-  let tasks=load(LS_T,[{t:'Замовити воду в кулер',d:true},{t:'Підготувати переговорну до 14:00',d:false},{t:'Онбординг нового логіста',d:false},{t:'Перевірити доступи для IT',d:false}]);
   let chats=load(LS_C,{});
   let readSet=new Set(load(LS_R,[]));
   function ensureChat(id){if(!chats[id]){const e=emp(id); chats[id]=[{me:false,text:e?`Привіт! Це ${e.name.split(' ')[0]}. Пиши, якщо щось треба 🙂`:'Привіт!'}]; save(LS_C,chats);} return chats[id];}
   function markRead(id){if(!readSet.has(id)){readSet.add(id); save(LS_R,[...readSet]); badges();}}
   function unread(){return state.employees.filter(e=>!readSet.has(e.id)).length;}
-  function badges(){const n=unread(),d=$('#phoneDot'),cb=$('#chatBadge'); d.style.display=n?'grid':'none'; d.textContent=n; cb.style.display=n?'grid':'none'; cb.textContent=n;}
+  const setBadge=(el,n)=>{el.style.display=n?'grid':'none'; el.textContent=n>99?'99+':n;};
+  function badges(){const n=unread(), t=personal()?tasksDue():0; setBadge($('#phoneDot'),n+t); setBadge($('#chatBadge'),n); setBadge($('#taskBadge'),t);}
 
   function tick(){const d=new Date(); $('#pclock').textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
     $('#pdate').textContent=d.toLocaleDateString('uk-UA',{weekday:'long',day:'numeric',month:'long'});}
@@ -1575,6 +1601,41 @@ function loop(now){requestAnimationFrame(loop); const dt=Math.min(.05,(now-lastT
   const rowHTML=(e,sub)=>`<div class="prow" data-id="${e.id}">${avHTML(e)}<div class="tx"><div class="nm">${esc(e.name)}</div><div class="sub">${esc(sub||e.position||e.dept)}</div></div><div class="meta">${STATUS[statusOf(e)].icon}</div></div>`;
   const empty=(b,s)=>`<div class="pempty"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M3 19a6 6 0 0 1 12 0M17 5a3.4 3.4 0 0 1 0 6.8M22 19a6 6 0 0 0-4.5-5.8"/></svg><b>${b}</b><span>${s}</span></div>`;
   const fld=(k,v)=>`<div class="pfield"><span class="k">${k}</span><span class="v">${esc(v)}</span></div>`;
+
+  // ── personal mode (spec 004): real per-user data via /me/*, only inside Telegram ──
+  // Identity = the verified Telegram user's linked character (TG.me). Nothing here goes
+  // into `state` or the layout blob; the office renderers are untouched.
+  const personal=()=>TG.active&&!!TG.me;
+  const PM={token:null,exp:0,tasks:null,ev:new Map(),contacts:new Map(),prefs:null};
+  async function meApi(method,path,body){
+    const h={'content-type':'application/json','X-Telegram-Init-Data':TG.initData};
+    if(PM.token&&PM.exp*1000>Date.now()+60000) h['X-Me-Token']=PM.token;
+    const r=await fetch(API+path,{method,headers:h,body:body!==undefined?JSON.stringify(body):undefined});
+    if(r.status===401){toast('Сесія застаріла — закрийте й відкрийте застосунок знову'); throw Object.assign(new Error('stale'),{code:401});}
+    if(!r.ok){const j=await r.json().catch(()=>({})); throw Object.assign(new Error(j.error||('http '+r.status)),{code:r.status});}
+    return r.json().catch(()=>null);
+  }
+  const fail=e=>{if(!e||e.code!==401) toast('Не вдалося зберегти — перевірте зв’язок');};
+  async function session(){try{const s=await meApi('POST','/me/session'); PM.token=s.token; PM.exp=s.exp;}catch(e){}}
+  const pad=n=>String(n).padStart(2,'0');
+  const dKey=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  const hm=d=>pad(d.getHours())+':'+pad(d.getMinutes());
+  const fromInputs=(date,time)=>{const [y,m,dd]=date.split('-').map(Number), [hh,mi]=(time||'00:00').split(':').map(Number); return new Date(y,m-1,dd,hh||0,mi||0);};
+  const dayLabel=d=>d.toLocaleDateString('uk-UA',{weekday:'short',day:'numeric',month:'long'});
+  const nameOf=id=>{const e=emp(id); return e?e.name:'Колега';};
+  const first=id=>nameOf(id).split(' ')[0];
+  const headP=(t,act)=>`<div class="phead"><button class="bk" data-back>${IC.back}</button><div class="ti">${t}</div><div class="sp"></div>${act||''}</div>`;
+  const redraw=id=>{const s=scr(id); if(s&&s._redraw&&stack.includes(id)) s._redraw();};
+  const PALETTE=['#E2001A','#F28C28','#F2C036','#5DBE7C','#3EA8C9','#5B76E6','#A36BE0','#E06CA6'];
+  const REMIND=[[null,'Без нагадування'],[10,'За 10 хв'],[30,'За 30 хв'],[60,'За 1 год']];
+  const chipsHTML=(attr,opts,cur)=>`<div class="pchips" ${attr}>${opts.map(([v,l])=>`<button type="button" class="pchip" data-v="${v??''}" aria-pressed="${String(v??'')===String(cur??'')}">${l}</button>`).join('')}</div>`;
+  const pickChip=(box,fn)=>box.querySelectorAll('.pchip').forEach(b=>b.onclick=()=>{box.querySelectorAll('.pchip').forEach(x=>x.setAttribute('aria-pressed',x===b)); fn(b.dataset.v);});
+  // Two-tap confirm (browser confirm() dialogs would freeze the Mini App WebView).
+  const confirm2=(btn,label,fn)=>{btn.onclick=()=>{if(btn.dataset.armed){fn();return;} btn.dataset.armed='1'; const t=btn.textContent; btn.textContent=label; setTimeout(()=>{delete btn.dataset.armed; btn.textContent=t;},3000);};};
+  function locked(s,title){
+    s.innerHTML=head(title)+`<div class="plocked"><div class="e">🔒</div><b>${TG.active?'Спочатку створіть персонажа':'Доступно в Telegram'}</b><span>${TG.active?'Напишіть боту /start — і тут з’являться ваші особисті чати, календар і задачі.':'Особисті чати, календар і задачі працюють у застосунку офісу всередині Telegram-бота.'}</span></div>`; wire(s);}
+  async function loadTasks(){try{PM.tasks=await meApi('GET','/me/tasks'); badges(); redraw('tasks');}catch(e){}}
+  const tasksDue=()=>{if(!PM.tasks) return 0; const end=new Date(); end.setHours(23,59,59,999); return PM.tasks.filter(t=>!t.done&&t.assigneeId===TG.me.id&&t.dueAt&&new Date(t.dueAt)<=end).length;};
 
   function setZ(){scr('home').style.zIndex=0; stack.forEach((id,i)=>scr(id).style.zIndex=i+1);}
   function go(id,build){if(build)build(scr(id)); if(!stack.includes(id))stack.push(id); setZ(); const s=scr(id); void s.offsetWidth; s.classList.add('show');}
@@ -1635,32 +1696,6 @@ function loop(now){requestAnimationFrame(loop); const dt=Math.min(.05,(now-lastT
       s._stop=()=>{clearTimeout(t1); clearInterval(t2);};
       s.querySelector('[data-end]').onclick=()=>back();}
 ,
-    calendar(s){
-      const DOW=['Пн','Вт','Ср','Чт','Пт','Сб','Нд'], MON=['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'], MONL=['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
-      const now=new Date(); now.setHours(0,0,0,0);
-      const wd=d=>(d.getDay()+6)%7, evOf=d=>WEEK[wd(d)]||[], same=(a,b)=>a.toDateString()===b.toDateString();
-      let view=new Date(now.getFullYear(),now.getMonth(),1), sel=new Date(now);
-      function draw(){
-        const y=view.getFullYear(), m=view.getMonth(), lead=wd(new Date(y,m,1)), dim=new Date(y,m+1,0).getDate();
-        let cells=''; for(let i=0;i<lead;i++) cells+='<div></div>';
-        for(let dn=1;dn<=dim;dn++){const d=new Date(y,m,dn);
-          cells+=`<button class="pcell${same(d,sel)?' sel':''}${same(d,now)?' tod':''}" data-d="${dn}"><span>${dn}</span>${evOf(d).length?'<i></i>':''}</button>`;}
-        const evs=evOf(sel);
-        s.innerHTML=head('Календар')+
-          `<div class="pcalbar"><button class="bk" data-prev>${IC.back}</button><div class="ti">${MON[m]} ${y}</div><button class="bk" data-next style="transform:scaleX(-1)">${IC.back}</button></div>
-           <div class="pcalgrid">${DOW.map(x=>`<div class="pdowc">${x}</div>`).join('')}</div>
-           <div class="pcalgrid" style="padding-bottom:6px">${cells}</div>
-           <div class="pscroll" style="border-top:1px solid var(--line);padding:4px 0">
-             <div style="padding:9px 16px 4px;font-size:13px;font-weight:900">${sel.getDate()} ${MONL[m]}${same(sel,now)?' · сьогодні':''}</div>
-             ${evs.length?evs.map(e=>`<div style="display:flex;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line)"><div style="width:3px;border-radius:3px;background:${e.c};flex:none"></div><div style="flex:1;min-width:0"><div style="font-size:11px;font-weight:800;color:var(--muted)">${e.t}</div><div style="font-size:13.5px;font-weight:800">${esc(e.ti)}</div><div style="font-size:11px;color:var(--muted);font-weight:700">📍 ${esc(e.r)}</div></div></div>`).join(''):'<div style="padding:26px 16px;text-align:center;color:var(--muted);font-weight:700;font-size:13px">Немає запланованих справ</div>'}
-           </div>`;
-        s.querySelector('[data-prev]').onclick=()=>{view=new Date(y,m-1,1); draw();};
-        s.querySelector('[data-next]').onclick=()=>{view=new Date(y,m+1,1); draw();};
-        s.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{sel=new Date(y,m,+b.dataset.d); draw();});
-        wire(s);
-      }
-      draw();}
-,
     coffee(s){
       const drinks=[['Еспресо','☕'],['Американо','☕'],['Капучино','🥛'],['Лате','🥛'],['Раф','🥛'],['Чай','🍵']];
       let pick='Капучино', size='M';
@@ -1678,15 +1713,6 @@ function loop(now){requestAnimationFrame(loop); const dt=Math.min(.05,(now-lastT
       s.querySelector('[data-order]').onclick=()=>{
         try{const h={'content-type':'application/json'}; if(TG.active) h['X-Telegram-Init-Data']=TG.initData; fetch(API+'/coffee',{method:'POST',headers:h,body:JSON.stringify({drink:pick,size})}).then(r=>{ if(r.status===403) toast('Замовлення кави доступне лише керівництву 🔒'); }).catch(()=>{});}catch(e){}
         toast(`Замовлено: ${pick} (${size}) ☕`); home(); close();}; wire(s);}
-,
-    tasks(s){
-      s.innerHTML=head('Задачі')+`<div class="pscroll" data-list></div><div class="pinput"><input placeholder="Нова задача…" data-in><button class="send" data-add>${IC.send}</button></div>`;
-      const box=s.querySelector('[data-list]'), inp=s.querySelector('[data-in]');
-      const draw=()=>{box.innerHTML=tasks.map((t,i)=>`<div class="ptask ${t.d?'done':''}" data-i="${i}"><span class="cb"><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg></span><span class="t">${esc(t.t)}</span></div>`).join('');
-        box.querySelectorAll('.cb').forEach((cb,i)=>cb.onclick=()=>{tasks[i].d=!tasks[i].d; save(LS_T,tasks); draw();});};
-      draw();
-      const add=()=>{const v=inp.value.trim(); if(!v)return; tasks.push({t:v,d:false}); inp.value=''; save(LS_T,tasks); draw();};
-      s.querySelector('[data-add]').onclick=add; inp.onkeydown=ev=>{if(ev.key==='Enter')add();}; wire(s);}
 ,
     broadcast(s){const depts=[...new Set(state.employees.map(e=>e.dept).filter(Boolean))];
       let aud='Усім';
@@ -1730,10 +1756,196 @@ function loop(now){requestAnimationFrame(loop); const dt=Math.min(.05,(now-lastT
         else save('alliancesim.phone.notif',on);}); wire(s);}
   };
 
+  // ── personal apps (Telegram user with a linked character) ──
+  const P={
+    calendar(s){
+      const DOW=['Пн','Вт','Ср','Чт','Пт','Сб','Нд'], MON=['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+      const today=new Date(); today.setHours(0,0,0,0);
+      const wd=d=>(d.getDay()+6)%7, same=(a,b)=>a.toDateString()===b.toDateString();
+      if(!s._view){s._view=new Date(today.getFullYear(),today.getMonth(),1); s._sel=new Date(today);}
+      let evs=[];
+      const evOn=d=>{const d1=new Date(d); d1.setDate(d1.getDate()+1); return evs.filter(e=>{const a=new Date(e.startsAt), b=e.endsAt?new Date(e.endsAt):a; return a<d1&&b>=d;});};
+      async function load(){const v=s._view, from=new Date(v); from.setDate(1-wd(v)); const to=new Date(from); to.setDate(to.getDate()+43);
+        try{evs=await meApi('GET',`/me/events?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`); evs.forEach(e=>PM.ev.set(e.id,e)); draw();}catch(e){}}
+      function draw(){
+        const view=s._view, sel=s._sel, y=view.getFullYear(), m=view.getMonth(), lead=wd(new Date(y,m,1)), dim=new Date(y,m+1,0).getDate();
+        let cells=''; for(let i=0;i<lead;i++) cells+='<div></div>';
+        for(let dn=1;dn<=dim;dn++){const d=new Date(y,m,dn);
+          cells+=`<button class="pcell${same(d,sel)?' sel':''}${same(d,today)?' tod':''}" data-d="${dn}"><span>${dn}</span>${evOn(d).length?'<i></i>':''}</button>`;}
+        const list=evOn(sel);
+        const row=e=>{const a=new Date(e.startsAt), b=e.endsAt?new Date(e.endsAt):null;
+          const tm=e.allDay?'Весь день':hm(a)+(b?'–'+hm(b):'');
+          const tag=e.myStatus==='pending'?'<span class="ptag">очікує відповіді</span>':(e.organizerId!==TG.me.id?`<span class="ptag muted">від ${esc(first(e.organizerId))}</span>`:'');
+          return `<div class="pev ${e.myStatus==='declined'?'declined':''}" data-ev="${e.id}"><div class="bar" style="background:${esc(e.color||'#5B76E6')}"></div><div style="flex:1;min-width:0"><div class="tm">${tm}${tag}</div><div class="tt">${esc(e.title)}</div>${e.place?`<div class="pl">📍 ${esc(e.place)}</div>`:''}</div></div>`;};
+        s.innerHTML=headP('Календар','<button class="act" data-new aria-label="Нова подія">+</button>')+
+          `<div class="pcalbar"><button class="bk" data-prev>${IC.back}</button><div class="ti">${MON[m]} ${y}</div><button class="bk" data-next style="transform:scaleX(-1)">${IC.back}</button></div>
+           <div class="pcalgrid">${DOW.map(x=>`<div class="pdowc">${x}</div>`).join('')}</div>
+           <div class="pcalgrid" style="padding-bottom:6px">${cells}</div>
+           <div class="pscroll" style="border-top:1px solid var(--line);padding:4px 0">
+             <div style="padding:9px 16px 4px;font-size:13px;font-weight:900">${esc(dayLabel(sel))}${same(sel,today)?' · сьогодні':''}</div>
+             ${list.length?list.map(row).join(''):'<div style="padding:26px 16px;text-align:center;color:var(--muted);font-weight:700;font-size:13px">Немає запланованих справ<br><span style="font-weight:600;font-size:12px">Натисніть «+», щоб додати подію чи нотатку</span></div>'}
+           </div>`;
+        s.querySelector('[data-prev]').onclick=()=>{s._view=new Date(y,m-1,1); draw(); load();};
+        s.querySelector('[data-next]').onclick=()=>{s._view=new Date(y,m+1,1); draw(); load();};
+        s.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{s._sel=new Date(y,m,+b.dataset.d); draw();});
+        s.querySelectorAll('[data-ev]').forEach(b=>b.onclick=()=>go('event',x=>P.event(x,b.dataset.ev)));
+        s.querySelector('[data-new]').onclick=()=>go('evform',x=>P.evform(x,null,s._sel));
+        wire(s);
+      }
+      s._redraw=load; draw(); load();}
+,
+    event(s,id){
+      const e=PM.ev.get(id);
+      if(!e){s.innerHTML=head('Подія')+empty('Подію не знайдено','Можливо, її скасували.'); wire(s); return;}
+      const a=new Date(e.startsAt), b=e.endsAt?new Date(e.endsAt):null, mineOrg=e.organizerId===TG.me.id;
+      const when=dayLabel(a)+(e.allDay?' · весь день':', '+hm(a)+(b?'–'+hm(b):''));
+      s.innerHTML=head('Подія')+`<div class="pscroll"><div class="pinfo">
+        <div style="height:5px;width:44px;border-radius:3px;background:${esc(e.color||'#5B76E6')};margin-top:8px"></div>
+        <div class="h">${esc(e.title)}</div>
+        <div class="r"><span class="k">Коли</span><span>${esc(when)}</span></div>
+        ${e.place?`<div class="r"><span class="k">Де</span><span>${esc(e.place)}</span></div>`:''}
+        ${e.note?`<div class="r"><span class="k">Нотатка</span><span style="white-space:pre-wrap">${esc(e.note)}</span></div>`:''}
+        ${mineOrg?'':`<div class="r"><span class="k">Організатор</span><span>${esc(nameOf(e.organizerId))}</span></div>`}
+        <div data-extra></div>
+        <div style="font-size:11.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:16px 0 8px">Нагадування в Telegram</div>
+        ${chipsHTML('data-remind',REMIND,e.remindMin)}
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:20px">
+          ${mineOrg?`<button class="pbtn ghost sm" data-edit>Редагувати</button><button class="pbtn danger sm" data-del>Видалити подію</button>`:''}
+        </div></div></div>`;
+      pickChip(s.querySelector('[data-remind]'),async v=>{try{const u=await meApi('PATCH','/me/events/'+id,{remindMin:v?+v:null}); PM.ev.set(id,u); toast(v?'Нагадаю в Telegram':'Нагадування вимкнено');}catch(err){fail(err);}});
+      const ed=s.querySelector('[data-edit]'); if(ed) ed.onclick=()=>go('evform',x=>P.evform(x,id));
+      const del=s.querySelector('[data-del]'); if(del) confirm2(del,'Точно видалити?',async()=>{try{await meApi('DELETE','/me/events/'+id); PM.ev.delete(id); back(); redraw('calendar'); toast('Подію видалено');}catch(err){fail(err);}});
+      if(P._eventExtra) P._eventExtra(s,e);
+      wire(s);}
+,
+    evform(s,id,day){
+      const e=id?PM.ev.get(id):null;
+      const st=e?new Date(e.startsAt):(()=>{const d=new Date(day||Date.now()); d.setHours(10,0,0,0); return d;})();
+      const en=e?(e.endsAt?new Date(e.endsAt):null):new Date(st.getTime()+3600e3);
+      let allDay=e?e.allDay:false, color=e?(e.color||PALETTE[5]):PALETTE[5], rem=e?e.remindMin:30;
+      const places=[...new Set(Object.values(state.zones||{}).map(z=>z&&z.name).filter(Boolean))];
+      s.innerHTML=head(e?'Редагувати подію':'Нова подія')+`<div class="pscroll"><form class="pform" data-f>
+        <label class="k">Назва</label><input type="text" data-title maxlength="200" placeholder="Зустріч, нотатка, нагадування…" value="${esc(e?e.title:'')}">
+        <div class="psetrow" style="padding:4px 2px;border:0"><div class="lb">Весь день / нотатка</div><div class="ptog" data-allday aria-pressed="${allDay}"></div></div>
+        <label class="k">Дата</label><input type="date" data-date value="${dKey(st)}">
+        <div class="row2" data-times><div><label class="k">Початок</label><input type="time" data-st value="${hm(st)}" style="margin-top:10px"></div><div><label class="k">Кінець</label><input type="time" data-en value="${en?hm(en):''}" style="margin-top:10px"></div></div>
+        <label class="k">Де</label><input type="text" data-place maxlength="200" list="pPlaces" placeholder="Переговорна, кабінет…" value="${esc(e&&e.place||'')}"><datalist id="pPlaces">${places.map(p=>`<option value="${esc(p)}">`).join('')}</datalist>
+        <label class="k">Нотатка</label><textarea data-note maxlength="2000" placeholder="Необов’язково">${esc(e&&e.note||'')}</textarea>
+        <label class="k">Колір</label><div class="pchips" data-color>${PALETTE.map(c=>`<button type="button" class="pchip" data-c="${c}" style="background:${c};width:30px;height:30px;padding:0;border-radius:50%;border:none${c===color?';outline:3px solid var(--ink);outline-offset:2px':''}"></button>`).join('')}</div>
+        ${e?'':`<label class="k">Нагадування</label>${chipsHTML('data-remind',REMIND,rem)}`}
+        <div data-invite></div>
+        <button class="pbtn" type="submit">${e?'Зберегти':'Створити'}</button>
+      </form></div>`;
+      const f=s.querySelector('[data-f]'), times=s.querySelector('[data-times]'), tog=s.querySelector('[data-allday]');
+      const syncAD=()=>{tog.setAttribute('aria-pressed',allDay); times.style.display=allDay?'none':'';}; syncAD();
+      tog.onclick=()=>{allDay=!allDay; syncAD();};
+      s.querySelectorAll('[data-color] [data-c]').forEach(b=>b.onclick=()=>{color=b.dataset.c; s.querySelectorAll('[data-color] [data-c]').forEach(x=>x.style.outline=x===b?'3px solid var(--ink)':'none'); b.style.outlineOffset='2px';});
+      const rb=s.querySelector('[data-remind]'); if(rb) pickChip(rb,v=>{rem=v?+v:null;});
+      const inv=P._inviteField?P._inviteField(s.querySelector('[data-invite]'),e):null;
+      f.onsubmit=async ev=>{ev.preventDefault();
+        const title=s.querySelector('[data-title]').value.trim(), date=s.querySelector('[data-date]').value;
+        if(!title){toast('Вкажіть назву'); return;} if(!date){toast('Вкажіть дату'); return;}
+        let startsAt, endsAt=null;
+        if(allDay) startsAt=fromInputs(date,'00:00');
+        else {const sv=s.querySelector('[data-st]').value||'09:00', evv=s.querySelector('[data-en]').value; startsAt=fromInputs(date,sv); if(evv){endsAt=fromInputs(date,evv); if(endsAt<=startsAt){toast('Кінець має бути пізніше початку'); return;}}}
+        const body={title,startsAt:startsAt.toISOString(),endsAt:endsAt?endsAt.toISOString():null,allDay,place:s.querySelector('[data-place]').value,note:s.querySelector('[data-note]').value,color};
+        if(!e) body.remindMin=rem;
+        if(inv) body.attendeeIds=inv();
+        try{const u=e?await meApi('PATCH','/me/events/'+id,body):await meApi('POST','/me/events',body); PM.ev.set(u.id,u);
+          const c=scr('calendar'); c._sel=new Date(startsAt); c._sel.setHours(0,0,0,0); c._view=new Date(c._sel.getFullYear(),c._sel.getMonth(),1);
+          back(); if(e){redraw('event'); const es=scr('event'); if(stack.includes('event')) P.event(es,u.id);} redraw('calendar'); toast(e?'Збережено':'Подію створено');
+        }catch(err){fail(err);}};
+      wire(s);}
+,
+    tasks(s){
+      if(!s._tab) s._tab='mine';
+      s.innerHTML=headP('Задачі','<button class="act" data-new aria-label="Нова задача">+</button>')+
+        `<div class="ptabs" data-tabs></div><div class="pscroll" data-list></div><div class="pinput"><input placeholder="Швидка задача для себе…" data-in maxlength="500"><button class="send" data-add>${IC.send}</button></div>`;
+      const box=s.querySelector('[data-list]'), inp=s.querySelector('[data-in]'), tabs=s.querySelector('[data-tabs]');
+      const due=t=>{if(!t.dueAt) return ''; const d=new Date(t.dueAt), late=!t.done&&d<new Date(); return `<span class="meta${late?' late':''}">⏰ ${esc(dayLabel(d))}, ${hm(d)}${late?' · прострочено':''}</span>`;};
+      const who=t=>t.authorId!==TG.me.id?`<span class="meta">від ${esc(nameOf(t.authorId))}</span>`:(t.assigneeId!==TG.me.id?`<span class="meta">→ ${esc(nameOf(t.assigneeId))}</span>`:'');
+      function draw(){
+        if(!PM.tasks){box.innerHTML=empty('Завантаження…',''); return;}
+        const mine=PM.tasks.filter(t=>t.assigneeId===TG.me.id), byMe=PM.tasks.filter(t=>t.authorId===TG.me.id&&t.assigneeId!==TG.me.id);
+        tabs.style.display=byMe.length||s._tab==='byme'?'':'none';
+        tabs.innerHTML=[['mine',`Мої · ${mine.filter(t=>!t.done).length}`],['byme',`Поставлені мною · ${byMe.filter(t=>!t.done).length}`]].map(([k,l])=>`<button class="pchip" data-tab="${k}" aria-pressed="${s._tab===k}">${l}</button>`).join('');
+        tabs.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{s._tab=b.dataset.tab; draw();});
+        const arr=s._tab==='mine'?mine:byMe;
+        box.innerHTML=arr.length?arr.map(t=>`<div class="ptask ${t.done?'done':''}" data-id="${t.id}"><span class="cb"><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg></span><span class="t">${esc(t.text)}${due(t)}${who(t)}</span></div>`).join('')
+          :`<div class="pempty"><b>${s._tab==='mine'?'Задач немає 🎉':'Ви ще нікому не ставили задач'}</b><span>${s._tab==='mine'?'Додайте задачу внизу або натисніть «+».':''}</span></div>`;
+        box.querySelectorAll('.ptask').forEach(el=>{const t=PM.tasks.find(x=>x.id===el.dataset.id);
+          el.querySelector('.cb').onclick=async()=>{const was=t.done; t.done=!was; draw(); badges();
+            try{Object.assign(t,await meApi('PATCH','/me/tasks/'+t.id,{done:!was}));}catch(err){t.done=was; draw(); badges(); fail(err);}};
+          el.querySelector('.t').onclick=()=>go('taskform',x=>P.taskform(x,t.id));});
+      }
+      const add=async()=>{const v=inp.value.trim(); if(!v) return; inp.value='';
+        try{const t=await meApi('POST','/me/tasks',{text:v}); (PM.tasks=PM.tasks||[]).unshift(t); s._tab='mine'; draw(); badges();}catch(err){inp.value=v; fail(err);}};
+      s.querySelector('[data-add]').onclick=add; inp.onkeydown=ev=>{if(ev.key==='Enter') add();};
+      s.querySelector('[data-new]').onclick=()=>go('taskform',x=>P.taskform(x,null));
+      s._redraw=draw; draw(); loadTasks(); wire(s);}
+,
+    taskform(s,id){
+      const t=id?(PM.tasks||[]).find(x=>x.id===id):null, author=!t||t.authorId===TG.me.id, ro=author?'':'readonly disabled';
+      const d=t&&t.dueAt?new Date(t.dueAt):null;
+      s.innerHTML=head(t?'Задача':'Нова задача')+`<div class="pscroll"><form class="pform" data-f>
+        <label class="k">Що зробити</label><textarea data-text maxlength="500" placeholder="Опишіть задачу" ${ro}>${esc(t?t.text:'')}</textarea>
+        <label class="k">Дедлайн</label><div class="row2"><input type="date" data-dd value="${d?dKey(d):''}" ${ro}><input type="time" data-dt value="${d?hm(d):''}" ${ro}></div>
+        <div data-assign></div>
+        ${t&&!author?`<div class="pnote" style="margin:0">Задачу поставив(ла) ${esc(nameOf(t.authorId))}. Ви можете позначити її виконаною.</div>`:''}
+        ${author?`<button class="pbtn" type="submit">${t?'Зберегти':'Створити'}</button>`:''}
+        ${t?`<button class="pbtn ghost" type="button" data-done>${t.done?'Повернути в роботу':'Позначити виконаною ✓'}</button>`:''}
+        ${t&&author?'<button class="pbtn danger" type="button" data-del>Видалити</button>':''}
+      </form></div>`;
+      const asg=author&&P._assignField?P._assignField(s.querySelector('[data-assign]'),t):null;
+      const upd=u=>{const i=PM.tasks.findIndex(x=>x.id===u.id); if(i>=0) PM.tasks[i]=u; else PM.tasks.unshift(u);};
+      s.querySelector('[data-f]').onsubmit=async ev=>{ev.preventDefault(); if(!author) return;
+        const text=s.querySelector('[data-text]').value.trim(), dd=s.querySelector('[data-dd]').value, dt=s.querySelector('[data-dt]').value;
+        if(!text){toast('Опишіть задачу'); return;}
+        const body={text,dueAt:dd?fromInputs(dd,dt||'18:00').toISOString():null};
+        if(asg&&!t) body.assigneeId=asg();
+        try{const u=t?await meApi('PATCH','/me/tasks/'+t.id,body):await meApi('POST','/me/tasks',body); PM.tasks=PM.tasks||[]; upd(u);
+          if(!t&&u.assigneeId!==TG.me.id){scr('tasks')._tab='byme'; toast('Задачу поставлено: '+first(u.assigneeId));} else toast(t?'Збережено':'Задачу додано');
+          back(); redraw('tasks'); badges();}catch(err){fail(err);}};
+      const dn=s.querySelector('[data-done]'); if(dn) dn.onclick=async()=>{try{upd(await meApi('PATCH','/me/tasks/'+t.id,{done:!t.done})); back(); redraw('tasks'); badges();}catch(err){fail(err);}};
+      const del=s.querySelector('[data-del]'); if(del) confirm2(del,'Точно видалити?',async()=>{try{await meApi('DELETE','/me/tasks/'+t.id); PM.tasks=PM.tasks.filter(x=>x.id!==t.id); back(); redraw('tasks'); badges(); toast('Задачу видалено');}catch(err){fail(err);}});
+      wire(s);}
+,
+    settings(s){
+      const dark=settings.theme==='dark', p=PM.prefs;
+      const row=(k,l,sub)=>`<div class="psetrow"><div><div class="lb">${l}</div><div class="sub">${sub}</div></div><div class="ptog" data-pref="${k}" aria-pressed="${p?p[k]:true}"></div></div>`;
+      s.innerHTML=head('Налаштування')+`<div class="pscroll">
+        <div class="psetrow"><div><div class="lb">Темна тема</div><div class="sub">Змінює вигляд офісу й телефону</div></div><div class="ptog" data-dark aria-pressed="${dark}"></div></div>
+        <div style="padding:16px 18px 4px;font-size:11.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Сповіщення в Telegram</div>
+        ${row('messages','Повідомлення','Нові повідомлення в чатах')}
+        ${row('events','Календар','Запрошення та нагадування про події')}
+        ${row('tasks','Задачі','Нові задачі, виконання, дедлайни')}
+        ${row('digest','Ранковий дайджест','Події та задачі на день — у будні зранку')}
+        <div class="pnote">🔒 Ваші чати, календар і задачі бачите лише ви та учасники. HR-доступ до них не відкриває. Дані зберігаються на сервері компанії; вкладення з чатів видаляються через 90 днів.</div>
+        <div class="psetrow"><div class="lb">Версія</div><div class="sub">AllianceOS 2.0</div></div></div>`;
+      s.querySelector('[data-dark]').onclick=e=>{const on=e.currentTarget.getAttribute('aria-pressed')!=='true'; e.currentTarget.setAttribute('aria-pressed',on); settings.theme=on?'dark':'pastel'; applySettings();};
+      s.querySelectorAll('[data-pref]').forEach(t=>t.onclick=async()=>{const k=t.dataset.pref, on=t.getAttribute('aria-pressed')!=='true'; t.setAttribute('aria-pressed',on);
+        try{PM.prefs=await meApi('PUT','/me/prefs',{[k]:on});}catch(err){t.setAttribute('aria-pressed',!on); fail(err);}});
+      if(!p) meApi('GET','/me/prefs').then(v=>{PM.prefs=v; if(stack.includes('settings')) P.settings(s);}).catch(()=>{});
+      wire(s);}
+  };
+  // Personal-only apps show a lock screen outside Telegram / before the character exists.
+  const PERSONAL_ONLY={calendar:'Календар',tasks:'Задачі'};
+  const appFor=id=>personal()&&P[id]?P[id]:(PERSONAL_ONLY[id]?(s=>locked(s,PERSONAL_ONLY[id])):R[id]);
+
+  async function personalStart(){
+    if(!personal()) return;
+    try{localStorage.removeItem('alliancesim.phone.tasks');}catch(e){}
+    await session();
+    setInterval(()=>{if(PM.exp*1000-Date.now()<3600e3) session();},10*60e3);
+    meApi('GET','/me/contacts').then(l=>{PM.contacts=new Map(l.map(c=>[c.id,c.username]));}).catch(()=>{});
+    loadTasks();
+  }
+  PHONE.personalStart=personalStart;
+
   $('#phoneFab').onclick=open;
   $('#phoneClose').onclick=close;
   $('#pbar').onclick=()=>{if(stack.length)home(); else close();};
-  scr('home').querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go,R[b.dataset.go]));
+  scr('home').querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go,appFor(b.dataset.go)));
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&app.dataset.phone){if(stack.length)back(); else close();}});
   tick(); setInterval(tick,20000); badges();
 })();

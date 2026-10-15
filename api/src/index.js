@@ -2,6 +2,7 @@ import express from 'express';
 import { query, initSchema, migrateBlobEmployees } from './db.js';
 import { requireEditToken, writeAuth } from './auth.js';
 import { verifyInitData } from './telegram.js';
+import { personal } from './personal.js';
 
 const app = express();
 app.use(express.json({ limit: '25mb' })); // layout blob embeds employees (+ optional base64 photos)
@@ -33,7 +34,11 @@ router.post('/tg/verify', async (req, res, next) => {
     const initData = (req.body && req.body.initData) || req.get('X-Telegram-Init-Data');
     const v = verifyInitData(initData, process.env.TELEGRAM_BOT_TOKEN);
     if (!v) return res.status(401).json({ ok: false, error: 'invalid initData' });
-    const { rows } = await query(`SELECT ${EMP_COLS} FROM employees WHERE telegram_id = $1`, [v.tgId]);
+    // Remember the @username so colleagues' "Подзвонити" can open this person in Telegram.
+    const { rows } = await query(
+      `UPDATE employees SET telegram_username = $2 WHERE telegram_id = $1 RETURNING ${EMP_COLS}`,
+      [v.tgId, (v.user && v.user.username) || null]
+    );
     const employee = rows[0] ? toEmp(rows[0], { includeTelegram: true }) : null;
     res.json({ ok: true, tgId: v.tgId, user: v.user, employee, canCoffee: canOrderCoffee(employee && employee.name) });
   } catch (err) {
@@ -382,6 +387,8 @@ router.post('/notifications/:id/sent', requireEditToken, async (req, res, next) 
 //  - Direct smoke tests against 127.0.0.1:8011/api/* and /health both resolve.
 app.use(router);
 app.use('/api', router);
+app.use(personal);
+app.use('/api', personal);
 
 // Central error handler
 app.use((err, _req, res, _next) => {

@@ -72,7 +72,63 @@ CREATE TABLE IF NOT EXISTS notifications (
   sent_at timestamptz          -- null until the bot delivers it
 );
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS from_name text;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS payload jsonb;  -- deep-link / inline buttons for the bot
 CREATE INDEX IF NOT EXISTS notifications_unsent ON notifications (id) WHERE sent_at IS NULL;
+
+-- ── Personal phone (spec 004) — private per-employee data, never in the layout blob ──
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS telegram_username text; -- for "Подзвонити" → t.me/<username>
+
+-- Calendar. The organizer is also an attendee row (status 'accepted'), so "my events"
+-- is always a join on event_attendees; reminders are per attendee.
+CREATE TABLE IF NOT EXISTS events (
+  id bigserial PRIMARY KEY,
+  organizer_id text NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+  title text NOT NULL,
+  starts_at timestamptz NOT NULL,
+  ends_at timestamptz,
+  all_day boolean NOT NULL DEFAULT false,
+  place text,
+  note text,
+  color text,
+  cancelled_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS events_starts ON events (starts_at);
+CREATE TABLE IF NOT EXISTS event_attendees (
+  event_id bigint NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  employee_id text NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+  status text NOT NULL DEFAULT 'pending',   -- pending | accepted | declined
+  remind_min integer,                        -- minutes before start; null = no reminder
+  reminded_at timestamptz,
+  PRIMARY KEY (event_id, employee_id)
+);
+CREATE INDEX IF NOT EXISTS event_attendees_emp ON event_attendees (employee_id);
+
+-- Tasks. A personal task has author = assignee.
+CREATE TABLE IF NOT EXISTS tasks (
+  id bigserial PRIMARY KEY,
+  author_id text NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+  assignee_id text NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+  text text NOT NULL,
+  due_at timestamptz,
+  done_at timestamptz,
+  due_notified_at timestamptz,
+  overdue_notified_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS tasks_assignee ON tasks (assignee_id);
+CREATE INDEX IF NOT EXISTS tasks_author ON tasks (author_id);
+
+-- Which Telegram notifications a person wants (absent row = all on).
+CREATE TABLE IF NOT EXISTS notify_prefs (
+  employee_id text PRIMARY KEY REFERENCES employees(id) ON DELETE CASCADE,
+  messages boolean NOT NULL DEFAULT true,
+  events boolean NOT NULL DEFAULT true,
+  tasks boolean NOT NULL DEFAULT true,
+  digest boolean NOT NULL DEFAULT true
+);
 `;
 
 export async function query(text, params) {
