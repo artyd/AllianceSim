@@ -1,0 +1,17 @@
+{
+  "furniture": [
+    { "uid": "d1", "type": "desk", "x": 21, "z": 21.5, "rot": 0 },
+    { "uid": "d2", "type": "desk", "x": 26, "z": 21.5, "rot": 0 },
+    { "uid": "d3", "type": "desk", "x": 21, "z": 27, "rot": 0 },
+    { "uid": "d4", "type": "desk", "x": 26, "z": 27, "rot": 0 },
+    { "uid": "m1", "type": "meeting", "x": 24.75, "z": 46, "rot": 0 }
+  ],
+  "zones": {
+    "r9": { "type": "open", "name": "Опен-спейс" },
+    "r12": { "type": "meeting", "name": "Переговорна «Київ»" },
+    "r6": { "type": "meeting", "name": "Переговорна «Львів»" },
+    "r13": { "type": "kitchen", "name": "Кухня" }
+  },
+  "rects": [],
+  "depts": { "HR": "#E2001A", "IT": "#5B76E6" }
+}

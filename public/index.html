@@ -179,6 +179,8 @@ kbd{font:700 11px Nunito;background:var(--chip);border:1px solid var(--line);bor
 /* labels */
 .rl{position:absolute;transform:translate(-50%,-50%);padding:5px 10px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap;background:rgba(255,255,255,.82);color:var(--ink);box-shadow:0 2px 8px rgba(60,40,30,.10);transition:opacity .2s}
 #app[data-ui="dark"] .rl{background:rgba(40,38,48,.85);color:#f3eef2}
+.rl.busy{box-shadow:0 0 0 2px #E2001A,0 4px 12px rgba(226,0,26,.25)}
+.rl .bz{margin-left:6px;font-size:11px;color:#E2001A}
 .rl.empty{border:1.5px dashed rgba(60,40,30,.25);background:rgba(255,255,255,.5);color:var(--muted);font-weight:700}
 .rl i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:-1px}
 #app[data-mode="builder"][data-tab="zones"] .rl{pointer-events:auto;cursor:pointer}
@@ -434,6 +436,7 @@ html.tgapp #app #preview{display:none}
 .pun.m{background:var(--muted)}
 .prow .sub i{color:var(--red);font-style:normal;font-weight:700}
 .av.gav{background:var(--chip);color:var(--ink);font-size:19px}
+.pchip.busy{border-color:var(--red)!important;color:var(--red)}.pchip.busy::after{content:" 🔴"}
 .prow .chk{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);flex:none;display:grid;place-items:center;color:#fff;font-size:13px;font-weight:900}
 .prow[aria-checked="true"] .chk{background:var(--red);border-color:var(--red)}
 .prow .rm,.pinfo .rm{padding:5px 10px;border-radius:999px;background:var(--chip);font-size:11px;font-weight:800;color:var(--red)}
@@ -855,7 +858,7 @@ async function refreshEmployees(){
   syncAvatars(); renderPeople(); renderLabels(); dirty2d=true;
   if(mode==='viewer') renderFilters();
 }
-function startEmpPolling(){ if(!empPollT) empPollT=setInterval(refreshEmployees,12000); }
+function startEmpPolling(){ if(!empPollT){ empPollT=setInterval(refreshEmployees,12000); refreshLive(); setInterval(refreshLive,30000); } }
 async function saveLayout(){
   try{localStorage.setItem(LS_LAYOUT,JSON.stringify(state));}catch(e){}
   if(!getToken()){openTokenModal(); return;}
@@ -1056,7 +1059,7 @@ function loadPose(g,pose){const key=pose===true?'sit':pose===false?'stand':pose;
 function buildAvatar(style,shirt,seated,withGem){const g=new THREE.Group(); g.userData.shirt=shirt; g.userData.opacity=1; loadPose(g,seated);
   if(withGem){const gem=new THREE.Mesh(new THREE.OctahedronGeometry(.14,0),new THREE.MeshStandardMaterial({color:'#4CAF6E',emissive:'#4CAF6E',emissiveIntensity:1.2,roughness:.2,metalness:.1,toneMapped:false})); gem.scale.set(.9,1.7,.9); g.userData.gem=gem; g.add(gem);}
   return g;}
-function disposeAvatar(g){g.userData.disposed=true; if(g.userData.mixer){g.userData.mixer.stopAllAction(); mixers.delete(g.userData.mixer);} if(g.userData.moodSprite) g.userData.moodSprite.material.dispose(); if(g.userData.photoSprite){g.userData.photoSprite.material.map.dispose(); g.userData.photoSprite.material.dispose();}}
+function disposeAvatar(g){g.userData.disposed=true; if(g.userData.mixer){g.userData.mixer.stopAllAction(); mixers.delete(g.userData.mixer);} if(g.userData.moodSprite) g.userData.moodSprite.material.dispose(); if(g.userData.badgeSprite) g.userData.badgeSprite.material.dispose(); if(g.userData.photoSprite){g.userData.photoSprite.material.map.dispose(); g.userData.photoSprite.material.dispose();}}
 /* ---- mood emoji above the head (пункт 5): a billboard sprite, always visible ---- */
 const _moodTex={};
 function moodTex(emoji){if(_moodTex[emoji]) return _moodTex[emoji]; const cv=document.createElement('canvas'); cv.width=cv.height=128; const x=cv.getContext('2d');
@@ -1066,6 +1069,20 @@ function moodTex(emoji){if(_moodTex[emoji]) return _moodTex[emoji]; const cv=doc
 function makeMoodSprite(emoji){const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:moodTex(emoji),transparent:true,depthWrite:false,depthTest:false,toneMapped:false})); sp.scale.set(.55,.55,.55); sp.renderOrder=10; return sp;}
 function setAvatarMood(g,emoji){let ms=g.userData.moodSprite; if(!ms){ms=makeMoodSprite(emoji); g.userData.moodSprite=ms; g.userData.moodEmoji=emoji; g.add(ms);} else if(g.userData.moodEmoji!==emoji){ms.material.map=moodTex(emoji); ms.material.needsUpdate=true; g.userData.moodEmoji=emoji;}}
 function updateAvatarMood(id){const g=avObjs[id], e=state.employees.find(x=>x.id===id); if(!g||!e) return; setAvatarMood(g,(MOODS[e.mood]||MOODS.good).e);}
+/* ---- live office (spec 005): booked rooms, "in a meeting" people — from /office/now ----
+   Side map only; never written into state/employees (keeps the poll diff + upserts clean). */
+let LIVE={rooms:{},busy:{},at:0};
+const liveUntil=x=>x&&new Date(x.until)>new Date()?new Date(x.until):null;
+const hhmm=d=>String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+const busyOf=e=>liveUntil(LIVE.busy[e.id]);
+const badgeOf=e=>(LIVE.extraBadge&&LIVE.extraBadge(e))||(busyOf(e)?'📅':'');
+const roomBusy=key=>liveUntil(LIVE.rooms[key]);
+async function refreshLive(){try{const r=await fetch(API+'/office/now'); if(!r.ok) return; LIVE=Object.assign(LIVE,await r.json()); applyLive();}catch(e){}}
+function applyLive(){renderLabels(); syncAvatars(); dirty2d=true; if(LIVE.onUpdate) LIVE.onUpdate();}
+function setAvatarBadge(g,emoji){let b=g.userData.badgeSprite;
+  if(!emoji){if(b){g.remove(b); b.material.dispose(); g.userData.badgeSprite=null; g.userData.badge='';} return;}
+  if(!b){b=makeMoodSprite(emoji); b.scale.set(.42,.42,.42); g.userData.badgeSprite=b; g.add(b);} else if(g.userData.badge!==emoji){b.material.map=moodTex(emoji); b.material.needsUpdate=true;}
+  g.userData.badge=emoji;}
 function setOpacity(g,a){g.userData.opacity=a; g.traverse(o=>{if(o.isMesh&&o!==g.userData.gem){o.material.transparent=a<1;o.material.opacity=a;o.material.depthWrite=a>=1;}});}
 /* ---- profile photo on the figure (bot/web uploads): a circular billboard badge ---- */
 const _photoImg={}; // employee id -> {src, img, ready}
@@ -1123,6 +1140,7 @@ function magnetSnap(f){const D=FURN[f.type]; if(D.onDesk||D.underlay) return; co
 function seatWorld(f,i){const s=FURN[f.type].seats[i]; const a=f.rot*Math.PI/2; const c=Math.cos(a),sn=Math.sin(a); return {x:f.x+s.x*c+s.z*sn, z:f.z-s.x*sn+s.z*c, y:s.y, ry:a+s.ry};}
 const seatTaken=(fu,i)=>state.employees.some(e=>e.seat&&e.seat.f===fu&&e.seat.i===i);
 function roomName(id){const r=ROOMS.find(r=>r.id===id); if(!r) return ''; const z=state.zones[id]; return z?(z.name||ZONES[z.type].n):(r.label||('Кімната '+r.n));}
+function liveRoomName(key){if(String(key).startsWith('rz:')){const rz=state.rects.find(x=>'rz:'+x.uid===key); return rz?(rz.name||ZONES[rz.type].n):'';} return roomName(key);}
 function roomCenter(r){const rc=r.rects[0]; return new THREE.Vector3((rc[0]+rc[2])/2,0,(rc[1]+rc[3])/2);}
 
 /* ---------- scene sync ---------- */
@@ -1140,6 +1158,7 @@ function syncAvatars(){dirty2d=true; const live=new Set();
     if(!g){g=buildAvatar(settings.avatar,e.color,!!e.seat,true); g.userData.key=key; g.userData.emp=e.id; avRoot.add(g); avObjs[e.id]=g;}
     setAvatarMood(g,(MOODS[e.mood]||MOODS.good).e);
     setAvatarPhoto(g,e);
+    setAvatarBadge(g,badgeOf(e));
     const p=empPos(e); if(p){g.position.set(p.x,.02,p.z);} }
   for(const k in avObjs) if(!live.has(k)){avRoot.remove(avObjs[k]); disposeAvatar(avObjs[k]); delete avObjs[k];}
   if(view!=='2d') refreshAvatarLook();}
@@ -1158,12 +1177,12 @@ function syncAll(){syncFurniture(); syncAvatars(); syncZones(); renderPeople(); 
 const labelsEl=$('#labels'); const roomLabelEls={}, tagEls={}; let hlEmp=null, filterDept=null, hoverEmp=null;
 function renderLabels(rebuild){
   for(const r of ROOMS){let el=roomLabelEls[r.id]; if(!el){el=document.createElement('div'); el.className='rl'; el.dataset.room=r.id; el.addEventListener('click',()=>{if(mode==='builder'&&tab==='zones') openZonePop({room:r.id});}); labelsEl.appendChild(el); roomLabelEls[r.id]=el;}
-    const z=state.zones[r.id]; el.classList.toggle('empty',!z); el.innerHTML=(z?`<i style="background:${zoneColor(z)}"></i>`:'')+roomName(r.id); el.style.display=(r.corridor&&!z)?'none':'';}
+    const z=state.zones[r.id], bz=roomBusy(r.id); el.classList.toggle('empty',!z); el.classList.toggle('busy',!!bz); el.innerHTML=(z?`<i style="background:${zoneColor(z)}"></i>`:'')+esc(roomName(r.id))+(bz?`<b class="bz">🔴 до ${hhmm(bz)}</b>`:''); el.style.display=(r.corridor&&!z)?'none':'';}
   const live=new Set(); for(const e of state.employees){if(!e.seat) continue; live.add(e.id); let el=tagEls[e.id]; if(!el){el=document.createElement('div'); el.className='tag'; el.dataset.emp=e.id; el.addEventListener('click',ev=>{ev.stopPropagation(); if(mode==='viewer') focusEmployee(e.id,true);}); labelsEl.appendChild(el); tagEls[e.id]=el;}
     el.innerHTML=`<div class="b"><i style="background:${safeColor(e.color)}"></i><span class="n">${esc(e.name)}</span><span class="d">${esc(e.position||e.dept)}</span></div>`;}
   for(const k in tagEls) if(!live.has(k)){tagEls[k].remove(); delete tagEls[k];}
   for(const rz of state.rects){let el=roomLabelEls['rz'+rz.uid]; if(!el){el=document.createElement('div'); el.className='rl'; labelsEl.appendChild(el); roomLabelEls['rz'+rz.uid]=el; el.addEventListener('click',()=>{if(mode==='builder'&&tab==='zones') openZonePop({rect:rz.uid});});}
-    el.innerHTML=`<i style="background:${zoneColor(rz)}"></i>${esc(rz.name||ZONES[rz.type].n)}`;}
+    const bz=roomBusy('rz:'+rz.uid); el.classList.toggle('busy',!!bz); el.innerHTML=`<i style="background:${zoneColor(rz)}"></i>${esc(rz.name||ZONES[rz.type].n)}${bz?`<b class="bz">🔴 до ${hhmm(bz)}</b>`:''}`;}
   for(const k in roomLabelEls) if(k.startsWith('rz')&&!state.rects.some(r=>'rz'+r.uid===k)){roomLabelEls[k].remove(); delete roomLabelEls[k];}}
 const _v=new THREE.Vector3();
 function project(x,y,z){if(view==='2d'){const s=w2s(x,z); return {x:s.x,y:s.y-(y||0)*view2.scale*.35,ok:true};} _v.set(x,y,z).project(camera); return {x:(_v.x+1)/2*innerWidth,y:(1-_v.y)/2*innerHeight,ok:_v.z<1};}
@@ -1392,7 +1411,7 @@ function clearHighlight(){while(fxRoot.children.length) fxRoot.remove(fxRoot.chi
 function showCard(e){const c=$('#empcard'); const f=e.seat&&state.furniture.find(x=>x.uid===e.seat.f); let where; if(f){const sw=seatWorld(f,e.seat.i); where=roomName(roomAt(sw.x,sw.z))||'В офісі';} else where=statusOf(e)==='office'?'Ходить офісом':'Не в офісі';
   const st=STATUS[statusOf(e)], md=MOODS[e.mood]||MOODS.good;
   c.innerHTML=`<div class="top">${avHTML(e)}<div><div class="nm" style="font-size:16px">${esc(e.name)}</div><div class="dp">${esc(e.dept)}${e.position?' · '+esc(e.position):''}</div></div></div>`+
-    `<div class="badges"><span class="pill" style="color:${st.c}">${st.icon} ${st.n}</span><span class="pill">${md.e} ${md.n}</span><span class="pill">📍 ${esc(where)}</span>${e.tg_linked?'<span class="pill" style="color:#229ED9" title="Прив\'язано через Telegram">✈️ TG</span>':''}</div>`+
+    `<div class="badges"><span class="pill" style="color:${st.c}">${st.icon} ${st.n}</span><span class="pill">${md.e} ${md.n}</span><span class="pill">📍 ${esc(where)}</span>${busyOf(e)?`<span class="pill" style="color:#5B76E6">📅 На зустрічі до ${hhmm(busyOf(e))}${LIVE.busy[e.id].room?' · '+esc(liveRoomName(LIVE.busy[e.id].room)):''}</span>`:''}${e.tg_linked?'<span class="pill" style="color:#229ED9" title="Прив\'язано через Telegram">✈️ TG</span>':''}</div>`+
     `<dl>${e.email?`<dt>Email</dt><dd>${esc(e.email)}</dd>`:''}${e.phone?`<dt>Телефон</dt><dd>${esc(e.phone)}</dd>`:''}${e.ext?`<dt>Роб. номер</dt><dd>${esc(e.ext)}</dd>`:''}</dl>`+
     // Status/mood/edit controls write to the DB. Shown to HR (builder) and — in the
     // Telegram Mini App — to the owner of this card only. Everyone else sees it read-only.
@@ -1523,7 +1542,7 @@ function drawEmp2D(e,wx,wz,S2,forceColor){if(!e) return; ctx2.save(); const p=w2
   if(img){ ctx2.save(); ctx2.clip(); const s=Math.max(2*rr/img.width,2*rr/img.height),dw=img.width*s,dh=img.height*s; ctx2.drawImage(img,p.x-dw/2,p.y-dh/2,dw,dh); ctx2.restore(); ctx2.lineWidth=2; ctx2.strokeStyle='#fff'; ctx2.stroke(); }
   else { ctx2.fillStyle=forceColor||e.color; ctx2.fill(); ctx2.lineWidth=2; ctx2.strokeStyle='#fff'; ctx2.stroke();
     ctx2.fillStyle='#fff'; ctx2.font=`800 ${Math.round(rr*.82)}px Nunito`; ctx2.textAlign='center'; ctx2.textBaseline='middle'; ctx2.fillText(initials(e.name),p.x,p.y); }
-  ctx2.font=`${Math.round(rr*1.3)}px "Segoe UI Emoji","Noto Color Emoji",sans-serif`; ctx2.fillText((MOODS[e.mood]||MOODS.good).e,p.x,p.y-rr*1.8);
+  ctx2.font=`${Math.round(rr*1.3)}px "Segoe UI Emoji","Noto Color Emoji",sans-serif`; ctx2.fillText((MOODS[e.mood]||MOODS.good).e,p.x,p.y-rr*1.8); const bdg=badgeOf(e); if(bdg){ctx2.font=`${Math.round(rr*1.05)}px "Segoe UI Emoji","Noto Color Emoji",sans-serif`; ctx2.fillText(bdg,p.x+rr*1.25,p.y-rr*1.7);}
   if(hlEmp===e.id){ctx2.beginPath(); ctx2.arc(p.x,p.y,rr+6,0,Math.PI*2); ctx2.strokeStyle='#E2001A'; ctx2.lineWidth=3; ctx2.stroke();}
   ctx2.restore();}
 function draw2D(){dirty2d=false; const th=THEMES[settings.theme]; const W=innerWidth,H=innerHeight,S2=view2.scale;
@@ -1607,7 +1626,7 @@ function loop(now){requestAnimationFrame(loop); const dt=Math.min(.05,(now-lastT
   if(view==='2d'){ updateRoam(dt); pan2FromKeys(dt); update2DFocus(now); if(dirty2d||drag||fly2||pan2||panKeys.size||settings.move==='on') draw2D(); }
   else {
     for(const mx of mixers) mx.update(dt);
-    updateRoam(dt); for(const id in avObjs){const g=avObjs[id]; const ep=EP[id]; if(ep){g.position.set(ep.x,.02,ep.z); g.rotation.y=ep.ry; loadPose(g,ep.pose==='sit'?true:ep.pose==='stand'?false:'walk');} const gm=g.userData.gem,ms=g.userData.moodSprite,pht=g.userData.photoSprite; const bob=Math.sin(now/500)*.05; if(gm){gm.rotation.y+=dt*1.8; gm.position.set(0,g.userData.tagY+.45+bob,0);} if(pht) pht.position.set(0,g.userData.tagY+.62+bob,0); if(ms) ms.position.set(0,g.userData.tagY+(pht?1.15:.95)+bob,0);}
+    updateRoam(dt); for(const id in avObjs){const g=avObjs[id]; const ep=EP[id]; if(ep){g.position.set(ep.x,.02,ep.z); g.rotation.y=ep.ry; loadPose(g,ep.pose==='sit'?true:ep.pose==='stand'?false:'walk');} const gm=g.userData.gem,ms=g.userData.moodSprite,pht=g.userData.photoSprite; const bob=Math.sin(now/500)*.05; if(gm){gm.rotation.y+=dt*1.8; gm.position.set(0,g.userData.tagY+.45+bob,0);} if(pht) pht.position.set(0,g.userData.tagY+.62+bob,0); if(ms) ms.position.set(0,g.userData.tagY+(pht?1.15:.95)+bob,0); const bd=g.userData.badgeSprite; if(bd) bd.position.set(.42,g.userData.tagY+(pht?1.15:.95)+bob,0);}
     if(fly){const k=Math.min(1,(now-fly.t0)/fly.ms), e=ease(k); camera.position.lerpVectors(fly.p0,fly.p1,e); controls.target.lerpVectors(fly.t0v,fly.t1,e); if(k>=1) fly=null;}
     panFromKeys(dt); controls.update();
     if(hlRing){const s=1+Math.sin(now/300)*.08; hlRing.scale.set(s,1,s);} if(hlArrow){hlArrow.position.y=hlArrow.userData.y0??(hlArrow.userData.y0=hlArrow.position.y); hlArrow.position.y+=Math.abs(Math.sin(now/350))*.35;}
@@ -1677,6 +1696,11 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
   const redraw=id=>{const s=scr(id); if(s&&s._redraw&&stack.includes(id)) s._redraw();};
   const PALETTE=['#E2001A','#F28C28','#F2C036','#5DBE7C','#3EA8C9','#5B76E6','#A36BE0','#E06CA6'];
   const REMIND=[[null,'Без нагадування'],[10,'За 10 хв'],[30,'За 30 хв'],[60,'За 1 год']];
+  const REPEAT=[[null,'Не повторювати'],['daily','Щодня'],['weekdays','По буднях'],['weekly','Щотижня'],['monthly','Щомісяця']];
+  const REPEAT_TXT={daily:'щодня',weekdays:'по буднях',weekly:'щотижня',monthly:'щомісяця'};
+  // Bookable rooms = plan rooms / drawn zones that HR typed as «Переговорна».
+  const meetingRooms=()=>[...ROOMS.filter(r=>(state.zones[r.id]||{}).type==='meeting').map(r=>({key:r.id,name:roomName(r.id)})),
+    ...state.rects.filter(rz=>rz.type==='meeting').map(rz=>({key:'rz:'+rz.uid,name:rz.name||ZONES.meeting.n}))];
   const chipsHTML=(attr,opts,cur)=>`<div class="pchips" ${attr}>${opts.map(([v,l])=>`<button type="button" class="pchip" data-v="${v??''}" aria-pressed="${String(v??'')===String(cur??'')}">${l}</button>`).join('')}</div>`;
   const pickChip=(box,fn)=>box.querySelectorAll('.pchip').forEach(b=>b.onclick=()=>{box.querySelectorAll('.pchip').forEach(x=>x.setAttribute('aria-pressed',x===b)); fn(b.dataset.v);});
   // Two-tap confirm (browser confirm() dialogs would freeze the Mini App WebView).
@@ -1865,10 +1889,10 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
         for(let dn=1;dn<=dim;dn++){const d=new Date(y,m,dn);
           cells+=`<button class="pcell${same(d,sel)?' sel':''}${same(d,today)?' tod':''}" data-d="${dn}"><span>${dn}</span>${evOn(d).length?'<i></i>':''}</button>`;}
         const list=evOn(sel);
-        const row=e=>{const a=new Date(e.startsAt), b=e.endsAt?new Date(e.endsAt):null;
-          const tm=e.allDay?'Весь день':hm(a)+(b?'–'+hm(b):'');
+        const row=(e,i)=>{const a=new Date(e.startsAt), b=e.endsAt?new Date(e.endsAt):null;
+          const tm=(e.allDay?'Весь день':hm(a)+(b?'–'+hm(b):''))+(e.repeat?' 🔁':'');
           const tag=e.myStatus==='pending'?'<span class="ptag">очікує відповіді</span>':(e.organizerId!==TG.me.id?`<span class="ptag muted">від ${esc(first(e.organizerId))}</span>`:'');
-          return `<div class="pev ${e.myStatus==='declined'?'declined':''}" data-ev="${e.id}"><div class="bar" style="background:${esc(e.color||'#5B76E6')}"></div><div style="flex:1;min-width:0"><div class="tm">${tm}${tag}</div><div class="tt">${esc(e.title)}</div>${e.place?`<div class="pl">📍 ${esc(e.place)}</div>`:''}</div></div>`;};
+          return `<div class="pev ${e.myStatus==='declined'?'declined':''}" data-ev="${e.id}" data-i="${i}"><div class="bar" style="background:${esc(e.color||'#5B76E6')}"></div><div style="flex:1;min-width:0"><div class="tm">${tm}${tag}</div><div class="tt">${esc(e.title)}</div>${e.place?`<div class="pl">📍 ${esc(e.place)}</div>`:''}</div></div>`;};
         s.innerHTML=headP('Календар','<button class="act" data-new aria-label="Нова подія">+</button>')+
           `<div class="pcalbar"><button class="bk" data-prev>${IC.back}</button><div class="ti">${MON[m]} ${y}</div><button class="bk" data-next style="transform:scaleX(-1)">${IC.back}</button></div>
            <div class="pcalgrid">${DOW.map(x=>`<div class="pdowc">${x}</div>`).join('')}</div>
@@ -1880,7 +1904,7 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
         s.querySelector('[data-prev]').onclick=()=>{s._view=new Date(y,m-1,1); draw(); load();};
         s.querySelector('[data-next]').onclick=()=>{s._view=new Date(y,m+1,1); draw(); load();};
         s.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{s._sel=new Date(y,m,+b.dataset.d); draw();});
-        s.querySelectorAll('[data-ev]').forEach(b=>b.onclick=()=>go('event',x=>P.event(x,b.dataset.ev)));
+        s.querySelectorAll('[data-ev]').forEach(b=>b.onclick=()=>{const o=list[+b.dataset.i]; if(o) PM.ev.set(o.id,o); go('event',x=>P.event(x,b.dataset.ev));});
         s.querySelector('[data-new]').onclick=()=>go('evform',x=>P.evform(x,null,s._sel));
         wire(s);
       }
@@ -1895,7 +1919,8 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
         <div style="height:5px;width:44px;border-radius:3px;background:${esc(e.color||'#5B76E6')};margin-top:8px"></div>
         <div class="h">${esc(e.title)}</div>
         <div class="r"><span class="k">Коли</span><span>${esc(when)}</span></div>
-        ${e.place?`<div class="r"><span class="k">Де</span><span>${esc(e.place)}</span></div>`:''}
+        ${e.place?`<div class="r"><span class="k">Де</span><span>${e.room?'🚪 ':''}${esc(e.place)}</span></div>`:''}
+        ${e.repeat?`<div class="r"><span class="k">Повтор</span><span>🔁 ${REPEAT_TXT[e.repeat]||''}${e.repeatUntil?' до '+esc(dayLabel(new Date(e.repeatUntil))):''}</span></div>`:''}
         ${e.note?`<div class="r"><span class="k">Нотатка</span><span style="white-space:pre-wrap">${esc(e.note)}</span></div>`:''}
         ${mineOrg?'':`<div class="r"><span class="k">Організатор</span><span>${esc(nameOf(e.organizerId))}</span></div>`}
         <div data-extra></div>
@@ -1913,40 +1938,65 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
 ,
     evform(s,id,day){
       const e=id?PM.ev.get(id):null;
-      const st=e?new Date(e.startsAt):(()=>{const d=new Date(day||Date.now()); d.setHours(10,0,0,0); return d;})();
-      const en=e?(e.endsAt?new Date(e.endsAt):null):new Date(st.getTime()+3600e3);
-      let allDay=e?e.allDay:false, color=e?(e.color||PALETTE[5]):PALETTE[5], rem=e?e.remindMin:30;
-      const places=[...new Set(Object.values(state.zones||{}).map(z=>z&&z.name).filter(Boolean))];
+      // Editing a repeating event edits the series → start from the series' first date.
+      const st=e?new Date(e.seriesStart||e.startsAt):(()=>{const d=new Date(day||Date.now()); d.setHours(10,0,0,0); return d;})();
+      const en=e?(e.endsAt?new Date(st.getTime()+(new Date(e.endsAt)-new Date(e.startsAt))):null):new Date(st.getTime()+3600e3);
+      let allDay=e?e.allDay:false, color=e?(e.color||PALETTE[5]):PALETTE[5], rem=e?e.remindMin:30, room=e?e.room:null, repeat=e?e.repeat:null;
+      const rooms=meetingRooms(), busy={day:null,list:[]};
       s.innerHTML=head(e?'Редагувати подію':'Нова подія')+`<div class="pscroll"><form class="pform" data-f>
         <label class="k">Назва</label><input type="text" data-title maxlength="200" placeholder="Зустріч, нотатка, нагадування…" value="${esc(e?e.title:'')}">
         <div class="psetrow" style="padding:4px 2px;border:0"><div class="lb">Весь день / нотатка</div><div class="ptog" data-allday aria-pressed="${allDay}"></div></div>
-        <label class="k">Дата</label><input type="date" data-date value="${dKey(st)}">
+        <label class="k">${e&&e.repeat?'Дата початку серії':'Дата'}</label><input type="date" data-date value="${dKey(st)}">
         <div class="row2" data-times><div><label class="k">Початок</label><input type="time" data-st value="${hm(st)}" style="margin-top:10px"></div><div><label class="k">Кінець</label><input type="time" data-en value="${en?hm(en):''}" style="margin-top:10px"></div></div>
-        <label class="k">Де</label><input type="text" data-place maxlength="200" list="pPlaces" placeholder="Переговорна, кабінет…" value="${esc(e&&e.place||'')}"><datalist id="pPlaces">${places.map(p=>`<option value="${esc(p)}">`).join('')}</datalist>
+        <label class="k">Повторювати</label>${chipsHTML('data-repeat',REPEAT,repeat)}
+        <div data-untilw style="display:none;flex-direction:column;gap:12px"><label class="k">До дати (необов’язково)</label><input type="date" data-until value="${e&&e.repeatUntil?dKey(new Date(e.repeatUntil)):''}"></div>
+        <label class="k">Де</label>
+        ${rooms.length?`<div class="pchips" data-rooms>${rooms.map(r=>`<button type="button" class="pchip" data-room="${esc(r.key)}" aria-pressed="${r.key===room}">🚪 ${esc(r.name)}</button>`).join('')}</div><div data-roominfo style="font-size:12px;font-weight:700;margin-top:-4px"></div>`:''}
+        <input type="text" data-place maxlength="200" placeholder="${rooms.length?'…або інше місце':'Переговорна, кабінет…'}" value="${esc(e&&e.place||'')}">
         <label class="k">Нотатка</label><textarea data-note maxlength="2000" placeholder="Необов’язково">${esc(e&&e.note||'')}</textarea>
         <label class="k">Колір</label><div class="pchips" data-color>${PALETTE.map(c=>`<button type="button" class="pchip" data-c="${c}" style="background:${c};width:30px;height:30px;padding:0;border-radius:50%;border:none${c===color?';outline:3px solid var(--ink);outline-offset:2px':''}"></button>`).join('')}</div>
         ${e?'':`<div data-remwrap style="display:flex;flex-direction:column;gap:12px"><label class="k">Нагадування</label>${chipsHTML('data-remind',REMIND,rem)}</div>`}
         <div data-invite></div>
         <button class="pbtn" type="submit">${e?'Зберегти':'Створити'}</button>
       </form></div>`;
-      const f=s.querySelector('[data-f]'), times=s.querySelector('[data-times]'), tog=s.querySelector('[data-allday]');
-      const syncAD=()=>{tog.setAttribute('aria-pressed',allDay); times.style.display=allDay?'none':''; const rw=s.querySelector('[data-remwrap]'); if(rw) rw.style.display=allDay?'none':'';}; syncAD();
+      const f=s.querySelector('[data-f]'), times=s.querySelector('[data-times]'), tog=s.querySelector('[data-allday]'), placeIn=s.querySelector('[data-place]');
+      const val=sel=>s.querySelector(sel).value;
+      // The chosen slot as Dates (null when all-day / incomplete).
+      const slot=()=>{const d=val('[data-date]'); if(!d||allDay) return null; const a=fromInputs(d,val('[data-st]')||'09:00'), b=val('[data-en]')?fromInputs(d,val('[data-en]')):new Date(a.getTime()+3600e3); return {a,b};};
+      const clash=key=>{const sl=slot(); return sl?busy.list.find(x=>x.room===key&&x.eventId!==id&&new Date(x.start)<sl.b&&new Date(x.end)>sl.a):null;};
+      function drawRooms(){const box=s.querySelector('[data-rooms]'); if(!box) return;
+        box.querySelectorAll('[data-room]').forEach(b=>{const c=clash(b.dataset.room); b.setAttribute('aria-pressed',b.dataset.room===room); b.classList.toggle('busy',!!c);});
+        const info=s.querySelector('[data-roominfo]'), c=room?clash(room):null;
+        info.innerHTML=!room?'':c?`<span style="color:var(--red)">🔴 Зайнято ${hm(new Date(c.start))}–${hm(new Date(c.end))}${c.organizer?' · '+esc(c.organizer):''} — оберіть інший час або кімнату</span>`:(slot()?'<span style="color:#2e9b57">🟢 Вільна на цей час</span>':'');}
+      async function loadBusy(){const d=val('[data-date]'); if(!rooms.length||!d||busy.day===d){drawRooms(); return;}
+        busy.day=d; const a=fromInputs(d,'00:00'), b=new Date(a.getTime()+864e5);
+        try{busy.list=await meApi('GET',`/me/rooms?from=${encodeURIComponent(a.toISOString())}&to=${encodeURIComponent(b.toISOString())}`);}catch(err){busy.list=[];} drawRooms();}
+      s.querySelectorAll('[data-rooms] [data-room]').forEach(b=>b.onclick=()=>{if(room===b.dataset.room){room=null;} else {room=b.dataset.room; placeIn.value=(rooms.find(r=>r.key===room)||{}).name||placeIn.value;} drawRooms();});
+      placeIn.oninput=()=>{const r=rooms.find(x=>x.name===placeIn.value.trim()); room=r?r.key:null; drawRooms();};
+      ['[data-date]','[data-st]','[data-en]'].forEach(q=>s.querySelector(q).addEventListener('change',loadBusy));
+      const syncAD=()=>{tog.setAttribute('aria-pressed',allDay); times.style.display=allDay?'none':''; const rw=s.querySelector('[data-remwrap]'); if(rw) rw.style.display=allDay?'none':''; drawRooms();}; syncAD();
       tog.onclick=()=>{allDay=!allDay; syncAD();};
+      const untilW=s.querySelector('[data-untilw]'), syncRep=()=>{untilW.style.display=repeat?'flex':'none';}; syncRep();
+      pickChip(s.querySelector('[data-repeat]'),v=>{repeat=v||null; syncRep();});
       s.querySelectorAll('[data-color] [data-c]').forEach(b=>b.onclick=()=>{color=b.dataset.c; s.querySelectorAll('[data-color] [data-c]').forEach(x=>x.style.outline=x===b?'3px solid var(--ink)':'none'); b.style.outlineOffset='2px';});
       const rb=s.querySelector('[data-remind]'); if(rb) pickChip(rb,v=>{rem=v?+v:null;});
       const inv=P._inviteField?P._inviteField(s.querySelector('[data-invite]'),e):null;
+      loadBusy();
       f.onsubmit=async ev=>{ev.preventDefault();
-        const title=s.querySelector('[data-title]').value.trim(), date=s.querySelector('[data-date]').value;
+        const title=val('[data-title]').trim(), date=val('[data-date]');
         if(!title){toast('Вкажіть назву'); return;} if(!date){toast('Вкажіть дату'); return;}
         let startsAt, endsAt=null;
         if(allDay) startsAt=fromInputs(date,'00:00');
-        else {const sv=s.querySelector('[data-st]').value||'09:00', evv=s.querySelector('[data-en]').value; startsAt=fromInputs(date,sv); if(evv){endsAt=fromInputs(date,evv); if(endsAt<=startsAt){toast('Кінець має бути пізніше початку'); return;}}}
-        const body={title,startsAt:startsAt.toISOString(),endsAt:endsAt?endsAt.toISOString():null,allDay,place:s.querySelector('[data-place]').value,note:s.querySelector('[data-note]').value,color};
+        else {const sv=val('[data-st]')||'09:00', evv=val('[data-en]'); startsAt=fromInputs(date,sv); if(evv){endsAt=fromInputs(date,evv); if(endsAt<=startsAt){toast('Кінець має бути пізніше початку'); return;}}}
+        const until=val('[data-until]');
+        const body={title,startsAt:startsAt.toISOString(),endsAt:endsAt?endsAt.toISOString():null,allDay,place:placeIn.value,note:val('[data-note]'),color,
+          room:allDay?null:room,repeat,repeatUntil:repeat&&until?fromInputs(until,'00:00').toISOString():null};
         if(!e) body.remindMin=allDay?null:rem;
         if(inv) body.attendeeIds=inv();
         try{const u=e?await meApi('PATCH','/me/events/'+id,body):await meApi('POST','/me/events',body); PM.ev.set(u.id,u);
           const c=scr('calendar'); c._sel=new Date(startsAt); c._sel.setHours(0,0,0,0); c._view=new Date(c._sel.getFullYear(),c._sel.getMonth(),1);
           popIf('evform'); if(e){const es=scr('event'); if(stack.includes('event')) P.event(es,u.id);} redraw('calendar'); toast(e?'Збережено':'Подію створено');
+          refreshLive();
         }catch(err){fail(err);}};
       wire(s);}
 ,

@@ -4,6 +4,8 @@ import { signSession } from './session.js';
 import { emit } from './realtime.js';
 import { queueNotif } from './notify.js';
 import { requireEditToken } from './auth.js';
+import { occurrences, nextOccurrence, FREQS, todayWindow, TZ } from './recur.js';
+import { invalidateOffice } from './office.js';
 
 // Personal phone: calendar, tasks, notification prefs (spec 004). Everything under /me is
 // scoped to req.me — the HR edit token deliberately grants NO access to these routes.
@@ -11,7 +13,7 @@ import { requireEditToken } from './auth.js';
 // (inline buttons "Прийняти/Виконано" act on behalf of the Telegram user who pressed them).
 export const personal = express.Router();
 
-export const TZ = process.env.CHECKIN_TZ || 'Europe/Kyiv';
+export { TZ }; // office timezone (re-exported for older imports)
 export const CHECKIN_HOUR = Number(process.env.CHECKIN_HOUR || 9);
 
 // ── input helpers ────────────────────────────────────────────────────────────
@@ -67,9 +69,23 @@ personal.get('/me/contacts', async (_req, res, next) => {
 // ── calendar ─────────────────────────────────────────────────────────────────
 const toEvent = (r, attendees = []) => ({
   id: String(r.id), title: r.title, startsAt: r.starts_at, endsAt: r.ends_at, allDay: r.all_day,
-  place: r.place, note: r.note, color: r.color, organizerId: r.organizer_id,
+  place: r.place, room: r.room || null, note: r.note, color: r.color, organizerId: r.organizer_id,
+  repeat: r.repeat_freq || null, repeatUntil: r.repeat_until || null,
+  seriesStart: r.starts_at, // occurrences keep the series' first start here
   myStatus: r.my_status, remindMin: r.remind_min, attendees,
 });
+// Occurrences of an API event object inside [from, to).
+const ms = (d) => new Date(d).getTime();
+const asSeries = (ev) => ({
+  starts_at: ev.seriesStart || ev.startsAt,
+  ends_at: ev.endsAt && ev.startsAt ? new Date(ms(ev.seriesStart || ev.startsAt) + ms(ev.endsAt) - ms(ev.startsAt)) : null,
+  repeat_freq: ev.repeat, repeat_until: ev.repeatUntil,
+});
+export const expandEvent = (ev, from, to) =>
+  occurrences(asSeries(ev), from, to, TZ).map((o) => ({ ...ev, startsAt: o.start, endsAt: o.end }));
+// SQL for "series that may have an occurrence in [$2, $3)".
+const IN_RANGE = `e.starts_at < $3 AND (COALESCE(e.ends_at, e.starts_at) >= $2
+  OR (e.repeat_freq IS NOT NULL AND (e.repeat_until IS NULL OR e.repeat_until >= $2::timestamptz - interval '1 day')))`;
 
 async function loadEvents(meId, where, params) {
   const { rows } = await query(
@@ -107,11 +123,20 @@ const invitePayload = (id) => ({
   buttons: [{ text: '✅ Прийняти', data: `ev:acc:${id}` }, { text: '❌ Відхилити', data: `ev:dec:${id}` }],
 });
 
+// Any calendar write can change who is in a meeting / which room is booked → drop the
+// /office/now cache once the response is out.
+personal.use(['/me/events', '/bot/events'], (req, res, next) => {
+  if (req.method !== 'GET') res.on('finish', invalidateOffice);
+  next();
+});
+
 personal.get('/me/events', async (req, res, next) => {
   try {
     const from = when(req.query.from), to = when(req.query.to);
     if (!from || !to) return bad(res, 'from and to required');
-    res.json(await loadEvents(req.me.id, 'e.starts_at < $3 AND COALESCE(e.ends_at, e.starts_at) >= $2', [from, to]));
+    const series = await loadEvents(req.me.id, IN_RANGE, [from, to]);
+    res.json(series.flatMap((ev) => expandEvent(ev, new Date(from), new Date(to)))
+      .sort((a, b) => a.startsAt - b.startsAt));
   } catch (err) { next(err); }
 });
 
@@ -139,6 +164,12 @@ function eventFields(b, partial) {
   if ('place' in b) f.place = str(b.place, 200);
   if ('note' in b) f.note = str(b.note, 2000);
   if ('color' in b) f.color = /^#[0-9a-f]{6}$/i.test(String(b.color || '')) ? b.color : null;
+  if ('room' in b) f.room = /^(r\d{1,3}|rz:[\w-]{1,40})$/.test(String(b.room || '')) ? b.room : null;
+  if ('repeat' in b) {
+    f.repeat_freq = b.repeat ? String(b.repeat) : null;
+    if (f.repeat_freq && !FREQS.has(f.repeat_freq)) return 'repeat must be daily/weekdays/weekly/monthly';
+  }
+  if ('repeatUntil' in b) { f.repeat_until = when(b.repeatUntil); if (f.repeat_until === undefined) return 'repeatUntil invalid'; }
   return f;
 }
 
@@ -423,11 +454,14 @@ personal.get('/bot/digests', requireEditToken, async (_req, res, next) => {
     const { rows: people } = await query(
       `SELECT e.id, e.telegram_id FROM employees e LEFT JOIN notify_prefs p ON p.employee_id = e.id
        WHERE e.telegram_id IS NOT NULL AND COALESCE(p.digest, true)`);
-    const { rows: evs } = await query(
-      `SELECT a.employee_id, a.status, ev.title, ev.starts_at, ev.all_day, ev.place FROM event_attendees a JOIN events ev ON ev.id = a.event_id
-       WHERE ev.cancelled_at IS NULL AND a.status <> 'declined'
-         AND ${local('ev.starts_at')}::date <= ${today} AND ${local('COALESCE(ev.ends_at, ev.starts_at)')}::date >= ${today}
-       ORDER BY ev.all_day DESC, ev.starts_at`);
+    // Today's occurrences (repeating series expanded), all-day first.
+    const win = todayWindow(TZ);
+    const { rows: cand } = await query(
+      `SELECT a.employee_id, a.status, e.* FROM event_attendees a JOIN events e ON e.id = a.event_id
+       WHERE e.cancelled_at IS NULL AND a.status <> 'declined' AND ${IN_RANGE.replace(/\$2/g, '$1').replace(/\$3/g, '$2')}`,
+      [win.start.toISOString(), win.end.toISOString()]);
+    const evs = cand.flatMap((e) => occurrences(e, win.start, win.end, TZ).map((o) => ({ ...e, starts_at: o.start })))
+      .sort((x, y) => (y.all_day - x.all_day) || (x.starts_at - y.starts_at));
     const { rows: tasks } = await query(
       `SELECT assignee_id, text, due_at, (due_at < now()) AS overdue,
               (due_at IS NOT NULL AND ${local('due_at')}::date <= ${today}) AS due
@@ -456,10 +490,27 @@ export async function runReminders() {
   const { rows: due } = await query(
     `UPDATE event_attendees a SET reminded_at = now()
      FROM events e
-     WHERE e.id = a.event_id AND e.cancelled_at IS NULL AND NOT e.all_day
+     WHERE e.id = a.event_id AND e.cancelled_at IS NULL AND NOT e.all_day AND e.repeat_freq IS NULL
        AND a.remind_min IS NOT NULL AND a.reminded_at IS NULL AND a.status <> 'declined'
        AND e.starts_at - make_interval(mins => a.remind_min) <= now() AND e.starts_at > now() - interval '5 minutes'
      RETURNING a.employee_id, e.id, e.title, e.starts_at, e.all_day, e.place, a.remind_min`);
+  // Repeating series: remind before the next occurrence (reminded_at marks the last one sent).
+  const now = new Date();
+  const { rows: rec } = await query(
+    `SELECT a.employee_id, a.remind_min, a.reminded_at, e.* FROM event_attendees a JOIN events e ON e.id = a.event_id
+     WHERE e.cancelled_at IS NULL AND NOT e.all_day AND e.repeat_freq IS NOT NULL
+       AND a.remind_min IS NOT NULL AND a.status <> 'declined'
+       AND (e.repeat_until IS NULL OR e.repeat_until >= now() - interval '1 day') AND e.starts_at < now() + interval '2 hours'`);
+  for (const r of rec) {
+    const o = nextOccurrence(r, new Date(now - 5 * 60e3), TZ, 2 * 864e5);
+    if (!o) continue;
+    const fireAt = new Date(o.start - r.remind_min * 60e3);
+    if (now < fireAt || (r.reminded_at && new Date(r.reminded_at) >= fireAt)) continue;
+    const { rowCount } = await query(
+      `UPDATE event_attendees SET reminded_at = now() WHERE event_id = $1 AND employee_id = $2 AND (reminded_at IS NULL OR reminded_at < $3)`,
+      [r.id, r.employee_id, fireAt]);
+    if (rowCount) due.push({ ...r, starts_at: o.start });
+  }
   for (const r of due) {
     await queueNotif(r.employee_id, 'event_reminder', {
       text: `${evLine(r)}\nчерез ${r.remind_min >= 60 ? r.remind_min / 60 + ' год' : r.remind_min + ' хв'}`,

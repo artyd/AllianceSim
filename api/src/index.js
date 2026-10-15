@@ -5,6 +5,7 @@ import { verifyInitData } from './telegram.js';
 import { personal, runReminders } from './personal.js';
 import { chats, syncSystemChats, scheduleSync, cleanupAttachments } from './chats.js';
 import { requireMe } from './session.js';
+import { office } from './office.js';
 
 const app = express();
 app.use(express.json({ limit: '25mb' })); // layout blob embeds employees (+ optional base64 photos)
@@ -408,7 +409,7 @@ app.use(router);
 app.use('/api', router);
 // Personal phone (spec 004): every /me/* route is the caller's own data only.
 app.use(['/me', '/api/me'], requireMe);
-for (const r of [personal, chats]) { app.use(r); app.use('/api', r); }
+for (const r of [personal, chats, office]) { app.use(r); app.use('/api', r); }
 
 // Central error handler
 app.use((err, _req, res, _next) => {

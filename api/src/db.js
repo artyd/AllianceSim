@@ -95,6 +95,10 @@ CREATE TABLE IF NOT EXISTS events (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS events_starts ON events (starts_at);
+-- Spec 005: repeating events (expanded on read; no per-occurrence rows).
+ALTER TABLE events ADD COLUMN IF NOT EXISTS repeat_freq text;          -- null | daily | weekdays | weekly | monthly
+ALTER TABLE events ADD COLUMN IF NOT EXISTS repeat_until timestamptz;  -- last day (inclusive), null = forever
+ALTER TABLE events ADD COLUMN IF NOT EXISTS room text;                 -- booked room: 'r5' (plan room) | 'rz:<uid>' (drawn zone)
 CREATE TABLE IF NOT EXISTS event_attendees (
   event_id bigint NOT NULL REFERENCES events(id) ON DELETE CASCADE,
   employee_id text NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
