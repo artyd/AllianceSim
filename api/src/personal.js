@@ -1,11 +1,11 @@
 import express from 'express';
 import { query } from './db.js';
-import { requireMe, signSession } from './session.js';
+import { signSession } from './session.js';
 
 // Personal phone: calendar, tasks, notification prefs (spec 004). Everything here is
 // scoped to req.me — the HR edit token deliberately grants NO access to these routes.
+// Auth: requireMe is mounted on /me in index.js.
 export const personal = express.Router();
-personal.use('/me', requireMe);
 
 // ── input helpers ────────────────────────────────────────────────────────────
 const str = (v, max) => {

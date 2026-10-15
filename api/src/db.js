@@ -121,6 +121,39 @@ CREATE TABLE IF NOT EXISTS tasks (
 CREATE INDEX IF NOT EXISTS tasks_assignee ON tasks (assignee_id);
 CREATE INDEX IF NOT EXISTS tasks_author ON tasks (author_id);
 
+-- Chats: direct (1:1, unique pair key), dept (auto, one per department), office (auto,
+-- everyone linked), group (user-created). Read state is a per-member high-water mark.
+CREATE TABLE IF NOT EXISTS chats (
+  id bigserial PRIMARY KEY,
+  kind text NOT NULL,                 -- direct | dept | office | group
+  title text,
+  dept text,
+  direct_key text UNIQUE,             -- 'idA|idB' (sorted) for kind = direct
+  created_by text REFERENCES employees(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS chats_one_per_dept ON chats (dept) WHERE kind = 'dept';
+CREATE UNIQUE INDEX IF NOT EXISTS chats_one_office ON chats (kind) WHERE kind = 'office';
+CREATE TABLE IF NOT EXISTS chat_members (
+  chat_id bigint NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
+  employee_id text NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+  last_read_id bigint NOT NULL DEFAULT 0,
+  muted boolean NOT NULL DEFAULT false,
+  joined_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (chat_id, employee_id)
+);
+CREATE INDEX IF NOT EXISTS chat_members_emp ON chat_members (employee_id);
+CREATE TABLE IF NOT EXISTS messages (
+  id bigserial PRIMARY KEY,
+  chat_id bigint NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
+  sender_id text REFERENCES employees(id) ON DELETE SET NULL,
+  text text,
+  edited_at timestamptz,
+  deleted_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS messages_chat ON messages (chat_id, id);
+
 -- Which Telegram notifications a person wants (absent row = all on).
 CREATE TABLE IF NOT EXISTS notify_prefs (
   employee_id text PRIMARY KEY REFERENCES employees(id) ON DELETE CASCADE,

@@ -1,6 +1,6 @@
 # 004 — Персональный телефон в Mini App: свой календарь, задачи, реальные чаты
 
-- **Status:** in-progress (этап 1 готов)
+- **Status:** in-progress (этапы 1–2 готовы)
 - **Commit(s):** —
 - **Date:** 2026-10-15
 
@@ -150,9 +150,9 @@ Mini App: `startapp=chat_<id>` / `event_<id>` / `task_<id>` → `WebApp.initData
 - [x] Экран «нет персонажа» для непривязанных
 
 **Этап 2 — чаты 1:1 в реальном времени**
-- [ ] Таблицы `chats`, `chat_members`, `messages`; API списка/истории/отправки/правки/удаления
-- [ ] SSE `/me/session` + `/me/stream`, Caddy flush; typing, read receipts, счётчики
-- [ ] Фронт чатов на API; удалить `REPLIES`/`ensureChat`; уведомление в бот с deep-link
+- [x] Таблицы `chats`, `chat_members`, `messages`; API списка/истории/отправки/правки/удаления
+- [x] SSE `/me/session` + `/me/stream`, Caddy flush; typing, read receipts, счётчики
+- [x] Фронт чатов на API; удалить `REPLIES`/`ensureChat`; уведомление в бот с deep-link
 
 **Этап 3 — группы и файлы**
 - [ ] Авто-чаты отделов и общий чат (синхронизация при изменении сотрудника)

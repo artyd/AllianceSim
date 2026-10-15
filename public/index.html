@@ -418,6 +418,23 @@ html.tgapp #app #preview{display:none}
 .plocked .e{font-size:42px}.plocked b{font-size:15px;font-weight:800}.plocked span{font-size:12.5px;font-weight:600;color:var(--muted);line-height:1.5}
 .pnote{margin:14px 16px;padding:12px 14px;border-radius:14px;background:var(--chip);font-size:12px;font-weight:600;color:var(--muted);line-height:1.5}
 .pinfo{padding:6px 18px 18px}.pinfo .h{font-size:20px;font-weight:900;margin:6px 0 4px}.pinfo .r{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px;font-weight:700}.pinfo .r .k{color:var(--muted);width:84px;flex:none}
+.pbub{position:relative;white-space:pre-wrap;word-break:break-word;cursor:default}
+.pbub .who{display:block;font-size:11px;font-weight:900;color:var(--red);margin-bottom:2px}
+.pbub .tm{display:block;text-align:right;font-size:10px;font-weight:700;opacity:.6;margin-top:3px;white-space:nowrap}
+.pbub.me{cursor:pointer}.pbub.me.sel{outline:2px solid var(--ink);outline-offset:2px}
+.pbub.del{opacity:.6}.pbub .pdel{font-style:italic;font-weight:600}
+.pbub a{color:inherit;text-decoration:underline}
+.pday{align-self:center;font-size:11px;font-weight:800;color:var(--muted);background:var(--chip);padding:3px 10px;border-radius:999px;margin:6px 0}
+.pmore{align-self:center;font-size:12px;font-weight:800;color:var(--red);padding:6px 12px}
+.pactbar{flex:none;display:flex;gap:6px;padding:8px 12px 0;align-items:center}
+.pactbar button{padding:7px 12px;border-radius:999px;background:var(--chip);font-size:12px;font-weight:800;color:var(--ink)}
+.pactbar .lbl{flex:1;font-size:12px;font-weight:800;color:var(--muted)}
+.pcm{display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-size:11px}
+.pun{min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--red);color:#fff;font-size:11px;font-weight:900;display:grid;place-items:center}
+.pun.m{background:var(--muted)}
+.prow .sub i{color:var(--red);font-style:normal;font-weight:700}
+.av.gav{background:var(--chip);color:var(--ink);font-size:19px}
+.pinput .att{width:40px;height:40px;border-radius:50%;background:var(--chip);display:grid;place-items:center;flex:none;cursor:pointer;font-size:18px}
 .pcalbar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 8px}
 .pcalbar .ti{font-weight:900}
 .pcalbar .bk{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:var(--chip)}
@@ -622,6 +639,7 @@ html.tgapp #app #preview{display:none}
       <div class="pscreen" data-scr="contact"></div>
       <div class="pscreen" data-scr="chatlist"></div>
       <div class="pscreen" data-scr="conv"></div>
+      <div class="pscreen" data-scr="chatnew"></div>
       <div class="pscreen" data-scr="calls"></div>
       <div class="pscreen" data-scr="calling"></div>
       <div class="pscreen" data-scr="calendar"></div>
@@ -1281,7 +1299,7 @@ function moodBtns(cur){return Object.keys(MOODS).map(k=>`<button type="button" c
 // Photo avatars set background-image + size/position explicitly (the `background`
 // shorthand would reset background-size:cover from CSS → image shown top-left at
 // natural size). This centres & covers any photo aspect ratio.
-const avHTML=(e,cls='av')=>`<div class="${cls}" style="${e.photo?`background-image:url(${e.photo});background-size:cover;background-position:center;background-repeat:no-repeat`:`background:${e.color}`}">${e.photo?'':initials(e.name)}</div>`;
+const avHTML=(e,cls='av')=>`<div class="${cls}" style="${e.photo?`background-image:url(${e.photo});background-size:cover;background-position:center;background-repeat:no-repeat`:`background:${e.color||"#9AA3AA"}`}">${e.photo?'':initials(e.name)}</div>`;
 const ICO_EDIT='<svg viewBox="0 0 512 512"><path d="M362.7 19.3L314.3 67.7 444.3 197.7l48.4-48.4c25-25 25-65.5 0-90.5L453.3 19.3c-25-25-65.5-25-90.5 0zm-71 71L58.6 323.5c-10.4 10.4-18 23.3-22.2 37.4L1 481.2C-1.5 489.7 .8 498.8 7 505s15.3 8.5 23.7 6.1l120.3-35.4c14.1-4.2 27-11.8 37.4-22.2L421.7 220.3 291.7 90.3z"/></svg>';
 const ICO_UNBIND='<svg viewBox="0 0 512 512"><path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z"/></svg>';
 const ICO_TRASH='<svg viewBox="0 0 448 512"><path d="M135.2 17.7L128 32 32 32C14.3 32 0 46.3 0 64S14.3 96 32 96l384 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-96 0-7.2-14.3C307.4 6.8 296.3 0 284.2 0L163.8 0c-12.1 0-23.2 6.8-28.6 17.7zM416 128L32 128 53.2 467c1.6 25.3 22.6 45 47.9 45l245.8 0c25.3 0 46.3-19.7 47.9-45L416 128z"/></svg>';
@@ -1581,17 +1599,10 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
     pin:'<svg viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.4"/></svg>',
     coffee:'<svg viewBox="0 0 24 24"><path d="M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Z"/><path d="M17 9h2.2a2.5 2.5 0 0 1 0 5H17"/><path d="M7.5 3v2M11 3v2"/></svg>'
   };
-  const REPLIES=['Добре, зрозумів 👍','Зараз буду','Дякую, що написав!','Ок, домовились','Хвилинку, гляну','Так, все вірно'];
-  const LS_C='alliancesim.phone.chats', LS_R='alliancesim.phone.read';
   const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k)); return v==null?f:v;}catch(e){return f;}};
   const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}};
-  let chats=load(LS_C,{});
-  let readSet=new Set(load(LS_R,[]));
-  function ensureChat(id){if(!chats[id]){const e=emp(id); chats[id]=[{me:false,text:e?`Привіт! Це ${e.name.split(' ')[0]}. Пиши, якщо щось треба 🙂`:'Привіт!'}]; save(LS_C,chats);} return chats[id];}
-  function markRead(id){if(!readSet.has(id)){readSet.add(id); save(LS_R,[...readSet]); badges();}}
-  function unread(){return state.employees.filter(e=>!readSet.has(e.id)).length;}
   const setBadge=(el,n)=>{el.style.display=n?'grid':'none'; el.textContent=n>99?'99+':n;};
-  function badges(){const n=unread(), t=personal()?tasksDue():0; setBadge($('#phoneDot'),n+t); setBadge($('#chatBadge'),n); setBadge($('#taskBadge'),t);}
+  function badges(){const n=personal()?unreadTotal():0, t=personal()?tasksDue():0; setBadge($('#phoneDot'),n+t); setBadge($('#chatBadge'),n); setBadge($('#taskBadge'),t);}
 
   function tick(){const d=new Date(); $('#pclock').textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
     $('#pdate').textContent=d.toLocaleDateString('uk-UA',{weekday:'long',day:'numeric',month:'long'});}
@@ -1635,6 +1646,49 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
   function locked(s,title){
     s.innerHTML=head(title)+`<div class="plocked"><div class="e">🔒</div><b>${TG.active?'Спочатку створіть персонажа':'Доступно в Telegram'}</b><span>${TG.active?'Напишіть боту /start — і тут з’являться ваші особисті чати, календар і задачі.':'Особисті чати, календар і задачі працюють у застосунку офісу всередині Telegram-бота.'}</span></div>`; wire(s);}
   async function loadTasks(){try{PM.tasks=await meApi('GET','/me/tasks'); badges(); redraw('tasks');}catch(e){}}
+  // ── chats: cache + live stream (SSE). Server is the source of truth; this is a view. ──
+  PM.chats=null; PM.typing=new Map(); // chatId → {id, until}
+  const chatById=id=>(PM.chats||[]).find(c=>c.id===String(id));
+  function upsertChat(c){if(!PM.chats) PM.chats=[]; const i=PM.chats.findIndex(x=>x.id===c.id); if(i>=0) PM.chats[i]=c; else PM.chats.push(c); PM.chats.sort((a,b)=>new Date(b.lastAt)-new Date(a.lastAt));}
+  async function loadChats(){try{PM.chats=await meApi('GET','/me/chats'); badges(); redraw('chatlist');}catch(e){}}
+  const unreadTotal=()=>(PM.chats||[]).reduce((n,c)=>n+(c.muted?0:c.unread),0);
+  const otherOf=c=>c.kind==='direct'?(c.members.find(m=>m.id!==TG.me.id)||{}).id:null;
+  const chatTitle=c=>c.kind==='direct'?nameOf(otherOf(c)):c.kind==='office'?'Весь офіс':c.kind==='dept'?(c.dept||'Відділ'):(c.title||'Група');
+  const chatAv=c=>{if(c.kind==='direct'){const e=emp(otherOf(c)); if(e) return avHTML(e);} return `<div class="av gav">${c.kind==='office'?'🏢':c.kind==='dept'?'🏷️':'👥'}</div>`;};
+  const typingIn=id=>{const t=PM.typing.get(String(id)); return t&&t.until>Date.now()?t.id:null;};
+  const shortTime=iso=>{const d=new Date(iso), now=new Date(); if(d.toDateString()===now.toDateString()) return hm(d); if(now-d<6*864e5) return d.toLocaleDateString('uk-UA',{weekday:'short'}); return pad(d.getDate())+'.'+pad(d.getMonth()+1);};
+  const linkify=h=>h.replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>');
+  const convOpen=id=>{const s=scr('conv'); return stack.includes('conv')&&s._chat===String(id)?s:null;};
+  function openChat(id){while(stack.includes('conv')) pop(); go('conv',x=>P.conv(x,String(id)));}
+  async function openDirect(empId){
+    const e=emp(empId); if(e&&!e.tg_linked){toast('Колега ще не підключив Telegram-бота'); return;}
+    try{const c=await meApi('POST','/me/chats/direct',{employeeId:empId}); upsertChat(c); if(!stack.includes('chatlist')) go('chatlist',P.chatlist); openChat(c.id);}
+    catch(e){if(e.code===404) toast('Колега ще не підключив Telegram-бота'); else fail(e);}}
+  function connect(){
+    if(PM.es) PM.es.close();
+    if(!PM.token){setTimeout(()=>session().then(connect),5000); return;}
+    const es=PM.es=new EventSource(API+'/me/stream?t='+encodeURIComponent(PM.token));
+    const on=(t,f)=>es.addEventListener(t,ev=>{let d; try{d=JSON.parse(ev.data);}catch(e){return;} f(d);});
+    es.onopen=()=>{if(PM.down){PM.down=false; loadChats(); const c=scr('conv'); if(stack.includes('conv')&&c._catchup) c._catchup();}};
+    // Network blips: EventSource retries by itself. A 401 (expired token) closes it — re-mint.
+    es.onerror=()=>{PM.down=true; if(es.readyState===2) setTimeout(async()=>{await session(); connect();},3000);};
+    on('message',m=>{const c=chatById(m.chatId), cv=convOpen(m.chatId);
+      PM.typing.delete(m.chatId);
+      if(!c){loadChats(); return;}
+      c.last=m; c.lastAt=m.createdAt; if(m.senderId!==TG.me.id&&!(cv&&!document.hidden)) c.unread++;
+      upsertChat(c); if(cv&&cv._onMsg) cv._onMsg(m); badges(); redraw('chatlist');});
+    on('message_update',m=>{const c=chatById(m.chatId); if(c&&c.last&&c.last.id===m.id) c.last=m; const cv=convOpen(m.chatId); if(cv&&cv._onUpd) cv._onUpd(m); redraw('chatlist');});
+    on('read',r=>{const c=chatById(r.chatId); if(!c) return; const mm=c.members.find(x=>x.id===r.employeeId); if(mm) mm.lastRead=r.lastRead;
+      if(r.employeeId===TG.me.id&&c.last&&+r.lastRead>=+c.last.id){c.unread=0; badges(); redraw('chatlist');}
+      const cv=convOpen(r.chatId); if(cv&&cv._draw) cv._draw();});
+    on('typing',t=>{PM.typing.set(t.chatId,{id:t.employeeId,until:Date.now()+4500}); const cv=convOpen(t.chatId); if(cv&&cv._head) cv._head(); redraw('chatlist');
+      setTimeout(()=>{const cv2=convOpen(t.chatId); if(cv2&&cv2._head) cv2._head(); redraw('chatlist');},4700);});
+    on('chat',c=>{upsertChat(c); badges(); redraw('chatlist'); const cv=convOpen(c.id); if(cv&&cv._draw){cv._head(); cv._draw();} redraw('chatinfo');});
+    on('chat_removed',d=>{PM.chats=(PM.chats||[]).filter(c=>c.id!==d.chatId); badges(); redraw('chatlist');
+      if(convOpen(d.chatId)){while(stack.length&&stack[stack.length-1]!=='chatlist') pop(); toast('Вас більше немає в цьому чаті');}});
+  }
+  document.addEventListener('visibilitychange',()=>{const s=scr('conv'); if(!personal()||!stack.includes('conv')||!s._chat) return;
+    meApi('POST','/me/presence',{chatId:document.hidden?null:s._chat}).catch(()=>{}); if(!document.hidden&&s._readLast) s._readLast();});
   const tasksDue=()=>{if(!PM.tasks) return 0; const end=new Date(); end.setHours(23,59,59,999); return PM.tasks.filter(t=>!t.done&&t.assigneeId===TG.me.id&&t.dueAt&&new Date(t.dueAt)<=end).length;};
 
   function setZ(){scr('home').style.zIndex=0; stack.forEach((id,i)=>scr(id).style.zIndex=i+1);}
@@ -1660,26 +1714,8 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
         <div class="pactions"><button class="pact" data-call>${IC.phone}Подзвонити</button><button class="pact" data-msg>${IC.chat}Написати</button><button class="pact" data-loc>${IC.pin}Знайти</button></div>
         <div class="pfields">${e.email?fld('Email',e.email):''}${e.phone?fld('Телефон',e.phone):''}${e.ext?fld('Робочий №',e.ext):''}${fld('Відділ',e.dept)}</div></div>`;
       s.querySelector('[data-call]').onclick=()=>go('calling',x=>R.calling(x,id));
-      s.querySelector('[data-msg]').onclick=()=>{markRead(id); go('conv',x=>R.conv(x,id));};
+      s.querySelector('[data-msg]').onclick=()=>personal()?openDirect(id):go('chatlist',appFor('chatlist'));
       s.querySelector('[data-loc]').onclick=()=>{notify(id,'mark'); close(); focusEmployee(id,true);}; wire(s);}
-,
-    chatlist(s){const es=state.employees;
-      s.innerHTML=head('Чат')+`<div class="pscroll" data-list></div>`;
-      const box=s.querySelector('[data-list]');
-      if(!es.length){box.innerHTML=empty('Немає чатів','Додайте колег — і зможете листуватися з ними тут.'); wire(s); return;}
-      box.innerHTML=es.map(e=>{const c=chats[e.id]; const last=c&&c.length?c[c.length-1].text:'Почніть розмову';return rowHTML(e,last);}).join('');
-      box.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>{markRead(el.dataset.id); go('conv',x=>R.conv(x,el.dataset.id));}); wire(s);}
-,
-    conv(s,id){const e=emp(id),msgs=ensureChat(id); markRead(id);
-      s.innerHTML=`<div class="phead"><button class="bk" data-back>${IC.back}</button>${avHTML(e)}<div style="min-width:0"><div class="ti" style="font-size:14.5px">${esc(e.name.split(' ')[0])}</div><div class="sub" style="font-size:11px;color:var(--muted);font-weight:700">${STATUS[statusOf(e)].n}</div></div><div class="sp"></div><button class="bk" data-call>${IC.phone}</button></div>
-        <div class="pconv" data-conv></div><div class="pinput"><input placeholder="Повідомлення…" data-in><button class="send" data-send>${IC.send}</button></div>`;
-      const c=s.querySelector('[data-conv]'), inp=s.querySelector('[data-in]');
-      const draw=()=>{c.innerHTML=msgs.map(m=>`<div class="pbub ${m.me?'me':'them'}">${esc(m.text)}</div>`).join(''); c.scrollTop=c.scrollHeight;};
-      draw();
-      const send=()=>{const v=inp.value.trim(); if(!v)return; msgs.push({me:true,text:v}); inp.value=''; draw(); save(LS_C,chats); notify(id,'message',v);
-        setTimeout(()=>{msgs.push({me:false,text:REPLIES[Math.floor(Math.random()*REPLIES.length)]}); draw(); save(LS_C,chats);},900+Math.random()*700);};
-      s.querySelector('[data-send]').onclick=send; inp.onkeydown=ev=>{if(ev.key==='Enter')send();};
-      s.querySelector('[data-call]').onclick=()=>go('calling',x=>R.calling(x,id)); wire(s);}
 ,
     calls(s){const es=state.employees;
       s.innerHTML=head('Дзвінки')+`<div class="pscroll" data-list></div>`;
@@ -1857,6 +1893,88 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
         }catch(err){fail(err);}};
       wire(s);}
 ,
+    chatlist(s){
+      s.innerHTML=headP('Чати','<button class="act" data-new aria-label="Новий чат">+</button>')+`<div class="psearch"><input placeholder="Пошук чату" data-q></div><div class="pscroll" data-list></div>`;
+      const box=s.querySelector('[data-list]'); let q='';
+      function draw(){
+        if(!PM.chats){box.innerHTML=empty('Завантаження…',''); return;}
+        const list=PM.chats.filter(c=>!q||chatTitle(c).toLowerCase().includes(q));
+        if(!list.length){box.innerHTML=empty(q?'Нічого не знайшли':'Ще немає чатів',q?'':'Натисніть «+», щоб написати колезі.'); return;}
+        box.innerHTML=list.map(c=>{const l=c.last, ty=typingIn(c.id);
+          const prev=ty?`<i>${esc(first(ty))} друкує…</i>`:l?(l.senderId===TG.me.id?'Ви: ':(c.kind!=='direct'&&l.senderId?esc(first(l.senderId))+': ':''))+(l.deleted?'Повідомлення видалено':esc(l.text||'📎 Вкладення')):'Немає повідомлень';
+          return `<div class="prow" data-c="${c.id}">${chatAv(c)}<div class="tx"><div class="nm">${esc(chatTitle(c))}${c.muted?' 🔕':''}</div><div class="sub">${prev}</div></div><div class="meta pcm"><span>${l?shortTime(l.createdAt):''}</span>${c.unread?`<b class="pun${c.muted?' m':''}">${c.unread}</b>`:''}</div></div>`;}).join('');
+        box.querySelectorAll('[data-c]').forEach(el=>el.onclick=()=>openChat(el.dataset.c));}
+      s.querySelector('[data-q]').oninput=e=>{q=e.target.value.trim().toLowerCase(); draw();};
+      s.querySelector('[data-new]').onclick=()=>go('chatnew',P.chatnew);
+      s._redraw=draw; draw(); loadChats(); wire(s);}
+,
+    chatnew(s){
+      const es=state.employees.filter(e=>e.tg_linked&&e.id!==TG.me.id).sort((a,b)=>a.name.localeCompare(b.name,'uk'));
+      s.innerHTML=head('Новий чат')+`<div data-grp></div><div class="psearch"><input placeholder="Пошук колеги" data-q></div><div class="pscroll" data-list></div>`;
+      if(P._groupEntry) P._groupEntry(s.querySelector('[data-grp]'));
+      const box=s.querySelector('[data-list]');
+      const draw=q=>{const r=es.filter(e=>!q||(e.name+' '+(e.dept||'')).toLowerCase().includes(q));
+        box.innerHTML=r.length?r.map(e=>rowHTML(e)).join(''):empty(es.length?'Нікого не знайшли':'Поки нікого немає',es.length?'':'Колеги з’являться тут, щойно підключать Telegram-бота.');
+        box.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>{pop(); openDirect(el.dataset.id);});};
+      draw(''); s.querySelector('[data-q]').oninput=e=>draw(e.target.value.trim().toLowerCase()); wire(s);}
+,
+    conv(s,chatId){
+      const C=()=>chatById(chatId);
+      if(!C()){s.innerHTML=head('Чат')+empty('Чат недоступний',''); wire(s); return;}
+      s._chat=chatId; let msgs=[], hasMore=false, editing=null, loaded=false, lastTyping=0;
+      s.innerHTML=`<div class="phead"><button class="bk" data-back>${IC.back}</button><span data-hav></span><div style="min-width:0;flex:1;cursor:pointer" data-info><div class="ti" style="font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" data-title></div><div class="sub" style="font-size:11px;color:var(--muted);font-weight:700" data-sub></div></div><span data-hact></span></div>
+        <div class="pconv" data-conv></div><div class="pactbar" data-actbar style="display:none"></div>
+        <div class="pinput"><span data-attw></span><input placeholder="Повідомлення…" data-in maxlength="4000" enterkeyhint="send"><button class="send" data-send>${IC.send}</button></div>`;
+      const box=s.querySelector('[data-conv]'), inp=s.querySelector('[data-in]'), bar=s.querySelector('[data-actbar]');
+      s._head=()=>{const c=C(); if(!c) return; s.querySelector('[data-hav]').innerHTML=chatAv(c); s.querySelector('[data-title]').textContent=chatTitle(c)+(c.muted?' 🔕':'');
+        const ty=typingIn(chatId), e=c.kind==='direct'?emp(otherOf(c)):null;
+        s.querySelector('[data-sub]').textContent=ty?(c.kind==='direct'?'друкує…':first(ty)+' друкує…'):(e?STATUS[statusOf(e)].n:`${c.members.length} учасників`);
+        s.querySelector('[data-hact]').innerHTML=c.kind==='direct'&&P._call?`<button class="bk" data-call>${IC.phone}</button>`:'';
+        const cb=s.querySelector('[data-call]'); if(cb) cb.onclick=()=>P._call(otherOf(c));};
+      const tick=m=>{const c=C(), others=c.members.filter(x=>x.id!==TG.me.id), n=others.filter(x=>+x.lastRead>=+m.id).length;
+        return n?(c.kind==='direct'||others.length<2?' ✓✓':` ✓✓ ${n}`):' ✓';};
+      const bubble=(m,prev)=>{const mine=m.senderId===TG.me.id, c=C();
+        const day=!prev||new Date(prev.createdAt).toDateString()!==new Date(m.createdAt).toDateString()?`<div class="pday">${esc(dayLabel(new Date(m.createdAt)))}</div>`:'';
+        const who=!mine&&c.kind!=='direct'&&(!prev||prev.senderId!==m.senderId||day)?`<b class="who">${esc(nameOf(m.senderId))}</b>`:'';
+        const body=m.deleted?'<i class="pdel">Повідомлення видалено</i>':((m.attachment&&P._att?P._att(m):'')+(m.text?linkify(esc(m.text)):''));
+        return day+`<div class="pbub ${mine?'me':'them'}${m.deleted?' del':''}${editing&&editing.id===m.id?' sel':''}" data-m="${m.id}">${who}${body}<span class="tm">${m.editedAt&&!m.deleted?'ред. · ':''}${hm(new Date(m.createdAt))}${mine&&!m.deleted?tick(m):''}</span></div>`;};
+      const nearBottom=()=>box.scrollHeight-box.scrollTop-box.clientHeight<80;
+      s._draw=(keep)=>{const stick=keep===undefined?nearBottom():false, h0=box.scrollHeight, t0=box.scrollTop;
+        box.innerHTML=!loaded?empty('Завантаження…',''):(hasMore?'<button class="pmore" data-more>Попередні повідомлення</button>':'')+(msgs.length?msgs.map((m,i)=>bubble(m,msgs[i-1])).join(''):empty('Почніть розмову','Повідомлення бачите лише ви та учасники чату.'));
+        if(keep==='top') box.scrollTop=box.scrollHeight-h0+t0; else if(stick||keep==='bottom') box.scrollTop=box.scrollHeight;};
+      const readUpTo=id=>{const c=C(); if(c){c.unread=0; badges(); redraw('chatlist');} meApi('POST',`/me/chats/${chatId}/read`,{upTo:id}).catch(()=>{});};
+      s._readLast=()=>{const m=msgs[msgs.length-1]; if(m) readUpTo(m.id);};
+      const merge=m=>{const i=msgs.findIndex(x=>x.id===m.id); if(i>=0) msgs[i]=m; else {msgs.push(m); msgs.sort((a,b)=>a.id-b.id);}};
+      s._onMsg=m=>{const bottom=nearBottom()||m.senderId===TG.me.id; merge(m); s._draw(bottom?'bottom':null); if(m.senderId!==TG.me.id&&!document.hidden) readUpTo(m.id); s._head();};
+      s._onUpd=m=>{merge(m); if(editing&&editing.id===m.id&&m.deleted) endEdit(); s._draw(null);};
+      s._catchup=async()=>{const last=msgs[msgs.length-1]; try{const r=await meApi('GET',`/me/chats/${chatId}/messages${last?'?after='+last.id:''}`); r.messages.forEach(merge); s._draw(); s._readLast();}catch(e){}};
+      async function loadOlder(){try{const r=await meApi('GET',`/me/chats/${chatId}/messages?before=${msgs[0].id}`); msgs=r.messages.concat(msgs); hasMore=r.hasMore; s._draw('top');}catch(e){fail(e);}}
+      function endEdit(){editing=null; bar.style.display='none'; inp.value=''; s._draw(null);}
+      function select(m){
+        if(editing) endEdit();
+        bar.style.display='flex';
+        bar.innerHTML=`<span class="lbl">Повідомлення</span>${m.text?'<button data-a="edit">✏️ Змінити</button>':''}<button data-a="del">🗑 Видалити</button><button data-a="x">✕</button>`;
+        bar.querySelector('[data-a=x]').onclick=()=>{bar.style.display='none';};
+        const eb=bar.querySelector('[data-a=edit]'); if(eb) eb.onclick=()=>{editing=m; inp.value=m.text; inp.focus(); bar.innerHTML='<span class="lbl">✏️ Редагування</span><button data-a="x">✕</button>'; bar.querySelector('[data-a=x]').onclick=endEdit; s._draw(null);};
+        confirm2(bar.querySelector('[data-a=del]'),'Точно?',async()=>{bar.style.display='none'; try{s._onUpd(await meApi('DELETE','/me/messages/'+m.id));}catch(e){fail(e);}});}
+      box.onclick=ev=>{const a=ev.target.closest('a'); if(a){ev.preventDefault(); try{Telegram.WebApp.openLink(a.href);}catch(e){window.open(a.href,'_blank');} return;}
+        if(ev.target.closest('[data-more]')){loadOlder(); return;}
+        const b=ev.target.closest('.pbub.me:not(.del)'); if(b){const m=msgs.find(x=>x.id===b.dataset.m); if(m) select(m);}};
+      async function send(){const v=inp.value.trim(); if(!v) return;
+        if(editing){const m=editing; endEdit(); try{s._onUpd(await meApi('PATCH','/me/messages/'+m.id,{text:v}));}catch(e){inp.value=v; fail(e);} return;}
+        inp.value='';
+        try{s._onMsg(await meApi('POST',`/me/chats/${chatId}/messages`,{text:v}));}catch(e){inp.value=v; fail(e);}}
+      s.querySelector('[data-send]').onclick=send;
+      inp.onkeydown=ev=>{if(ev.key==='Enter'){ev.preventDefault(); send();}};
+      inp.oninput=()=>{if(Date.now()-lastTyping>3000&&inp.value){lastTyping=Date.now(); meApi('POST',`/me/chats/${chatId}/typing`).catch(()=>{});}};
+      s.querySelector('[data-info]').onclick=()=>{const c=C(); if(c.kind==='direct'){const id=otherOf(c); if(emp(id)) go('contact',x=>R.contact(x,id));} else if(P.chatinfo) go('chatinfo',x=>P.chatinfo(x,chatId));};
+      if(P._attach) P._attach(s.querySelector('[data-attw]'),chatId,m=>s._onMsg(m));
+      meApi('POST','/me/presence',{chatId}).catch(()=>{});
+      s._stop=()=>{s._chat=null; meApi('POST','/me/presence',{chatId:null}).catch(()=>{});};
+      s._head(); s._draw();
+      meApi('GET',`/me/chats/${chatId}/messages`).then(r=>{msgs=r.messages; hasMore=r.hasMore; loaded=true; s._draw('bottom'); s._readLast();}).catch(e=>{loaded=true; s._draw(); fail(e);});
+      wire(s);}
+,
     tasks(s){
       if(!s._tab) s._tab='mine';
       s.innerHTML=headP('Задачі','<button class="act" data-new aria-label="Нова задача">+</button>')+
@@ -1929,7 +2047,7 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
       wire(s);}
   };
   // Personal-only apps show a lock screen outside Telegram / before the character exists.
-  const PERSONAL_ONLY={calendar:'Календар',tasks:'Задачі'};
+  const PERSONAL_ONLY={calendar:'Календар',tasks:'Задачі',chatlist:'Чати'};
   const appFor=id=>personal()&&P[id]?P[id]:(PERSONAL_ONLY[id]?(s=>locked(s,PERSONAL_ONLY[id])):R[id]);
 
   async function personalStart(){
@@ -1939,6 +2057,17 @@ const PHONE={}; // hooks the phone exposes to init (personalStart, openDeep)
     setInterval(()=>{if(PM.exp*1000-Date.now()<3600e3) session();},10*60e3);
     meApi('GET','/me/contacts').then(l=>{PM.contacts=new Map(l.map(c=>[c.id,c.username]));}).catch(()=>{});
     loadTasks();
+    await loadChats();
+    connect();
+    // Deep link from a bot notification: ?open=chat_12 | event_5 | task_3 (or Telegram start_param).
+    let deep=params.get('open'); try{deep=deep||(Telegram.WebApp.initDataUnsafe||{}).start_param;}catch(e){}
+    const m=/^(chat|event|task)_(\d+)$/.exec(deep||'');
+    if(m) setTimeout(()=>openDeep(m[1],m[2]),400);
+  }
+  async function openDeep(kind,id){
+    if(kind==='chat'){if(!chatById(id)) await loadChats(); if(!chatById(id)){toast('Чат недоступний'); return;} go('chatlist',P.chatlist); openChat(id);}
+    else if(kind==='event'){try{const e=await meApi('GET','/me/events/'+id); PM.ev.set(e.id,e); go('calendar',P.calendar); go('event',x=>P.event(x,e.id));}catch(e){toast('Подію не знайдено');}}
+    else if(kind==='task'){go('tasks',P.tasks); await loadTasks(); if((PM.tasks||[]).some(t=>t.id===id)) go('taskform',x=>P.taskform(x,id));}
   }
   PHONE.personalStart=personalStart;
 

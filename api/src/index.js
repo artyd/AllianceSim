@@ -3,6 +3,8 @@ import { query, initSchema, migrateBlobEmployees } from './db.js';
 import { requireEditToken, writeAuth } from './auth.js';
 import { verifyInitData } from './telegram.js';
 import { personal } from './personal.js';
+import { chats } from './chats.js';
+import { requireMe } from './session.js';
 
 const app = express();
 app.use(express.json({ limit: '25mb' })); // layout blob embeds employees (+ optional base64 photos)
@@ -362,12 +364,12 @@ router.post('/coffee', async (req, res, next) => {
 router.get('/notifications/pending', requireEditToken, async (_req, res, next) => {
   try {
     const { rows } = await query(
-      `SELECT n.id, n.kind, n.text, n.from_name, e.telegram_id, e.name
+      `SELECT n.id, n.kind, n.text, n.from_name, n.payload, e.telegram_id, e.name
        FROM notifications n JOIN employees e ON e.id = n.employee_id
        WHERE n.sent_at IS NULL AND e.telegram_id IS NOT NULL
        ORDER BY n.id LIMIT 100`
     );
-    res.json(rows.map((r) => ({ id: r.id, kind: r.kind, text: r.text, from_name: r.from_name, name: r.name, telegram_id: String(r.telegram_id) })));
+    res.json(rows.map((r) => ({ id: r.id, kind: r.kind, text: r.text, from_name: r.from_name, payload: r.payload, name: r.name, telegram_id: String(r.telegram_id) })));
   } catch (err) {
     next(err);
   }
@@ -387,8 +389,9 @@ router.post('/notifications/:id/sent', requireEditToken, async (req, res, next) 
 //  - Direct smoke tests against 127.0.0.1:8011/api/* and /health both resolve.
 app.use(router);
 app.use('/api', router);
-app.use(personal);
-app.use('/api', personal);
+// Personal phone (spec 004): every /me/* route is the caller's own data only.
+app.use(['/me', '/api/me'], requireMe);
+for (const r of [personal, chats]) { app.use(r); app.use('/api', r); }
 
 // Central error handler
 app.use((err, _req, res, _next) => {

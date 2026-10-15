@@ -370,7 +370,26 @@ const NOTIF_TEXT = {
   call: (_t, who, me) => `📞 ${me}, ${who} телефонує тобі з офісу!`,
   mark: (_t, who, me) => `📍 ${me}, ${who} шукає тебе в офісі — відкрив твою картку.`,
   coffee: (t, who, me) => `☕ ${me}, нове замовлення кави\nВід: ${who}\nЗамовлення: ${t}`,
+  // Personal phone (spec 004) — `p` is the payload the api queued alongside.
+  chat: (t, who, me, p) => (p && p.chatTitle
+    ? `💬 ${who} у «${p.chatTitle}»:\n${t || '…'}`
+    : `💬 ${me}, нове повідомлення від ${who}:\n${t || '…'}`),
 };
+
+// Mini App deep link: WEBAPP_URL?open=chat_12 → the phone opens straight on that screen.
+function openUrl(open) {
+  try { const u = new URL(WEBAPP_URL); u.searchParams.set('open', open); return u.toString(); } catch (e) { return null; }
+}
+// Inline keyboard for a queued notification: action buttons (callback data) + "open" button.
+function notifKeyboard(p) {
+  if (!p) return undefined;
+  const kb = new InlineKeyboard();
+  let any = false;
+  for (const b of p.buttons || []) { kb.text(b.text, b.data); any = true; }
+  const url = p.open && WEBAPP_URL ? openUrl(p.open) : null;
+  if (url) { if (any) kb.row(); kb.webApp(p.openText || '📱 Відкрити', url); any = true; }
+  return any ? kb : undefined;
+}
 async function drainNotifications() {
   let pending = [];
   try { pending = (await api.pending()) || []; } catch (e) { return; }
@@ -378,7 +397,8 @@ async function drainNotifications() {
     const make = NOTIF_TEXT[n.kind]; if (!make) { await api.markSent(n.id).catch(() => {}); continue; }
     const who = n.from_name || 'Хтось';
     const me = firstOf(n.name) || 'колего';
-    try { await bot.api.sendMessage(n.telegram_id, make(n.text, who, me)); } catch (e) { /* blocked → still mark sent to avoid a stuck queue */ }
+    const kb = notifKeyboard(n.payload);
+    try { await bot.api.sendMessage(n.telegram_id, make(n.text, who, me, n.payload), kb ? { reply_markup: kb } : undefined); } catch (e) { /* blocked → still mark sent to avoid a stuck queue */ }
     await api.markSent(n.id).catch(() => {});
   }
 }
