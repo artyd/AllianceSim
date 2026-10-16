@@ -6,9 +6,11 @@
   "scripts": {
     "test": "node run.mjs",
     "test:api": "node run.mjs api",
-    "test:ui": "node run.mjs ui"
+    "test:ui": "node run.mjs ui",
+    "test:pw": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "embedded-postgres": "^18.4.0-beta.0",
     "eslint-scope": "^9.1.2",
     "espree": "^11.2.0",

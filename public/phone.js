@@ -49,7 +49,7 @@ export function initPhone(O){
     const chats=p?(PM.chats||[]).slice().sort((x,y)=>(y.unread>0)-(x.unread>0)||new Date(y.lastAt||0)-new Date(x.lastAt||0)).slice(0,2):[];
     const un=p?unreadTotal():0; set('wChatN',un?un+' нові':'');
     html('wChatList',chats.length?chats.map(c=>`<span class="cr">${chatAv(c)}<span class="t"><b>${esc(chatTitle(c))}</b><span>${!c.last?'Ще немає повідомлень':c.last.deleted?'Повідомлення видалено':esc(c.last.text||'Вкладення')}</span></span>${c.unread?`<span class="n">${c.unread}</span>`:''}</span>`).join(''):`<span class="tr e">${p?'Чатів поки немає':'Особисті чати — у Telegram'}</span>`);
-    if(p){const me=emp(TG.me.id)||TG.me; html('wMeAv',avHTML(me)); set('wMeSt',(STATUS[statusOf(me)]||{}).n||'AllianceOS'); html('wMood',Object.keys(MOODS).map(k=>`<button type="button" class="mb" data-mood-set="${k}" aria-label="${MOODS[k].n}" aria-pressed="${(me.mood||'good')===k}">${moodSvg(k)}</button>`).join('')); $('#wMood').querySelectorAll('[data-mood-set]').forEach(b=>b.onclick=ev=>{ev.stopPropagation(); haptic(); setMe('mood',b.dataset.moodSet);});}
+    {const me=p?(emp(TG.me.id)||TG.me):null; if(me){html('wMeAv',avHTML(me)); set('wMeSt',(STATUS[statusOf(me)]||{}).n||'AllianceOS');} html('wMood',Object.keys(MOODS).map(k=>`<button type="button" class="mb" data-mood-set="${k}" aria-label="${MOODS[k].n}" aria-pressed="${!!me&&(me.mood||'good')===k}">${moodSvg(k)}</button>`).join('')); $('#wMood').querySelectorAll('[data-mood-set]').forEach(b=>b.onclick=ev=>{ev.stopPropagation(); haptic(); setMe('mood',b.dataset.moodSet);});}
   }
   // ── app chrome (spec 006): large collapsing titles, bottom sheets, floating tab bars ──
   const SHEETS=new Set(['evform','taskform','chatnew','groupnew','pick','wall']);
@@ -182,9 +182,13 @@ export function initPhone(O){
   // Floating glass tab bar, shared by the screens of one group (Зв’язок / Мій день).
   const tabbar=document.createElement('nav'); tabbar.className='ptabbar'; tabbar.setAttribute('aria-label','Розділи'); wrap.appendChild(tabbar);
   tabbar.onclick=e=>{const b=e.target.closest('[data-tab-go]'); if(!b) return; const id=b.dataset.tabGo, cur=stack[stack.length-1]; if(id===cur) return;
-    haptic('light'); pop(); go(id,appFor(id));};
+    // Tabs switch instantly (no zoom/fade through the home screen), like iOS.
+    haptic('light'); phone.classList.add('notrans'); pop(); go(id,appFor(id));
+    requestAnimationFrame(()=>requestAnimationFrame(()=>phone.classList.remove('notrans')));};
   function appMode(){const top=stack[stack.length-1];
     stack.length?phone.setAttribute('data-app',''):phone.removeAttribute('data-app');
+    // The strip under the island / Telegram header takes the open app’s background, not the wallpaper.
+    if(top) phone.style.setProperty('--topbg',getComputedStyle(scr(top)).backgroundColor);
     const g=top&&TABS[top]; tabbar.classList.toggle('on',!!g);
     if(g) tabbar.innerHTML=TABDEF[g].map(([id,l,ic])=>`<button type="button" data-tab-go="${id}" aria-current="${id===top?'page':'false'}">${ic}<span>${l}</span></button>`).join('');}
   function go(id,build){if(build)build(scr(id)); if(!stack.includes(id))stack.push(id); setZ(); appMode(); const s=scr(id); void s.offsetWidth; s.classList.add('show');}
