@@ -1,6 +1,7 @@
 // AllianceOS — the phone (personal Mini App + office demo), split out of index.html (spec 005 F).
 // Office internals come in through `O` (see the initPhone(...) call in index.html):
 // constants/functions by value, `state` through a getter because the office reassigns it.
+import { initGamesUI } from './games.js';
 export function initPhone(O){
   const {$, API, DEPT_COLORS, MOODS, ROOMS, STATUS, TG, ZONES, apiEmpWrite, app, applySettings, avHTML, empUpsert, esc, focusEmployee, getToken, params, refreshLive, renderLabels, renderPeople, roomAt, roomName, settings, statusOf, syncAvatars, toast}=O;
   const PHONE={}; // hooks for the office init: personalStart (and future deep links)
@@ -52,7 +53,7 @@ export function initPhone(O){
     {const me=p?(emp(TG.me.id)||TG.me):null; if(me){html('wMeAv',avHTML(me)); set('wMeSt',(STATUS[statusOf(me)]||{}).n||'AllianceOS');} html('wMood',Object.keys(MOODS).map(k=>`<button type="button" class="mb" data-mood-set="${k}" aria-label="${MOODS[k].n}" aria-pressed="${!!me&&(me.mood||'good')===k}">${moodSvg(k)}</button>`).join('')); $('#wMood').querySelectorAll('[data-mood-set]').forEach(b=>b.onclick=ev=>{ev.stopPropagation(); haptic(); setMe('mood',b.dataset.moodSet);});}
   }
   // ── app chrome (spec 006): large collapsing titles, bottom sheets, floating tab bars ──
-  const SHEETS=new Set(['evform','taskform','chatnew','groupnew','pick','wall','meedit']);
+  const SHEETS=new Set(['evform','taskform','chatnew','groupnew','pick','wall','meedit','gsetup']);
   const TABS={chatlist:'comm',calls:'comm',contacts:'comm',calendar:'day',tasks:'day'};
   const TABDEF={comm:[['chatlist','Чати',IC.chat],['calls','Дзвінки',IC.phone],['contacts','Контакти','<svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3.4"/><path d="M2 19a6 6 0 0 1 12 0"/><path d="M16 5a3.4 3.4 0 0 1 0 6.8M22 19a6 6 0 0 0-4.5-5.8"/></svg>']],
     day:[['calendar','Календар','<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9.5h16M8 3v4M16 3v4"/></svg>'],['tasks','Задачі','<svg viewBox="0 0 24 24"><path d="M9 4h6v2.5H9zM8 5H5v15h14V5h-3M8.5 13l2.2 2.2L15 11"/></svg>']]};
@@ -130,6 +131,10 @@ export function initPhone(O){
   const chatTitle=c=>c.kind==='direct'?nameOf(otherOf(c)):c.kind==='office'?'Весь офіс':c.kind==='dept'?(c.dept||'Відділ'):(c.title||'Група');
   const chatAv=c=>{if(c.kind==='direct'){const e=emp(otherOf(c)); if(e) return avHTML(e);} return `<div class="av gav">${c.kind==='office'?'🏢':c.kind==='dept'?'🏷️':'👥'}</div>`;};
   const REACT=['👍','❤️','😂','😮','😢','🙏'];
+  // Spec 007: a poll inside an announcement — tap to vote, live percentages.
+  const pollHTML=m=>{const p=m.poll, total=p.votes.reduce((a,v)=>a+v.length,0), mine=p.votes.findIndex(v=>v.includes(TG.me.id));
+    return `<div class="ppoll">${p.options.map((o,i)=>{const n=p.votes[i].length, pc=total?Math.round(n*100/total):0;
+      return `<button type="button" class="ppo${mine===i?' on':''}" data-pv="${i}" data-m="${m.id}"><span class="bar" style="width:${mine>=0?pc:0}%"></span><span class="tx">${esc(o)}</span>${mine>=0?`<b>${pc}%</b>`:''}</button>`;}).join('')}<span class="pft">${total} ${total===1?'голос':total>1&&total<5?'голоси':'голосів'}${mine<0?' · оберіть варіант':''}</span></div>`;};
   const senderName=id=>id?nameOf(id):'HR'; // HR web announcements have no sender
   const typingIn=id=>{const t=PM.typing.get(String(id)); return t&&t.until>Date.now()?t.id:null;};
   const shortTime=iso=>{const d=new Date(iso), now=new Date(); if(d.toDateString()===now.toDateString()) return hm(d); if(now-d<6*864e5) return d.toLocaleDateString('uk-UA',{weekday:'short'}); return pad(d.getDate())+'.'+pad(d.getMonth()+1);};
@@ -167,6 +172,9 @@ export function initPhone(O){
     on('event',e=>{PM.ev.set(e.id,e); redraw('calendar'); const es=scr('event'); if(stack.includes('event')&&es._id===e.id) P.event(es,e.id); loadInvites();});
     on('event_removed',d=>{PM.ev.delete(d.id); redraw('calendar'); const es=scr('event'); if(stack.includes('event')&&es._id===d.id){while(stack.includes('event')) pop(); toast('Подію скасовано');} loadInvites();});
     on('task',t=>{if(!PM.tasks) return; const i=PM.tasks.findIndex(x=>x.id===t.id); if(i>=0) PM.tasks[i]=t; else PM.tasks.unshift(t); redraw('tasks'); badges();});
+    // Spec 007: mini-games — room updates and invites (island banner)
+    on('game',g=>{if(GM) GM.onGame(g);});
+    on('game_invite',d=>{if(GM) GM.onInvite(d);});
     on('task_removed',d=>{if(!PM.tasks) return; PM.tasks=PM.tasks.filter(x=>x.id!==d.id); redraw('tasks'); badges();});
     on('chat_removed',d=>{PM.chats=(PM.chats||[]).filter(c=>c.id!==d.chatId); badges(); redraw('chatlist');
       if(convOpen(d.chatId)){while(stack.length&&stack[stack.length-1]!=='chatlist') pop(); toast('Вас більше немає в цьому чаті');}});
@@ -209,6 +217,12 @@ export function initPhone(O){
     if(t&&t.kind==='msg'){const m=t.data, c=chatById(m.chatId); n.classList.add('big');
       el.innerHTML=`${c?chatAv(c):''}<span class="bt"><b>${esc(c?chatTitle(c):senderName(m.senderId))}</b><span>${esc(m.text||(m.attachment?'Вкладення':'Повідомлення'))}</span></span><button type="button" class="ib">Відповісти</button>`;
       n.onclick=()=>{ISL.t=null; widgets(); if(!app.dataset.phone) open(); lockHide(); if(!stack.includes('chatlist')) go('chatlist',P.chatlist); openChat(m.chatId);}; return;}
+    if(t&&t.kind==='invite'&&GM){const d=t.data; n.classList.add('big');
+      el.innerHTML=`${GM.icHTML(d.kind,'sm')}<span class="bt"><b>${esc(d.from)}</b><span>запрошує: ${esc(d.title)}</span></span><button type="button" class="ib ok" data-ia>Прийняти</button><button type="button" class="ib x" data-ix aria-label="Відхилити">✕</button>`;
+      el.querySelector('[data-ia]').onclick=e=>{e.stopPropagation(); lockHide(); GM.respond(d.gameId,true);};
+      el.querySelector('[data-ix]').onclick=e=>{e.stopPropagation(); GM.respond(d.gameId,false);};
+      n.onclick=()=>{ISL.t=null; widgets(); lockHide(); GM.openRoom(d.gameId);}; return;}
+    if(t&&t.kind==='ginfo'&&GM){n.classList.add('live'); el.innerHTML=`<i></i>${esc(t.data.text)}`; n.onclick=()=>{ISL.t=null; widgets(); GM.openRoom(t.data.gameId);}; return;}
     if(t&&t.kind==='rec'){n.classList.add('live'); const s=Math.floor((Date.now()-t.data)/1000); el.innerHTML=`<i class="rec"></i>${Math.floor(s/60)}:${pad(s%60)}<span class="wave"><b></b><b></b><b></b><b></b><b></b><b></b><b></b></span>`; return;}
     if(t&&t.kind==='coffee'){n.classList.add('live'); const k=Math.min(1,(Date.now()-t.data.at)/(t.until-t.data.at));
       el.innerHTML=`<i class="cof">${IC.coffee}</i>${esc(t.data.label)}<span class="prog"><b style="width:${Math.round(k*100)}%"></b></span>`; return;}
@@ -510,6 +524,9 @@ export function initPhone(O){
       wire(s);}
   };
   scr('settings')._redraw=()=>settingsView(scr('settings'));
+  // Spec 007: mini-games module
+  const GM=initGamesUI({meApi,toast,haptic,hapticOk,wire,go,back,pop,popIf,scr,body,esc,personal,TG,emp,avHTML,IC,islandTemp,islandEnd,segHTML,CHEV,empty,stackTop:()=>stack[stack.length-1],load,save});
+  R.games=x=>GM.screens.games(x); R.gtop=x=>GM.screens.gtop(x);
 
   // ── personal apps (Telegram user with a linked character) ──
   const P={
@@ -703,9 +720,10 @@ export function initPhone(O){
       const bubble=(m,prev)=>{const mine=!!m.senderId&&m.senderId===TG.me.id, c=C()||{kind:'direct',members:[]};
         const day=!prev||new Date(prev.createdAt).toDateString()!==new Date(m.createdAt).toDateString()?`<div class="pday">${esc(dayLabel(new Date(m.createdAt)))}</div>`:'';
         if(m.kind==='system') return day+`<div class="psys" data-m="${m.id}">${linkify(esc(m.text||''))}</div>`;
+        if(m.kind==='game'&&GM) return day+GM.cardHTML(m,mine);
         const ann=m.kind==='announce';
         const who=ann?`<b class="who">📢 Оголошення · ${esc(senderName(m.senderId))}</b>`:(!mine&&c.kind!=='direct'&&(!prev||prev.senderId!==m.senderId||day||prev.kind)?`<b class="who">${esc(senderName(m.senderId))}</b>`:'');
-        const body=m.deleted?'<i class="pdel">Повідомлення видалено</i>':((m.quote?quoteHTML(m.quote):'')+(m.attachment&&P._att?P._att(m):'')+(m.text?linkify(esc(m.text)):''));
+        const body=m.deleted?'<i class="pdel">Повідомлення видалено</i>':((m.quote?quoteHTML(m.quote):'')+(m.attachment&&P._att?P._att(m):'')+(m.text?linkify(esc(m.text)):'')+(m.poll?pollHTML(m):''));
         const sel=(editing&&editing.id===m.id)||(replying&&replying.id===m.id);
         return day+`<div class="pbub ${mine?'me':'them'}${ann?' ann':''}${m.deleted?' del':''}${sel?' sel':''}" data-m="${m.id}">${who}${body}<span class="tm">${m.editedAt&&!m.deleted?'ред. · ':''}${hm(new Date(m.createdAt))}${mine&&!m.deleted?tick(m):''}</span></div>${m.deleted?'':rxHTML(m)}`;};
       const nearBottom=()=>box.scrollHeight-box.scrollTop-box.clientHeight<80;
@@ -739,7 +757,9 @@ export function initPhone(O){
         const eb=bar.querySelector('[data-a=edit]'); if(eb) eb.onclick=()=>{editing=m; inp.value=m.text; inp.focus(); bar.innerHTML='<span class="lbl">✏️ Редагування</span><button data-a="x">✕</button>'; bar.querySelector('[data-a=x]').onclick=endMode; s._draw(null);};
         const db=bar.querySelector('[data-a=del]'); if(db) confirm2(db,'Точно?',async()=>{bar.style.display='none'; try{s._onUpd(await meApi('DELETE','/me/messages/'+m.id));}catch(e){fail(e);}});}
       async function react(id,emoji){try{s._onUpd(await meApi('POST',`/me/messages/${id}/react`,{emoji}));}catch(e){fail(e);}}
-      box.onclick=ev=>{const im=ev.target.closest('img.pimg'); if(im){openExt(im.src); return;}
+      box.onclick=ev=>{const gb=ev.target.closest('[data-gm]'); if(gb&&GM){GM.cardAction(gb); return;}
+        const pv=ev.target.closest('[data-pv]'); if(pv){haptic(); meApi('POST',`/me/messages/${pv.dataset.m}/vote`,{option:+pv.dataset.pv}).then(u=>s._onUpd(u)).catch(fail); return;}
+        const im=ev.target.closest('img.pimg'); if(im){openExt(im.src); return;}
         const a=ev.target.closest('a'); if(a){ev.preventDefault(); openExt(a.href); return;}
         if(ev.target.closest('audio')) return;
         if(ev.target.closest('[data-more]')){loadOlder(); return;}
@@ -1007,12 +1027,14 @@ export function initPhone(O){
     showTour();
     // Deep link from a bot notification: ?open=chat_12 | event_5 | task_3 (or Telegram start_param).
     let deep=params.get('open'); try{deep=deep||(Telegram.WebApp.initDataUnsafe||{}).start_param;}catch(e){}
-    const m=/^(chat|event|task)_(\d+)$/.exec(deep||'');
+    const m=/^(chat|event|task|game)_(\d+)$/.exec(deep||'');
+    if(deep==='games') setTimeout(()=>go('games',appFor('games')),400);
     if(m) setTimeout(()=>openDeep(m[1],m[2]),400);
   }
   async function openDeep(kind,id){
     if(kind==='chat'){if(!chatById(id)) await loadChats(); if(!chatById(id)){toast('Чат недоступний'); return;} go('chatlist',P.chatlist); openChat(id);}
     else if(kind==='event'){try{const e=await meApi('GET','/me/events/'+id); PM.ev.set(e.id,e); go('calendar',P.calendar); go('event',x=>P.event(x,e.id));}catch(e){toast('Подію не знайдено');}}
+    else if(kind==='game'){if(GM) GM.openRoom(id);}
     else if(kind==='task'){go('tasks',P.tasks); await loadTasks(); if((PM.tasks||[]).some(t=>t.id===id)) go('taskform',x=>P.taskform(x,id));}
   }
   PHONE.personalStart=personalStart;
