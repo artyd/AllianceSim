@@ -32,7 +32,7 @@ async function reset() {
   if (rows.length) await db.query(`TRUNCATE ${rows.map((r) => '"' + r.tablename + '"').join(', ')} RESTART IDENTITY CASCADE`);
   // back to the seeded people (fields features may have changed), links included
   await db.query(`DELETE FROM employees WHERE id <> ALL($1::text[])`, [PEOPLE.map((p) => p.id)]);
-  await db.query(`UPDATE employees SET telegram_id = NULL`);
+  await db.query(`UPDATE employees SET telegram_id = NULL, status_note = NULL, status_until = NULL, hired_on = NULL, birthday = NULL`);
   await seed(PEOPLE.map((p) => ({ ...p, extra: { status: 'office', mood: 'good', seat: null, photo: null, color: '#5B76E6' } })));
   if (fs.existsSync(LAYOUT)) await api('PUT', '/layout', { data: JSON.parse(fs.readFileSync(LAYOUT, 'utf8')) });
   await new Promise((r) => setTimeout(r, 1200)); // debounced office/dept chat sync after employee writes

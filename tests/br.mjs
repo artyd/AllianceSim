@@ -25,12 +25,14 @@ export async function launch() {
 }
 export async function close() { await browser.close(); }
 
-export async function openAs(who, { tour = false } = {}) {
+export async function openAs(who, { tour = false, myday = false } = {}) {
   const ctx = await browser.createBrowserContext();
   const page = await ctx.newPage();
   await page.setViewport({ width: 390, height: 800, deviceScaleFactor: 1 });
   // The first-run tour overlay is covered by its own scenario; skip it elsewhere.
   if (!tour) await page.evaluateOnNewDocument(() => { try { localStorage.setItem('alliancesim.tour.v1', '1'); } catch (e) {} });
+  // «Мій день» opens once a day — keep it out of scenarios that don't test it
+  if (!myday) await page.evaluateOnNewDocument(() => { try { localStorage.setItem('alliancesim.myday', JSON.stringify(new Date().toDateString())); } catch (e) {} });
   page.errors = [];
   page.on('pageerror', (e) => page.errors.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !/favicon|Failed to load resource/.test(m.text())) page.errors.push('console: ' + m.text()); });

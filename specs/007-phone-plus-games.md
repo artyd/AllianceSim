@@ -1,6 +1,6 @@
 # 007 — Phone+: day screen, search, rooms, statuses, polls, pulse, onboarding, PWA, mini-games
 
-**Status:** in progress · decided with the product owner on 2026-10-16 (survey answers below).
+**Status:** implemented · decided with the product owner on 2026-10-16 (survey answers below).
 
 ## Scope (13 improvements + games)
 1. **Telegram actions** — invite/task buttons exist; add game invites (Прийняти/Відхилити) and poll voting from the bot.
@@ -33,3 +33,11 @@
 
 ## Invariants
 Nothing new in the layout `state`; all personal data under `/me/*` scoped to `req.me`; HR config in `office_kv`.
+
+## Implementation map
+- Server: `api/src/games.js` (rooms, invites, quiz, leaderboard, HR schedule), `api/src/people.js` (pulse, onboarding), `api/src/kv.js`, polls + game cards in `chats.js`, status note in `index.js`, Focus in `notify.js`.
+- Bot: `gm:acc|dec:<id>`, `pv:<msg>:<i>` callbacks; `game_invite` / `game_declined` texts.
+- Phone: `public/games-engines.js` (pure rules + bots), `public/games.js` (UI), spec 007 block in `phone.js` (search, rooms, «Мій день», onboarding, timed status, offline cache).
+- Web HR: «Аналітика» tab → pulse question/results, onboarding template + newcomers, games schedule + quiz questions; «Дата найму» in the person card.
+- PWA: `public/manifest.json`, `public/sw.js` (network-first), `public/assets/icon*`.
+- Tests: `tests/api/10-phone-plus.mjs`, `11-game-rules.mjs` (chess perft), bot e2e, `tests/ui/11-games.mjs`, `12-phone-plus.mjs`, Playwright `tests/pw` (layout + a11y audit of every screen).

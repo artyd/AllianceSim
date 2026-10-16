@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AllianceSim — офіс Харків</title>
+<!-- PWA (spec 007): installable on the home screen, offline fallback -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#E2001A">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="AllianceSim">
+<script>if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost')) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
 <!-- Telegram Mini App SDK (harmless outside Telegram: WebApp.initData is empty) -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <!-- Detect the Mini App synchronously (before first paint) so the office never flashes -->
@@ -194,6 +202,7 @@ kbd{font:700 11px Nunito;background:var(--chip);border:1px solid var(--line);bor
 #itemBar svg{width:14px;height:14px;fill:currentColor;stroke:none}
 /* labels */
 .rl{position:absolute;transform:translate(-50%,-50%);padding:5px 10px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap;background:rgba(255,255,255,.82);color:var(--ink);box-shadow:0 2px 8px rgba(60,40,30,.10);transition:opacity .2s}
+#hrTools .hrrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0}#hrTools .hrrow .field{flex:1;min-width:200px}#hrTools textarea.field{width:100%;resize:vertical;font:inherit}#hrTools .hrchk{display:flex;gap:6px;align-items:center;font-weight:700}
 #app[data-ui="dark"] .rl{background:rgba(40,38,48,.85);color:#f3eef2}
 .rl.busy{box-shadow:0 0 0 2px #E2001A,0 4px 12px rgba(226,0,26,.25)}
 .rl .bz{margin-left:6px;font-size:11px;color:#E2001A}
@@ -772,7 +781,7 @@ html.tgapp #app .ptabbar{bottom:calc(34px + var(--sab))}
 #phone .gic svg{width:24px;height:24px;fill:none;stroke:#fff;stroke-width:2}
 #phone .gic.sm{width:32px;height:32px}#phone .gic.sm svg{width:18px;height:18px}
 #phone .gic.lg{width:72px;height:72px}#phone .gic.lg svg{width:38px;height:38px}
-#phone .gtrophy{display:grid;place-items:center;width:36px;padding:0}#phone .gtrophy svg{width:20px;height:20px;fill:none;stroke:var(--os-ink);stroke-width:2}
+#phone .gtrophy,#phone .phead .tbtn.gtrophy{display:grid;place-items:center;width:36px;padding:0}#phone .gtrophy svg{width:20px;height:20px;fill:none;stroke:var(--os-ink);stroke-width:2}
 #phone .ggrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:0 16px}
 #phone .gcard{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:12px;border-radius:18px;background:var(--os-surf);text-align:left;color:var(--os-ink);min-height:112px}
 #phone .gcard b{font-size:15px;font-weight:600}#phone .gcard span:last-child{font-size:12.5px;color:var(--os-ink2)}
@@ -861,9 +870,9 @@ html.tgapp #app .ptabbar{bottom:calc(34px + var(--sab))}
 #phone .wc{height:52px;border-radius:10px;border:2px solid var(--os-sep);display:grid;place-items:center;font-size:24px;font-weight:700;color:var(--os-ink);background:var(--os-surf)}
 #phone .wc.f{border-color:#8E8E93}
 #phone .wc.mg{background:#34A853;border-color:#34A853;color:#fff}#phone .wc.my{background:#E8B020;border-color:#E8B020;color:#fff}#phone .wc.mx{background:#8E8E93;border-color:#8E8E93;color:#fff}
-#phone .wkb{display:flex;flex-direction:column;gap:6px;width:100%}
-#phone .wkr{display:flex;gap:4px;justify-content:center}
-#phone .wk{flex:1;max-width:32px;height:44px;border-radius:7px;background:var(--os-surf);font-size:14.5px;font-weight:600;color:var(--os-ink);padding:0;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+#phone .wkb{display:flex;flex-direction:column;gap:6px;width:calc(100% + 20px);margin:0 -10px}
+#phone .wkr{display:flex;gap:3px;justify-content:center}
+#phone .wk{flex:1;max-width:34px;height:44px;border-radius:7px;background:var(--os-surf);font-size:14.5px;font-weight:600;color:var(--os-ink);padding:0;box-shadow:0 1px 2px rgba(0,0,0,.12)}
 #phone .wk.wide{max-width:none;flex:1.6;font-size:13px}
 #phone .wk.mg{background:#34A853;color:#fff}#phone .wk.my{background:#E8B020;color:#fff}#phone .wk.mx{background:#8E8E93;color:#fff}
 /* quiz */
@@ -898,6 +907,47 @@ html.tgapp #app .ptabbar{bottom:calc(34px + var(--sab))}
 /* island invite */
 #phone .pnotch .ib.ok{background:var(--red)}#phone .pnotch .ib.x{width:30px;padding:0;margin-left:4px}
 #phone .pnotch #pisl>.gic.sm{width:36px;height:36px}
+/* ==== spec 007: search pill, offline pill, my day, rooms, timed status, coffee, polls ==== */
+#phone .pwall{padding-bottom:calc(150*var(--u))}
+#phone .psrchpill{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(112*var(--u));z-index:2;display:flex;align-items:center;gap:6px;height:calc(30*var(--u));min-height:28px;padding:0 14px;border-radius:999px;background:var(--glass);border:1px solid var(--gb);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);color:#fff;font-size:calc(13*var(--u));font-weight:600;min-width:88px;justify-content:center}
+#phone .psrchpill svg{width:15px;height:15px;fill:none;stroke:#fff;stroke-width:2.4}
+#phone .poffline{position:absolute;left:50%;top:44px;z-index:65;transform:translate(-50%,-140%);opacity:0;transition:transform .3s,opacity .3s;padding:6px 12px;border-radius:999px;background:#1C1C1E;color:#fff;font-size:12.5px;font-weight:600;white-space:nowrap;pointer-events:none}
+#phone .poffline.on{transform:translate(-50%,0);opacity:1}
+html.tgapp #app .poffline{position:fixed;top:calc(var(--sat,0px) + 8px)}
+#phone .prow .sic,#phone .rrow .sic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none}
+#phone .prow .sic svg{width:19px;height:19px;fill:none;stroke:#fff;stroke-width:2}
+#phone .pnote2{font-style:normal;color:var(--red);font-weight:600}
+/* my day */
+#phone .mdh{display:flex;flex-direction:column;gap:2px;padding:0 20px 6px}#phone .mdh b{font-size:24px;font-weight:700}#phone .mdh span{font-size:14.5px;color:var(--os-ink2)}
+#phone .mdpulse{margin:10px 16px 0;padding:14px;border-radius:18px;background:linear-gradient(160deg,#FFE5E8,#FFF4E5);display:flex;flex-direction:column;gap:4px;color:#3b1a1f}
+#app[data-ui="dark"] #phone .mdpulse{background:linear-gradient(160deg,#3A0E16,#2A1A0E);color:#F5F5F7}
+#phone .mdpulse b{font-size:16.5px}#phone .mdpulse span{font-size:12.5px;opacity:.8}
+#phone .mdf{display:flex;gap:6px;margin-top:8px}
+#phone .mdf button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0;border-radius:14px;background:rgba(255,255,255,.75);color:#C8001A}
+#app[data-ui="dark"] #phone .mdf button{background:rgba(255,255,255,.08);color:#FF6B78}
+#phone .mdf svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8}#phone .mdf em{font-style:normal;font-size:10.5px;font-weight:600;color:var(--os-ink2)}
+#phone .mdonb{display:flex;flex-direction:column;gap:8px;width:calc(100% - 32px);margin:10px 16px 0;padding:12px 14px;border-radius:16px;background:var(--os-surf);text-align:left;color:var(--os-ink)}
+#phone .mdonb>span:first-child{display:flex;justify-content:space-between;align-items:baseline;gap:8px}#phone .mdonb b{font-size:15.5px}#phone .mdonb em{font-style:normal;font-size:13px;color:var(--os-ink2)}
+#phone .mdbar{height:8px;border-radius:999px;background:var(--os-fill);overflow:hidden}#phone .mdbar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#34C759,#16917A)}
+#phone .mdt{min-width:54px;font-size:14px;font-weight:700;color:var(--red)}
+#phone .mdteam{display:flex;gap:12px;overflow-x:auto;padding:2px 16px 4px;scrollbar-width:none}
+#phone .mdav{display:flex;flex-direction:column;align-items:center;gap:4px;flex:none;width:56px}#phone .mdav .av{width:48px;height:48px;border-radius:50%}#phone .mdav em{font-style:normal;font-size:12px;color:var(--os-ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:56px}
+/* rooms */
+#phone .rrow{align-items:center}#phone .rfree{color:#2E8B57;font-weight:600}#phone .rbusy{color:var(--os-ink2)}
+#phone .rbtns{display:flex;gap:6px;flex:none}#phone .rbtns .pbtn{padding:0 10px}#phone .rbtns .pbtn.ghost{background:var(--os-fill);color:var(--os-ink)}
+#phone .rbtns .pbtn:disabled{opacity:.4}
+/* control center: timed status */
+#phone .pcc .ccnotes{display:flex;flex-wrap:wrap;gap:6px;padding:2px 4px 4px}
+#phone .pcc .ccn{display:flex;flex-direction:column;align-items:flex-start;padding:7px 11px;border-radius:14px;background:rgba(255,255,255,.12);color:#fff;font-size:13px;font-weight:600;text-align:left}
+#phone .pcc .ccn em{font-style:normal;font-size:10.5px;opacity:.7}
+#phone .pcc .ccn[aria-pressed=true]{background:#fff;color:#111114}#phone .pcc .ccn.clr{background:rgba(255,59,48,.85);justify-content:center}
+/* coffee en route */
+#phone .cfroute{display:flex;align-items:center;gap:10px;margin:10px 16px 0;padding:10px 12px;border-radius:16px;background:#FBF3EE;color:#5A3420}
+#app[data-ui="dark"] #phone .cfroute{background:#33251C;color:#F5E6DC}
+#phone .cfroute>span{width:34px;height:34px;border-radius:50%;background:#8A5132;display:grid;place-items:center;flex:none}#phone .cfroute svg{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:2}
+#phone .cfroute b{flex:1;font-size:14.5px}
+/* broadcast poll */
+#phone .pbpoll{margin-top:4px}#phone .pbpoll .pgrp{margin:0}
 /* Dynamic Island */
 #phone .pnotch{width:auto;min-width:112px;height:30px;top:8px;background:#000;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;color:#fff;font-size:11.5px;font-weight:600;z-index:80;transition:min-width .35s cubic-bezier(.2,.9,.25,1),height .35s cubic-bezier(.2,.9,.25,1),border-radius .35s;cursor:pointer}
 #phone .pnotch.live{min-width:190px}
@@ -1185,6 +1235,7 @@ html.tgapp #app .pcc{padding-top:calc(max(var(--sat),calc(max(env(safe-area-inse
       </div>
       <div class="f2">
         <div><label class="fl" for="fExt">Робочий номер</label><input class="field" id="fExt" placeholder="Напр. 214"></div>
+        <div><label class="fl" for="fHired">Дата найму</label><input class="field" id="fHired" type="date" title="Новачкам перші 30 днів показується чек-лист онбордингу"></div>
         <div><label class="fl">Фото</label><div class="photo"><div class="av" id="fAv">?</div><label class="up">Завантажити<input id="fPhoto" type="file" accept="image/*"></label><span class="dp" id="fPhotoName">необов'язково</span></div></div>
       </div>
       <div class="fsec-t"><svg class="fsec-i" viewBox="0 0 384 512"><path d="M215.7 499.2C267 435 384 279.4 384 192C384 86 298 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0zM192 128a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><span>Де зараз</span></div>
@@ -1230,6 +1281,7 @@ html.tgapp #app .pcc{padding-top:calc(max(var(--sat),calc(max(env(safe-area-inse
           </div>
           <button class="pwd pwchats" data-go="chatlist"><span class="h"><b>Чати</b><i id="wChatN"></i></span><span id="wChatList"></span></button>
         </div>
+        <button type="button" class="psrchpill" data-go="search" aria-label="Пошук"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>Пошук</button>
         <div class="pdock">
           <button class="papp" data-go="chatlist" aria-label="Чат"><span class="ic" style="--g1:#6FE08E;--g2:#25A24E"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4V5Z"/></svg></span><span class="badge" id="chatBadge" style="display:none">0</span></button>
           <button class="papp" data-go="calls" aria-label="Дзвінки"><span class="ic" style="--g1:#FF6B78;--g2:#C8001A"><svg viewBox="0 0 24 24"><path d="M6.5 3h3l1.6 4-2 1.4a12 12 0 0 0 5 5l1.4-2 4 1.6v3a2 2 0 0 1-2.1 2A16 16 0 0 1 4 5.1 2 2 0 0 1 6.5 3Z"/></svg></span></button>
@@ -1977,6 +2029,7 @@ $('#fName').oninput=renderSwatches; $('#fDept').oninput=renderSwatches;
 $('#fPhoto').onchange=e=>{const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{fPhoto=rd.result; $('#fPhotoName').textContent=f.name; renderSwatches();}; rd.readAsDataURL(f);};
 $('#empForm').onsubmit=ev=>{ev.preventDefault(); const name=$('#fName').value.trim(), dept=$('#fDept').value.trim(); if(!name||!dept) return; pushUndo(); state.depts[dept]=fColor; const color=fColor;
   const data={name,dept,position:$('#fPos').value.trim(),email:$('#fMail').value.trim(),phone:$('#fPhone').value.trim(),ext:$('#fExt').value.trim(),color,photo:fPhoto,status:fStatus,mood:fMood};
+  const hired=$('#fHired').value; if(hired&&getToken()){const id=editingId; setTimeout(()=>apiEmpWrite('PUT','/employees/'+encodeURIComponent(id||(state.employees[state.employees.length-1]||{}).id),{hired_on:hired}).catch(()=>{}),900);}
   if(editingId){const emp=state.employees.find(x=>x.id===editingId); Object.assign(emp,data); empUpsert(emp); editingId=null; markDirty(); closeModal(); syncAvatars(); renderPeople(); renderLabels(); toast(`${name} — оновлено`); return;}
   const ne=Object.assign({id:uid(),seat:null},data); state.employees.push(ne); if(TG.active&&!TG.me){TG.me=ne; setTimeout(()=>PHONE.personalStart&&PHONE.personalStart(),1200);} empUpsert(ne); markDirty(); closeModal(); syncAvatars(); renderPeople(); toast(`${name} — додано й ходить офісом. За бажанням перетягніть на місце`); hideWelcome();
   if(tab!=='people') $('#tabPeople').click();};
@@ -2244,7 +2297,33 @@ async function renderStats(){const box=$('#stats'); if(!box) return; const tok=g
       ${w>0?`<path d="M${LL} ${y}h${Math.max(0,w-4)}a4 4 0 0 1 4 4v${bh-8}a4 4 0 0 1 -4 4h${-Math.max(0,w-4)}z" fill="var(--viz)"/>`:''}
       <text x="${LL+w+6}" y="${y+bh/2+4}" style="font-size:11.5px;font-weight:900;fill:var(--ink)">${x.share}%</text></g>`;}).join('')}</svg>`:'<p class="hint">Ще немає даних.</p>';
   $$('#stRemote g[data-i]').forEach(g=>{const x=rows[+g.dataset.i]; g.onmousemove=ev=>showTip(ev,`${esc(x.dept)} · ${x.share}% днів з дому · людей: ${x.people}`); g.onmouseleave=hideTip;});}
-$('#tabs [data-tab="stats"]').addEventListener('click',renderStats);
+$('#tabs [data-tab="stats"]').addEventListener('click',()=>renderStats().then(renderHrTools));
+/* ---------- HR tools (spec 007): weekly pulse, newcomer onboarding, games schedule + quiz ---------- */
+async function renderHrTools(){const box=$('#stats'), tok=getToken(); if(!box||!tok) return;
+  let el=$('#hrTools'); if(!el){el=document.createElement('div'); el.id='hrTools'; box.appendChild(el);}
+  const H={'X-Edit-Token':tok,'content-type':'application/json'};
+  const get=p=>fetch(API+p,{headers:H}).then(r=>r.ok?r.json():null).catch(()=>null);
+  const put=(p,b)=>fetch(API+p,{method:'PUT',headers:H,body:JSON.stringify(b)}).then(r=>{if(!r.ok) throw new Error(r.status); return r.json();});
+  const [pulse,onb,gs]=await Promise.all([get('/pulse?weeks=8'),get('/onboarding'),get('/games/settings')]);
+  el.innerHTML=`<h5 style="margin-top:18px">Пульс тижня <small>· анонімно, середнє лише для груп від ${pulse?pulse.minGroup:3} людей</small></h5>
+    ${pulse?`<div class="hrrow"><input class="field" id="hrPulseQ" maxlength="200" value="${esc(pulse.current.question)}" aria-label="Питання тижня"><button class="btn" id="hrPulseSave">Зберегти питання</button></div>
+    <table>${pulse.weeks.length?pulse.weeks.map(w=>`<tr><td>${esc(w.week)}</td><td>${esc(w.question)}</td><td>${w.avg!=null?w.avg.toFixed(2)+'/5':'—'} · ${w.n} відп.</td><td>${w.depts.map(d=>esc(d.dept)+': '+d.avg.toFixed(1)).join(', ')}</td></tr>`).join(''):'<tr><td>Ще немає відповідей</td></tr>'}</table>`:'<p class="hint">Недоступно</p>'}
+    <h5 style="margin-top:18px">Онбординг новачків <small>· перші 30 днів після дати найму; по рядку на пункт</small></h5>
+    ${onb?`<textarea class="field" id="hrOnb" rows="7" aria-label="Пункти онбордингу">${esc(onb.items.map(i=>i.text).join('\n'))}</textarea><div class="hrrow"><button class="btn" id="hrOnbSave">Зберегти чек-лист</button></div>
+    <table>${onb.people.length?onb.people.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(p.dept||'')}</td><td>${p.done}/${p.total}</td></tr>`).join(''):'<tr><td>Новачків зараз немає — вкажіть «Дату найму» в картці співробітника</td></tr>'}</table>`:''}
+    <h5 style="margin-top:18px">Ігри в телефоні</h5>
+    ${gs?`<div class="hrrow"><label class="hrchk"><input type="checkbox" id="hrGamesOn" ${gs.enabled?'checked':''}> Ігри дозволені</label><input class="field" id="hrGamesWin" placeholder="Будь-коли · або 12:00-14:00, 18:00-21:00" value="${esc(gs.windows.map(w=>w.from+'-'+w.to).join(', '))}" aria-label="Години для ігор"></div>
+    <p class="hint">Питання для вікторини — по рядку: <b>Питання | правильна відповідь | варіант | варіант</b></p>
+    <textarea class="field" id="hrQuiz" rows="5" aria-label="Питання вікторини">${esc(gs.quiz.map(q=>[q.q,q.options[q.answer],...q.options.filter((_,i)=>i!==q.answer)].join(' | ')).join('\n'))}</textarea>
+    <div class="hrrow"><button class="btn" id="hrGamesSave">Зберегти налаштування ігор</button></div>`:''}`;
+  const ps=$('#hrPulseSave'); if(ps) ps.onclick=async()=>{try{await put('/pulse/question',{question:$('#hrPulseQ').value}); toast('Питання тижня збережено');}catch(e){toast('Не вдалося зберегти');}};
+  const os=$('#hrOnbSave'); if(os) os.onclick=async()=>{const old=onb.items, lines=$('#hrOnb').value.split('\n').map(x=>x.trim()).filter(Boolean);
+    try{await put('/onboarding/template',{items:lines.map(t=>({id:(old.find(i=>i.text===t)||{}).id,text:t}))}); toast('Чек-лист збережено'); renderHrTools();}catch(e){toast('Не вдалося зберегти');}};
+  const gsv=$('#hrGamesSave'); if(gsv) gsv.onclick=async()=>{
+    const windows=$('#hrGamesWin').value.split(',').map(x=>x.trim()).filter(Boolean).map(x=>{const m=/^(\d{1,2}:\d\d)\s*[-–]\s*(\d{1,2}:\d\d)$/.exec(x); return m?{from:m[1].padStart(5,'0'),to:m[2].padStart(5,'0')}:null;});
+    if(windows.some(w=>!w)){toast('Години у форматі 12:00-14:00'); return;}
+    const quiz=$('#hrQuiz').value.split('\n').map(l=>l.split('|').map(x=>x.trim()).filter(Boolean)).filter(p=>p.length>=3).map(p=>({q:p[0],options:p.slice(1,5),answer:0}));
+    try{await put('/games/settings',{enabled:$('#hrGamesOn').checked,windows,quiz}); toast('Налаштування ігор збережено');}catch(e){toast('Не вдалося зберегти');}};}
 
 /* ---------- init ---------- */
 const params=new URLSearchParams(location.search);
@@ -2286,7 +2365,7 @@ function loop(now){requestAnimationFrame(loop); const dt=Math.min(.05,(now-lastT
   updateLabels();
   if(backdrop.classList.contains('open')&&pAv){pRenderer.render(pScene,pCam); const pv=$('#preview').getBoundingClientRect(), cr=$('#pc').getBoundingClientRect(); const v=new THREE.Vector3(0,pAv.userData.tagY+.1,0).project(pCam); const t=$('#ptag'); t.style.left=(cr.left-pv.left+(v.x+1)/2*cr.width)+'px'; t.style.top=(cr.top-pv.top+(1-v.y)/2*cr.height)+'px';}}
 /* ---------- phone (AllianceOS) — lives in public/phone.js ---------- */
-const PHONE=initPhone({get state(){return state;}, $, API, DEPT_COLORS, MOODS, ROOMS, STATUS, TG, ZONES, apiEmpWrite, app, applySettings, avHTML, empUpsert, esc, focusEmployee, getToken, params, refreshLive, renderLabels, renderPeople, roomAt, roomName, settings, statusOf, syncAvatars, toast});
+const PHONE=initPhone({get state(){return state;}, $, API, DEPT_COLORS, MOODS, ROOMS, STATUS, TG, ZONES, apiEmpWrite, app, applySettings, avHTML, empPos, empUpsert, esc, focusEmployee, getToken, params, refreshLive, renderLabels, renderPeople, roomAt, roomName, settings, statusOf, syncAvatars, toast});
 requestAnimationFrame(loop);
 </script>
 </body>

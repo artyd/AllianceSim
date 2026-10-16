@@ -93,6 +93,20 @@ try {
   await call('POST', '/announce', { hr: true, body: { target: 'office', text: 'Свято в пʼятницю' } });
   const an = await waitFor((c) => c.method === 'sendMessage' && /📢 Оголошення/.test(c.p.text));
   ok(an && /від HR/.test(an.p.text) && /Свято/.test(an.p.text), 'announcement text');
+
+  // ── spec 007: game invite → Прийняти in Telegram; poll vote buttons ──
+  const g = (await call('POST', '/me/games', { as: 1001, body: { kind: 'chess', invite: ['b'] } })).data;
+  const gi = await waitFor((c) => c.method === 'sendMessage' && c.p.chat_id == 1002 && /запрошує тебе зіграти: Шахи/.test(c.p.text));
+  ok(gi && btns(gi).some((b) => b.callback_data === `gm:acc:${g.id}`) && btns(gi).some((b) => b.web_app && /open=game_/.test(b.web_app.url)), 'game invite with buttons + open link');
+  press(1002, `gm:acc:${g.id}`, gi);
+  ok(await waitFor((c) => c.method === 'editMessageText' && /Виклик прийнято/.test(c.p.text)), 'invite message edited: accepted');
+  eq((await call('GET', `/me/games/${g.id}`, { as: 1001 })).data.status, 'active', 'game active after the Telegram press');
+  await call('POST', '/announce', { hr: true, body: { target: 'office', text: 'Коли корпоратив?', poll: ['Пʼятниця', 'Субота'] } });
+  const pa = await waitFor((c) => c.method === 'sendMessage' && c.p.chat_id == 1002 && /Коли корпоратив/.test(c.p.text));
+  ok(pa && btns(pa).filter((b) => /^pv:/.test(b.callback_data || '')).length === 2, 'announcement carries poll buttons');
+  press(1002, btns(pa).find((b) => /^pv:/.test(b.callback_data)).callback_data, pa);
+  const pe = await waitFor((c) => c.method === 'editMessageReplyMarkup' && JSON.stringify(c.p).includes('100%'));
+  ok(pe, 'poll buttons show live results after the vote');
 } catch (e) { console.error(e); ok(false, 'exception ' + e.message); }
 const f = report();
 bot.kill(); srv.close();

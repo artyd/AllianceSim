@@ -8,6 +8,8 @@ free-roam colleagues, share a read-only link.
   + `<style>` + one `<script type="module">`; the phone (AllianceOS, personal Mini App) is
   the ES module `phone.js`, wired in via `initPhone({get state(){…}, …})` — add any new
   office dependency to that call (`state` stays a getter: the office reassigns it).
+  Mini-games: `public/games-engines.js` (pure rules/bots, unit-tested in Node) +
+  `public/games.js` (UI, wired via `initGamesUI`). PWA: `manifest.json` + `sw.js` (network-first).
   No build step, no framework.
 - **Backend: `api/`** (Express + Postgres). The office plan is one `state` blob saved to
   `PUT /layout` (token-gated); employees and all personal phone data (chats, calendar,
@@ -24,7 +26,8 @@ free-roam colleagues, share a read-only link.
 3. **Verify in the browser** — don't trust parsing alone. Use `/serve`
    (`node .claude/scripts/serve.cjs public 5055`) and the **`app-verify`** agent;
    confirm **no console errors**.
-   For api/bot/phone changes run the suite in `tests/` (`cd tests && npm test`): real api
+   For api/bot/phone changes run the suite in `tests/` (`cd tests && npm test`, plus
+   `npm run test:pw` — Playwright layout/a11y audit on phone + web sizes): real api
    on embedded Postgres, the bot against a fake Bot API, Mini App in headless Chrome as
    faked Telegram users. Add a scenario for every new feature.
 4. Commit one change at a time; update the spec status.

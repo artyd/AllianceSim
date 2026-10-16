@@ -21,7 +21,7 @@ const test = base.extend({
       // Mobile Telegram clients receive Mini App events through this proxy — record them.
       window.__tgEvents = [];
       window.TelegramWebviewProxy = { postEvent: (type) => window.__tgEvents.push(type) };
-      try { localStorage.setItem('alliancesim.tour.v1', '1'); } catch (e) {}
+      try { localStorage.setItem('alliancesim.tour.v1', '1'); localStorage.setItem('alliancesim.myday', JSON.stringify(new Date().toDateString())); } catch (e) {}
     });
     await use(page);
     expect(page.errors, 'no console errors').toEqual([]);

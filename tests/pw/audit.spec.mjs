@@ -59,8 +59,10 @@ function audit(scrId) {
         if (inter(a, b) > 4) push('overlap', flow[i], `with ${name(flow[j])}`);
       }
     }
+    // 5a. accessibility: an icon-only control needs a name for screen readers
+    if ((tag === 'button' || (tag === 'a' && el.getAttribute('href'))) && !(el.innerText || '').trim() && !el.getAttribute('aria-label') && !el.getAttribute('title') && !el.getAttribute('aria-labelledby') && !el.closest('[aria-hidden=true]')) push('a11y-no-label', el, 'icon-only control without aria-label');
     // 5. tap targets
-    if ((tag === 'button' || (tag === 'a' && el.getAttribute('href')) || el.hasAttribute('data-go')) && !el.closest('.pwalls,.paz,.pdrinks') && (r.width < 28 || r.height < 26)) push('tap-target-small', el, `${Math.round(r.width)}×${Math.round(r.height)}`);
+    if ((tag === 'button' || (tag === 'a' && el.getAttribute('href')) || el.hasAttribute('data-go')) && !el.closest('.pwalls,.paz,.pdrinks,.wkb') && (r.width < 28 || r.height < 26)) push('tap-target-small', el, `${Math.round(r.width)}×${Math.round(r.height)}`);
   }
   // 6. nothing important hidden under the floating tab bar / FAB once the list is scrolled to the end
   const bar = document.querySelector('.ptabbar.on'); const fab = root.querySelector('.phead .act');
@@ -89,7 +91,7 @@ for (const theme of ['light', 'dark']) {
     test.setTimeout(240_000);
     const errors = [];
     page.on('pageerror', (e) => errors.push(e.message));
-    await page.addInitScript((theme) => { try { localStorage.setItem('alliancesim.tour.v1', '1'); localStorage.setItem('alliancesim.phone.theme', JSON.stringify(theme)); } catch (e) {} }, theme);
+    await page.addInitScript((theme) => { try { localStorage.setItem('alliancesim.tour.v1', '1'); localStorage.setItem('alliancesim.myday', JSON.stringify(new Date().toDateString())); localStorage.setItem('alliancesim.phone.theme', JSON.stringify(theme)); } catch (e) {} }, theme);
     await page.goto(urls().a.replace('tgWebAppPlatform=tdesktop', 'tgWebAppPlatform=' + tgPlatform));
     await page.waitForSelector('#wMood [data-mood-set]');
     await page.waitForTimeout(400);
@@ -135,6 +137,19 @@ for (const theme of ['light', 'dark']) {
     await page.evaluate(() => document.querySelector('.pwov [data-x]').click()); await page.waitForTimeout(400);
     await tap('[data-dept]'); await page.waitForTimeout(500); await check('wheel-dept', 'wheel');
     await page.evaluate(() => document.querySelector('.pwov [data-x]').click()); await page.waitForTimeout(400); await home(); await home();
+    // spec 007: games
+    const cc = async (target) => { await home(); await page.evaluate(() => { const h = document.querySelector('[data-scr=home]'); h.dispatchEvent(new PointerEvent('pointerdown', { clientY: 20, bubbles: true })); h.dispatchEvent(new PointerEvent('pointerup', { clientY: 240, bubbles: true })); }); await page.waitForTimeout(500); await page.evaluate((t) => document.querySelector('.pcc [data-ccgo=' + t + ']').click(), target); await page.waitForTimeout(1500); };
+    await home(); await tap('.pgrid [data-go=games]'); await check('games');
+    await tap('[data-k=ttt]'); await check('gsetup');
+    await tap('[data-mode] [data-v=bot]'); await tap('[data-go-play]'); await tap('.tc[data-i="4"]'); await page.waitForTimeout(800); await check('game-ttt');
+    for (const k of ['chess', 'checkers', 'sea']) { await home(); await tap('.pgrid [data-go=games]'); await tap('[data-k=' + k + ']'); await tap('[data-mode] [data-v=bot]'); await tap('[data-go-play]'); await check('game-' + k); }
+    for (const k of ['2048', 'snake', 'word']) { await home(); await tap('.pgrid [data-go=games]'); await tap('[data-k="' + k + '"]'); await check('game-' + k); }
+    await home(); await tap('.pgrid [data-go=games]'); await tap('[data-top]'); await page.waitForTimeout(600); await check('leaderboard');
+    // spec 007: search / my day / rooms
+    await home(); await tap('.psrchpill'); await type('[data-q]', 'а'); await page.evaluate(() => document.querySelector('[data-scr=search] [data-q]').dispatchEvent(new Event('input'))); await check('search');
+    await cc('myday'); await check('myday');
+    await cc('rooms'); await check('rooms');
+    await home();
     await check('home', 'home');
     await page.evaluate(() => { const h = document.querySelector('[data-scr=home]'); h.dispatchEvent(new PointerEvent('pointerdown', { clientY: 20, bubbles: true })); h.dispatchEvent(new PointerEvent('pointerup', { clientY: 240, bubbles: true })); });
     await page.waitForTimeout(600); await check('control-center', 'cc');
