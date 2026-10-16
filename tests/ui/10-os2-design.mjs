@@ -51,7 +51,7 @@ try {
   await js(w, () => document.getElementById('phoneFab').click()); await sleep(700);
   ok(await js(w, () => document.querySelector('.plock').classList.contains('on')), 'lock screen on open (web)');
   await shot(w, 'g10-lock');
-  await js(w, () => document.querySelector('.plock .bt span').click()); await sleep(500);
+  await js(w, () => document.querySelector('.plock .tm').click()); await sleep(500);
   ok(await js(w, () => !document.querySelector('.plock').classList.contains('on')), 'lock screen unlocks');
   await shot(w, 'g10-web-home');
   ok([a, w].every((p) => p.errors.length === 0), 'no console errors: ' + [a, w].flatMap((p) => p.errors).join(' | '));

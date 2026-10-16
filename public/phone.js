@@ -223,11 +223,13 @@ export function initPhone(O){
     lock.innerHTML=`<div class="lk"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
       <div class="dt">${d.toLocaleDateString('uk-UA',{weekday:'long',day:'numeric',month:'long'})}</div><div class="tm">${d.getHours()}:${pad(d.getMinutes())}</div>${ev}
       <div class="nts">${items.length?'<div class="nl">Сповіщення</div>'+items.join(''):''}</div>
-      <div class="bt"><button type="button" class="qb" data-lgo="profile" aria-label="Мій статус"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-5h6v5"/></svg></button><span>Проведіть угору</span><button type="button" class="qb" data-lgo="coffee" aria-label="Кава">${IC.coffee}</button></div>`;
+      <div class="bt"><button type="button" class="qb" data-lgo="profile" aria-label="Мій статус"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-5h6v5"/></svg></button><span>${matchMedia('(pointer: fine)').matches?'Натисніть, щоб відкрити':'Проведіть угору'}</span><button type="button" class="qb" data-lgo="coffee" aria-label="Кава">${IC.coffee}</button></div>`;
     lock.classList.add('on');
     lock.querySelectorAll('[data-lgo]').forEach(b=>b.onclick=e=>{e.stopPropagation(); lockHide(); go(b.dataset.lgo,appFor(b.dataset.lgo));});
     lock.querySelectorAll('[data-lc]').forEach(b=>b.onclick=e=>{e.stopPropagation(); lockHide(); go('chatlist',appFor('chatlist')); openChat(b.dataset.lc);});}
-  lock.onclick=e=>{if(e.target.closest('.bt span')||e.target===lock) lockHide();};
+  // A tap/click anywhere (except the quick buttons) unlocks — a mouse can’t swipe.
+  lock.onclick=e=>{if(!e.target.closest('button')) lockHide();};
+  document.addEventListener('keydown',e=>{if(lock.classList.contains('on')&&/^(Enter| |ArrowUp)$/.test(e.key)){e.preventDefault(); lockHide();}});
   {let y0=null; lock.addEventListener('pointerdown',e=>{y0=e.clientY;}); lock.addEventListener('pointerup',e=>{if(y0!=null&&y0-e.clientY>60) lockHide(); y0=null;});}
 
   // ── Control Center: status, do-not-disturb, haptics, theme, glass, mood, quick tiles ──
