@@ -222,6 +222,59 @@ CREATE TABLE IF NOT EXISTS notify_prefs (
   tasks boolean NOT NULL DEFAULT true,
   digest boolean NOT NULL DEFAULT true
 );
+
+-- Spec 007: HR office settings, mini-games + leaderboard, pulse, onboarding, polls, status with timer.
+CREATE TABLE IF NOT EXISTS office_kv (
+  key text PRIMARY KEY,
+  value jsonb NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS games (
+  id bigserial PRIMARY KEY,
+  kind text NOT NULL,                       -- ttt | sea | checkers | chess | quiz
+  host_id text REFERENCES employees(id) ON DELETE SET NULL,
+  status text NOT NULL DEFAULT 'lobby',     -- lobby | active | done | cancelled
+  players jsonb NOT NULL DEFAULT '[]',      -- [{id|null, name, bot:level|null, state: host|invited|accepted|declined|left}]
+  state jsonb,                              -- game state (client-defined for duels, server-run for quiz)
+  seq integer NOT NULL DEFAULT 0,           -- optimistic concurrency for moves
+  winner integer,                           -- player index; null = draw / none
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS game_scores (
+  id bigserial PRIMARY KEY,
+  employee_id text NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+  kind text NOT NULL,
+  outcome text NOT NULL,                    -- win | loss | draw | score
+  vs text NOT NULL,                         -- human | bot | solo
+  score integer NOT NULL DEFAULT 0,
+  game_id bigint,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS game_scores_kind_at ON game_scores (kind, created_at);
+CREATE TABLE IF NOT EXISTS pulse_answers (
+  week text NOT NULL,                       -- ISO week '2026-W42' (office time zone)
+  employee_id text NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+  dept text,
+  score integer NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (week, employee_id)
+);
+CREATE TABLE IF NOT EXISTS onboarding_done (
+  employee_id text NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+  item_id text NOT NULL,
+  done_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (employee_id, item_id)
+);
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS meta jsonb;          -- game invite {gameId,kind,state} | poll {options}
+CREATE TABLE IF NOT EXISTS poll_votes (
+  message_id bigint NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+  employee_id text NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+  option integer NOT NULL,
+  PRIMARY KEY (message_id, employee_id)
+);
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS status_note text;        -- «На обіді», «Фокус»…
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS status_until timestamptz; -- note auto-expires
 `;
 
 export async function query(text, params) {

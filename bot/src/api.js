@@ -52,5 +52,8 @@ export const api = {
   respondEvent: (id, tgId, status) => act(`/bot/events/${encodeURIComponent(id)}/respond`, { tgId, status }),
   taskDone: (id, tgId) => act(`/bot/tasks/${encodeURIComponent(id)}/done`, { tgId }),
   digests: () => req('GET', '/bot/digests'),
+  // Spec 007: game invites and poll votes pressed in Telegram.
+  gameRespond: (id, tgId, accept) => act(`/bot/games/${encodeURIComponent(id)}/respond`, { tgId, accept }),
+  vote: (msgId, tgId, option) => act(`/bot/messages/${encodeURIComponent(msgId)}/vote`, { tgId, option }),
   analytics: (days) => req('GET', `/analytics?days=${days}`),
 };

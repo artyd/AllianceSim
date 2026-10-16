@@ -6,6 +6,8 @@ import { personal, runReminders } from './personal.js';
 import { chats, syncSystemChats, scheduleSync, cleanupAttachments } from './chats.js';
 import { requireMe } from './session.js';
 import { office, runDailyPosts, snapshotDay } from './office.js';
+import { games, initGames } from './games.js';
+import { people } from './people.js';
 
 const app = express();
 app.use(express.json({ limit: '25mb' })); // layout blob embeds employees (+ optional base64 photos)
@@ -87,7 +89,7 @@ router.put('/layout', requireEditToken, async (req, res, next) => {
 // shape so the renderer code stays untouched. telegram_id is never exposed publicly
 // (only a `tg_linked` boolean); the bot reads it via /employees/by-telegram.
 const EMP_COLS =
-  'id, name, department, position, email, phone, ext, photo, color, status, mood, desk_id, seat_i, telegram_id, birthday, hired_on, created_at, updated_at';
+  'id, name, department, position, email, phone, ext, photo, color, status, mood, desk_id, seat_i, telegram_id, birthday, hired_on, status_note, status_until, created_at, updated_at';
 
 function toEmp(r, { includeTelegram = false } = {}) {
   if (!r) return null;
@@ -105,6 +107,9 @@ function toEmp(r, { includeTelegram = false } = {}) {
     mood: r.mood,
     seat: r.desk_id != null ? { f: r.desk_id, i: r.seat_i } : null,
     tg_linked: r.telegram_id != null,
+    // Spec 007: status note with a timer («На обіді · до 14:00»); expired notes read as none.
+    statusNote: r.status_note && (!r.status_until || new Date(r.status_until) > new Date()) ? r.status_note : null,
+    statusUntil: r.status_note && r.status_until && new Date(r.status_until) > new Date() ? r.status_until : null,
   };
   if (includeTelegram) {
     out.telegram_id = r.telegram_id != null ? String(r.telegram_id) : null;
@@ -122,6 +127,8 @@ function sanitizeEmp(b) {
   if ('color' in b && b.color != null && !/^#[0-9a-f]{3,8}$/i.test(String(b.color))) b.color = null;
   // birthday: 'MM-DD' (also accepts 'DD.MM' / 'YYYY-MM-DD'); hired_on: 'YYYY-MM-DD'
   if ('birthday' in b) b.birthday = normBirthday(b.birthday);
+  if ('statusNote' in b) b.statusNote = b.statusNote == null ? null : String(b.statusNote).trim().slice(0, 40) || null;
+  if ('statusUntil' in b) { const t = b.statusUntil ? new Date(b.statusUntil) : null; b.statusUntil = t && !Number.isNaN(t.getTime()) ? t.toISOString() : null; }
   if ('hired_on' in b) b.hired_on = /^\d{4}-\d\d-\d\d$/.test(String(b.hired_on || '')) && !Number.isNaN(Date.parse(b.hired_on)) ? b.hired_on : null;
   return b;
 }
@@ -143,6 +150,7 @@ const SCALARS = {
   name: 'name', dept: 'department', position: 'position', email: 'email',
   phone: 'phone', ext: 'ext', photo: 'photo', color: 'color',
   status: 'status', mood: 'mood', birthday: 'birthday', hired_on: 'hired_on',
+  statusNote: 'status_note', statusUntil: 'status_until',
 };
 
 router.get('/employees', async (_req, res, next) => {
@@ -432,7 +440,7 @@ app.use(router);
 app.use('/api', router);
 // Personal phone (spec 004): every /me/* route is the caller's own data only.
 app.use(['/me', '/api/me'], requireMe);
-for (const r of [personal, chats, office]) { app.use(r); app.use('/api', r); }
+for (const r of [personal, chats, office, games, people]) { app.use(r); app.use('/api', r); }
 
 // Central error handler
 app.use((err, _req, res, _next) => {
@@ -447,6 +455,7 @@ const PORT = Number(process.env.PORT || 8011);
 initSchema()
   .then(() => migrateBlobEmployees())
   .then(() => syncSystemChats())
+  .then(() => initGames())
   .then(() => {
     // Background jobs (spec 004): roster → system chats, attachment cleanup, reminders.
     const safe = (name, fn) => () => fn().catch((e) => console.error(`[api] ${name} failed:`, e.message));

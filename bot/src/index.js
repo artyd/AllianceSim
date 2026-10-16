@@ -147,6 +147,30 @@ bot.on('callback_query:data', async (ctx) => {
 
   // Personal phone buttons on notifications: accept/decline an invite, finish a task.
   // The API checks the presser actually is the invitee / assignee.
+  // Spec 007: game invite (Прийняти/Відхилити) and poll votes from an announcement.
+  const gm = /^gm:(acc|dec):(\d+)$/.exec(data), pv = /^pv:(\d+):(\d+)$/.exec(data);
+  if (gm) {
+    let r; try { r = await api.gameRespond(gm[2], ctx.from.id, gm[1] === 'acc'); } catch (e) { r = { status: 0 }; }
+    if (r.status !== 200) return ctx.answerCallbackQuery({ text: r.status === 409 ? 'Запрошення вже неактуальне' : r.status === 404 ? 'Гру не знайдено' : 'Не вдалося 😕' }).catch(() => {});
+    const note = gm[1] === 'acc' ? '✅ Виклик прийнято — відкривай гру!' : '❌ Ти відхилив(ла) запрошення';
+    await ctx.answerCallbackQuery({ text: note }).catch(() => {});
+    const msg = ctx.callbackQuery.message;
+    const keep = (msg?.reply_markup?.inline_keyboard || []).map((row) => row.filter((b) => b.web_app)).filter((row) => row.length);
+    return ctx.editMessageText(`${msg?.text || ''}\n\n${note}`, { reply_markup: { inline_keyboard: gm[1] === 'acc' ? keep : [] } }).catch(() => {});
+  }
+  if (pv) {
+    let r; try { r = await api.vote(pv[1], ctx.from.id, Number(pv[2])); } catch (e) { r = { status: 0 }; }
+    if (r.status !== 200 || !r.data) return ctx.answerCallbackQuery({ text: 'Опитування недоступне' }).catch(() => {});
+    const total = r.data.counts.reduce((a, b) => a + b, 0);
+    await ctx.answerCallbackQuery({ text: `🗳 Голос враховано · ${r.data.options[Number(pv[2])]}` }).catch(() => {});
+    // Live results right on the buttons.
+    const msg = ctx.callbackQuery.message;
+    const rows = (msg?.reply_markup?.inline_keyboard || []).map((row) => row.map((b) => {
+      const m = /^pv:\d+:(\d+)$/.exec(b.callback_data || '');
+      return m ? { text: `${r.data.options[+m[1]].slice(0, 30)} · ${total ? Math.round(r.data.counts[+m[1]] * 100 / total) : 0}%`, callback_data: b.callback_data } : b;
+    }));
+    return ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: rows } }).catch(() => {});
+  }
   const ev = /^ev:(acc|dec):(\d+)$/.exec(data), tk = /^tk:done:(\d+)$/.exec(data);
   if (ev || tk) {
     let r;
@@ -428,7 +452,10 @@ const NOTIF_TEXT = {
   chat: (t, who, me, p) => (p && p.chatTitle
     ? `💬 ${who} у «${p.chatTitle}»:\n${t || '…'}`
     : `💬 ${me}, нове повідомлення від ${who}:\n${t || '…'}`) + '\n\n↩️ Відповідай на це повідомлення — відповідь піде в чат.',
-  announce: (t, who, _me, p) => `📢 Оголошення${p && p.chatTitle ? ' · ' + p.chatTitle : ''}\nвід ${who}:\n\n${t}`,
+  announce: (t, who, _me, p) => `📢 Оголошення${p && p.chatTitle ? ' · ' + p.chatTitle : ''}\nвід ${who}:\n\n${t}${p && p.buttons && p.buttons.length ? '\n\n🗳 Голосуй кнопками нижче' : ''}`,
+  // Spec 007: mini-games
+  game_invite: (t, who, me) => `🎮 ${me}, ${who} запрошує тебе зіграти: ${t}!\nПрийняти виклик?`,
+  game_declined: (t, who, me) => `🎮 ${me}, ${who} не зможе зіграти в «${t}» зараз.`,
   event_invite: (t, who, me) => `📅 ${me}, ${who} запрошує тебе:\n${t}`,
   event_changed: (t, who) => `📅 ${who} змінив(ла) подію:\n${t}`,
   event_cancelled: (t, who) => `🚫 ${who} скасував(ла) подію:\n${t}`,

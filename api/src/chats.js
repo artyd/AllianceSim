@@ -33,6 +33,7 @@ const toMsg = (r) => ({
     : null,
   replyTo: r.reply_to ? String(r.reply_to) : null,
   reactions: [],
+  meta: r.meta || null, // spec 007: game invite {gameId, kind, state} | poll {options}
 });
 export const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
@@ -47,7 +48,12 @@ async function enrich(msgs) {
     quoted.length ? query(`${MSG_SELECT} WHERE m.id = ANY($1::bigint[])`, [quoted]) : { rows: [] },
   ]);
   const srcBy = new Map(src.map((r) => [String(r.id), r]));
+  const pollIds = msgs.filter((m) => m.meta && m.meta.poll).map((m) => m.id);
+  const { rows: votes } = pollIds.length
+    ? await query('SELECT message_id, option, array_agg(employee_id) AS ids FROM poll_votes WHERE message_id = ANY($1::bigint[]) GROUP BY message_id, option', [pollIds])
+    : { rows: [] };
   for (const m of msgs) {
+    if (m.meta && m.meta.poll) m.poll = { options: m.meta.poll.options, votes: m.meta.poll.options.map((_, i) => (votes.find((v) => String(v.message_id) === m.id && v.option === i) || { ids: [] }).ids) };
     m.reactions = reacts.filter((r) => String(r.message_id) === m.id).map((r) => ({ emoji: r.emoji, ids: r.ids }));
     if (m.replyTo) {
       const q = srcBy.get(m.replyTo);
@@ -207,20 +213,24 @@ async function linkedIds(ids) {
   return rows.map((r) => r.id);
 }
 
+// The 1:1 chat between two people (created on first use).
+export async function directChatId(a, b) {
+  const key = [a, b].sort().join('|');
+  await query(`INSERT INTO chats (kind, direct_key, created_by) VALUES ('direct', $1, $2) ON CONFLICT (direct_key) DO NOTHING`, [key, a]);
+  const { rows: [c] } = await query('SELECT id FROM chats WHERE direct_key = $1', [key]);
+  await query(`INSERT INTO chat_members (chat_id, employee_id) VALUES ($1, $2), ($1, $3) ON CONFLICT DO NOTHING`, [c.id, a, b]);
+  return c.id;
+}
+export const chatRow = async (id) => (await query('SELECT * FROM chats WHERE id = $1', [id])).rows[0] || null;
+export { msgById };
+
 // Open (or create) the 1:1 chat with a linked colleague.
 chats.post('/me/chats/direct', async (req, res, next) => {
   try {
     const other = String((req.body || {}).employeeId || '');
     if (!other || other === req.me.id) return bad(res, 'employeeId required');
     if (!(await linkedIds([other])).length) return res.status(404).json({ error: 'colleague is not in the bot yet' });
-    const key = [req.me.id, other].sort().join('|');
-    await query(`INSERT INTO chats (kind, direct_key, created_by) VALUES ('direct', $1, $2) ON CONFLICT (direct_key) DO NOTHING`, [key, req.me.id]);
-    const { rows: [c] } = await query('SELECT id FROM chats WHERE direct_key = $1', [key]);
-    await query(
-      `INSERT INTO chat_members (chat_id, employee_id) VALUES ($1, $2), ($1, $3) ON CONFLICT DO NOTHING`,
-      [c.id, req.me.id, other]
-    );
-    res.json(await loadChat(req.me.id, c.id));
+    res.json(await loadChat(req.me.id, await directChatId(req.me.id, other)));
   } catch (err) { next(err); }
 });
 
@@ -355,21 +365,23 @@ async function notifyMembers(chat, msg, sender) {
     lastPing.set(k, Date.now());
     await queueNotif(r.employee_id, loud ? 'announce' : 'chat', {
       text: preview, fromName: sender.name, pref: 'messages',
-      payload: { open: `chat_${chat.id}`, chatTitle: title, reply: !loud },
+      payload: { open: `chat_${chat.id}`, chatTitle: title, reply: !loud,
+        buttons: msg.poll ? msg.poll.options.map((o, i) => ({ text: o.slice(0, 40), data: `pv:${msg.id}:${i}` })) : undefined },
     });
   }
 }
 
 // sender = {id, name}; id null for HR (web) / system posts.
-export async function postMessage(chat, sender, { text = null, attachmentId = null, replyTo = null, kind = null } = {}) {
+export async function postMessage(chat, sender, { text = null, attachmentId = null, replyTo = null, kind = null, meta = null } = {}) {
   const { rows: [m] } = await query(
-    'INSERT INTO messages (chat_id, sender_id, text, attachment_id, reply_to, kind) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
-    [chat.id, sender.id, text, attachmentId, replyTo, kind]
+    'INSERT INTO messages (chat_id, sender_id, text, attachment_id, reply_to, kind, meta) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
+    [chat.id, sender.id, text, attachmentId, replyTo, kind, meta ? JSON.stringify(meta) : null]
   );
   if (sender.id) await query('UPDATE chat_members SET last_read_id = $3 WHERE chat_id = $1 AND employee_id = $2', [chat.id, sender.id, m.id]);
   const msg = await msgById(m.id);
   emit(await memberIds(chat.id), 'message', msg);
-  if (kind !== 'system') notifyMembers(chat, msg, sender).catch((e) => console.error('[api] notify failed:', e.message));
+  // game cards send their own Telegram invite (with Прийняти/Відхилити) — see games.js
+  if (kind !== 'system' && kind !== 'game') notifyMembers(chat, msg, sender).catch((e) => console.error('[api] notify failed:', e.message));
   return msg;
 }
 
@@ -444,14 +456,56 @@ chats.post('/me/announce', async (req, res, next) => {
     if (!canAnnounce(req.me.name)) return res.status(403).json({ error: 'announcements not allowed' });
     const chat = await systemChat(b.target === 'office' ? 'office' : req.me.dept);
     if (!chat || !(await membership(chat.id, req.me.id))) return nf(res);
-    res.status(201).json(await postMessage(chat, req.me, { text, kind: 'announce' }));
+    const poll = pollOf(b.poll);
+    if (poll === undefined) return bad(res, 'poll needs 2–6 options');
+    res.status(201).json(await postMessage(chat, req.me, { text, kind: 'announce', meta: poll ? { poll } : null }));
   } catch (err) { next(err); }
 });
-export async function hrAnnounce(target, text) {
+export async function hrAnnounce(target, text, pollIn) {
   const chat = await systemChat(target);
   if (!chat) return null;
-  return postMessage(chat, { id: null, name: 'HR' }, { text, kind: 'announce' });
+  const poll = pollOf(pollIn);
+  return postMessage(chat, { id: null, name: 'HR' }, { text, kind: 'announce', meta: poll ? { poll } : null });
 }
+// Poll options: null = no poll, undefined = invalid.
+function pollOf(v) {
+  if (v == null || v === '') return null;
+  const options = (Array.isArray(v) ? v : Array.isArray(v.options) ? v.options : []).map((o) => String(o || '').trim().slice(0, 80)).filter(Boolean);
+  return options.length >= 2 && options.length <= 6 ? { options } : undefined;
+}
+// One vote per person; voting the same option again takes it back.
+export async function votePoll(empId, msgId, option) {
+  if (!isId(msgId)) return null;
+  const { rows: [m] } = await query(
+    `SELECT m.id, m.chat_id, m.meta FROM messages m JOIN chat_members cm ON cm.chat_id = m.chat_id AND cm.employee_id = $2
+     WHERE m.id = $1 AND m.deleted_at IS NULL`, [msgId, empId]);
+  if (!m || !m.meta || !m.meta.poll) return null;
+  const o = Number(option);
+  if (!Number.isInteger(o) || o < 0 || o >= m.meta.poll.options.length) return undefined;
+  const del = await query('DELETE FROM poll_votes WHERE message_id = $1 AND employee_id = $2 AND option = $3', [m.id, empId, o]);
+  if (!del.rowCount) await query(`INSERT INTO poll_votes (message_id, employee_id, option) VALUES ($1, $2, $3)
+    ON CONFLICT (message_id, employee_id) DO UPDATE SET option = EXCLUDED.option`, [m.id, empId, o]);
+  const msg = await msgById(m.id);
+  emit(await memberIds(m.chat_id), 'message_update', msg);
+  return msg;
+}
+chats.post('/me/messages/:id/vote', async (req, res, next) => {
+  try {
+    const msg = await votePoll(req.me.id, req.params.id, (req.body || {}).option);
+    if (msg === null) return nf(res);
+    if (msg === undefined) return bad(res, 'option invalid');
+    res.json(msg);
+  } catch (err) { next(err); }
+});
+// The bot: a poll button pressed in Telegram votes on behalf of that user.
+chats.post('/bot/messages/:id/vote', requireEditToken, async (req, res, next) => {
+  try {
+    const { rows: [e] } = await query('SELECT id FROM employees WHERE telegram_id = $1', [String((req.body || {}).tgId || '')]);
+    const msg = e ? await votePoll(e.id, req.params.id, (req.body || {}).option) : null;
+    if (!msg) return nf(res);
+    res.json({ ok: true, options: msg.poll.options, counts: msg.poll.votes.map((v) => v.length) });
+  } catch (err) { next(err); }
+});
 // Bot-authored posts (birthday greetings…): no Telegram ping, sender = null.
 export async function systemPost(target, text) {
   const chat = await systemChat(target);
@@ -604,7 +658,7 @@ chats.post('/announce', requireEditToken, async (req, res, next) => {
     const b = req.body || {};
     const text = String(b.text || '').trim().slice(0, MSG_MAX);
     if (!text) return bad(res, 'text required');
-    const msg = await hrAnnounce(b.target === 'office' || !b.target ? 'office' : b.target, text);
+    const msg = await hrAnnounce(b.target === 'office' || !b.target ? 'office' : b.target, text, b.poll);
     if (!msg) return nf(res);
     res.status(201).json(msg);
   } catch (err) { next(err); }
