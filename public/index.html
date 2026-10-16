@@ -7,7 +7,11 @@
 <!-- Telegram Mini App SDK (harmless outside Telegram: WebApp.initData is empty) -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <!-- Detect the Mini App synchronously (before first paint) so the office never flashes -->
-<script>try{var w=window.Telegram&&window.Telegram.WebApp;if(w&&w.initData&&w.initData.length){document.documentElement.classList.add('tgapp');w.ready&&w.ready();w.expand&&w.expand();}}catch(e){}</script>
+<script>try{var w=window.Telegram&&window.Telegram.WebApp;if(w&&w.initData&&w.initData.length){document.documentElement.classList.add('tgapp');w.ready&&w.ready();w.expand&&w.expand();
+  // Always full screen on phones (Bot API 8.0+); swipe-down must not close the app (it opens the Control Center).
+  var full=function(){try{if(/^(android|ios)$/.test(w.platform)&&w.isVersionAtLeast&&w.isVersionAtLeast('8.0')&&!w.isFullscreen)w.requestFullscreen();}catch(e){}};
+  full();try{w.disableVerticalSwipes&&w.disableVerticalSwipes();}catch(e){}
+  try{w.onEvent('activated',full);}catch(e){}}}catch(e){}</script>
 <!-- UI icons: Font Awesome Free 6.7.2 (https://fontawesome.com) — Icons: CC BY 4.0, inlined as SVG -->
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -314,7 +318,9 @@ html.tgapp #hdr,html.tgapp #labels,html.tgapp #dock,html.tgapp #dock2,html.tgapp
 html.tgapp #app #c,html.tgapp #app #c2{display:none}
 html.tgapp #app #phoneFab,html.tgapp #app #phoneClose{display:none!important}
 html.tgapp #app #phone{position:fixed;inset:0;width:100%;max-width:100%;height:100%;border-radius:0;padding:0;transform:none!important;opacity:1!important;pointer-events:auto!important;box-shadow:none;background:var(--panel-solid)}
-html.tgapp #app .pscreenwrap{border-radius:0;padding-top:env(safe-area-inset-top,0px)}
+html.tgapp{--sat:calc(max(env(safe-area-inset-top,0px),var(--tg-safe-area-inset-top,0px)) + var(--tg-content-safe-area-inset-top,0px));--sab:max(env(safe-area-inset-bottom,0px),var(--tg-safe-area-inset-bottom,0px))}
+html.tgapp #app .pscreenwrap{border-radius:0;padding-top:var(--sat)}
+html.tgapp #app .phome{height:calc(26px + var(--sab));padding-bottom:var(--sab)}
 html.tgapp #app .pnotch{display:none}
 html.tgapp #app .pactions [data-loc]{display:none}          /* "знайти на карті" is moot without the map */
 html.tgapp #app #backdrop{z-index:40}                       /* create-character modal above the phone */
@@ -531,7 +537,7 @@ html.tgapp #app .pstatus{display:none}
 #phone .ptabbar button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 16px;border-radius:999px;font-size:10.5px;font-weight:600;color:var(--os-ink2);min-width:72px}
 #phone .ptabbar svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:2}
 #phone .ptabbar [aria-current=page]{color:var(--red);background:var(--os-acc-soft)}
-html.tgapp #app .ptabbar{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+html.tgapp #app .ptabbar{bottom:calc(34px + var(--sab))}
 #phone .pscreen.tabbed .pscroll{padding-bottom:96px}
 /* lists */
 #phone .pscroll,#phone .pdetail{background:transparent}
@@ -734,7 +740,7 @@ html.tgapp #app .ptabbar{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
 #phone .pnotch .bt b{font-size:13px;color:#fff;font-weight:600}#phone .pnotch .bt span{overflow:hidden;text-overflow:ellipsis}
 #phone .pnotch .ib{height:30px;padding:0 10px;border-radius:999px;background:#2C2C2E;color:#fff;font-size:12px;font-weight:600}
 @keyframes prb{50%{opacity:.3}}@keyframes pwv{50%{height:100%}}
-html.tgapp #app .pnotch.live,html.tgapp #app .pnotch.big{display:flex;position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px)}
+html.tgapp #app .pnotch.live,html.tgapp #app .pnotch.big{display:flex;position:fixed;top:calc(max(env(safe-area-inset-top,0px),var(--tg-safe-area-inset-top,0px)) + 8px)}
 /* home: widgets, grid, dock */
 #phone .pwall{padding:6px 14px 0;gap:14px;display:flex;flex-direction:column}
 #phone .pwrow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -796,7 +802,7 @@ html.tgapp #app .plock{display:none}
 #phone .pcc{position:absolute;inset:0;z-index:75;background:rgba(30,4,12,.62);backdrop-filter:blur(30px) saturate(150%);-webkit-backdrop-filter:blur(30px) saturate(150%);color:#fff;padding:52px 16px 0;transform:translateY(-100%);opacity:0;pointer-events:none;transition:transform .42s cubic-bezier(.2,.9,.25,1),opacity .3s;overflow:auto}
 #phone[data-reduce] .pcc{background:#2A0A12}
 #phone .pcc.on{transform:none;opacity:1;pointer-events:auto}
-html.tgapp #app .pcc{padding-top:calc(env(safe-area-inset-top,0px) + 44px)}
+html.tgapp #app .pcc{padding-top:calc(var(--sat) + 12px);padding-bottom:var(--sab)}
 #phone .pcc .g{display:flex;flex-direction:column;gap:12px}
 #phone .pcc .tile{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.14);border-radius:26px;color:#fff;padding:10px}
 #phone .pcc .row{display:flex;gap:12px}
