@@ -490,7 +490,16 @@ html.tgapp #app #preview{display:none}
 #phone[data-reduce]{--blur:none;--wd:var(--os-surf);--glass:rgba(40,10,20,.6);--bar:var(--os-surf)}
 html.tgapp,html.tgapp body{background:#F2F2F7}
 #phone .pscreenwrap{background:var(--wall)}
-html.tgapp #toast{position:fixed;bottom:auto;top:calc(max(env(safe-area-inset-top,0px),var(--tg-safe-area-inset-top,0px)) + 52px);z-index:90}
+/* audit fixes: icon-only buttons have no UA padding and centre their glyph; comfy hit areas */
+#phone .mb,#phone .wnav,#phone .phead .bk,#phone .rt,#phone .md,#phone .qb,#phone .pcallb,#phone .ib,#phone .cl{padding:0}
+#phone .phead .bk:not(:has(.bl)),#phone [data-scr=conv] .phead [data-call]{justify-content:center}
+#phone .pweek .wnav{width:30px!important;height:44px!important;flex:none}
+#phone .pevb{min-height:30px}
+#phone .pinput input,#phone .pquick input{flex:1;min-width:0;width:0}
+#phone .pinput>*{flex-shrink:0}#phone .pinput>input{flex-shrink:1}
+#phone .pwme .mood .mb{width:max(28px,calc(30*var(--u)));height:max(28px,calc(30*var(--u)))}
+#phone .pwme .mood.mood{gap:max(2px,calc(4*var(--u)))}
+html.tgapp #app #toast{position:fixed;bottom:auto!important;max-width:calc(100vw - 32px);top:calc(max(env(safe-area-inset-top,0px),var(--tg-safe-area-inset-top,0px)) + 52px);z-index:90}
 #phone[data-app] .pscreenwrap{background:var(--topbg,var(--os-bg))}
 /* closed phone on the website: no layer of it may catch clicks (it sits right over the phone button) */
 html:not(.tgapp) #app:not([data-phone]) #phone,html:not(.tgapp) #app:not([data-phone]) #phone *{pointer-events:none!important}
@@ -520,7 +529,7 @@ html.tgapp #app .pstatus{display:none}
 #phone .phead .ti{position:absolute;left:50%;transform:translateX(-50%);max-width:55%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:16.5px;font-weight:600;transition:opacity .2s}
 #phone .pscreen.haslt:not(.collapsed) .phead .ti{opacity:0}
 #phone .pscreen[data-scr=conv] .phead .ti{position:static;transform:none;max-width:none;opacity:1}
-#phone .plt{margin:0 16px 8px;font-size:31px;font-weight:700;letter-spacing:-.03em;line-height:1.1;max-height:44px;overflow:hidden;transition:max-height .25s,opacity .2s,margin .25s;flex:none}
+#phone .plt{margin:0 16px 6px;font-size:31px;font-weight:700;letter-spacing:-.03em;line-height:1.25;max-height:52px;overflow:hidden;transition:max-height .25s,opacity .2s,margin .25s;flex:none}
 #phone .pscreen.collapsed .plt{max-height:0;opacity:0;margin-bottom:0}
 #phone .phead .tbtn{height:30px;padding:0 12px;border-radius:999px;background:var(--os-fill);color:var(--os-ink);font-size:13px;font-weight:600}
 #phone .phead .tpill{height:30px;padding:0 10px;border-radius:999px;background:var(--os-acc-soft);color:var(--red);font-size:12.5px;font-weight:600;display:flex;align-items:center}
@@ -813,7 +822,7 @@ html.tgapp #app .plock{display:none}
 #phone .pcc{position:absolute;inset:0;z-index:75;background:rgba(30,4,12,.62);backdrop-filter:blur(30px) saturate(150%);-webkit-backdrop-filter:blur(30px) saturate(150%);color:#fff;padding:52px 16px 0;transform:translateY(-100%);opacity:0;pointer-events:none;transition:transform .42s cubic-bezier(.2,.9,.25,1),opacity .3s;overflow:auto}
 #phone[data-reduce] .pcc{background:#2A0A12}
 #phone .pcc.on{transform:none;opacity:1;pointer-events:auto}
-html.tgapp #app .pcc{padding-top:calc(var(--sat) + 12px);padding-bottom:var(--sab)}
+html.tgapp #app .pcc{padding-top:calc(max(var(--sat),calc(max(env(safe-area-inset-top,0px),var(--tg-safe-area-inset-top,0px)) + 46px)) + 8px);padding-bottom:var(--sab)}
 #phone .pcc .g{display:flex;flex-direction:column;gap:12px}
 #phone .pcc .tile{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.14);border-radius:26px;color:#fff;padding:10px}
 #phone .pcc .row{display:flex;gap:12px}

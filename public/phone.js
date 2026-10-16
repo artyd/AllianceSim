@@ -66,7 +66,7 @@ export function initPhone(O){
     if(sheet){const hd=s.querySelector('.phead'), main=s.querySelector('button[type=submit],[data-ok],[data-create]');
       if(hd&&main&&!hd.querySelector('.sbtn')){const b=document.createElement('button'); b.type='button'; b.className='sbtn'; b.textContent=(main.textContent||'Готово').replace(/s*·.*$/,'').trim().split(' ')[0]; b.onclick=()=>main.click(); hd.appendChild(b);}}
     const lt=s.querySelector('.plt'); s.classList.toggle('haslt',!!lt); s.classList.remove('collapsed');
-    if(lt) s.querySelectorAll('.pscroll').forEach(sc=>{if(sc._lt) return; sc._lt=1; sc.addEventListener('scroll',()=>s.classList.toggle('collapsed',sc.scrollTop>24),{passive:true});});}
+    if(lt) s.querySelectorAll('.pscroll:not(.ptl)').forEach(sc=>{if(sc._lt) return; sc._lt=1; sc.addEventListener('scroll',()=>s.classList.toggle('collapsed',sc.scrollTop>24),{passive:true});});}
   const wire=s=>{chrome(s); s.querySelectorAll('[data-back]').forEach(b=>b.onclick=back);};
   const head=(t,act)=>`<div class="phead"><button class="bk" data-back>${IC.back}<span class="bl">Назад</span></button><div class="ti">${t}</div><div class="sp"></div>${act||''}</div>${t?`<h1 class="plt">${t}</h1>`:''}`;
   const stDot=e=>`<span class="pavw">${avHTML(e)}<i style="background:${(STATUS[statusOf(e)]||{}).c||'#8E8E93'}"></i></span>`;
