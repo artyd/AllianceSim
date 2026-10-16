@@ -470,6 +470,103 @@ html.tgapp #app #preview{display:none}
 .psys{align-self:center;max-width:90%;text-align:center;font-size:12.5px;font-weight:700;padding:7px 12px;border-radius:14px;background:var(--chip);color:var(--ink)}
 @keyframes phl{0%,60%{box-shadow:0 0 0 3px #F2C036}100%{box-shadow:0 0 0 0 transparent}}
 .phl{animation:phl 1.8s ease-out}
+/* ==== AllianceOS 2.0 (spec 006): iOS 26 glass x Material 3 — overrides the phone look only ==== */
+#phone{--os-bg:#F2F2F7;--os-surf:#FFFFFF;--os-ink:#111114;--os-ink2:#6B6B73;--os-sep:#E3E3E8;--os-acc-soft:#FFE5E8;
+  --ink:var(--os-ink);--muted:var(--os-ink2);--line:var(--os-sep);--panel-solid:var(--os-surf);--chip:#EDEDF0;--red-soft:var(--os-acc-soft);
+  --wall:radial-gradient(120% 70% at 15% 0%,#FF7A5C 0%,rgba(255,122,92,0) 55%),radial-gradient(100% 80% at 100% 100%,#5A0820 0%,rgba(90,8,32,0) 60%),linear-gradient(165deg,#E2001A 0%,#B0001E 45%,#4A0B1E 100%);
+  --wd:rgba(255,255,255,.84);--glass:rgba(255,255,255,.22);--gb:rgba(255,255,255,.35);--blur:blur(26px) saturate(180%);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+#app[data-ui="dark"] #phone{--os-bg:#000;--os-surf:#1C1C1E;--os-ink:#F5F5F7;--os-ink2:#A1A1AA;--os-sep:#38383A;--os-acc-soft:#3A0E16;--chip:#2C2C2E;
+  --wall:radial-gradient(110% 60% at 10% 0%,#5A0A1E 0%,rgba(90,10,30,0) 60%),radial-gradient(90% 70% at 100% 100%,#2A0B3A 0%,rgba(42,11,58,0) 60%),linear-gradient(170deg,#160A10 0%,#0B0B0F 100%);
+  --wd:rgba(28,28,30,.78);--glass:rgba(255,255,255,.1);--gb:rgba(255,255,255,.14)}
+#phone[data-reduce]{--blur:none;--wd:var(--os-surf);--glass:rgba(40,10,20,.55)}
+html.tgapp,html.tgapp body{background:#F2F2F7}
+#phone .pscreenwrap{background:var(--wall)}
+#phone .pscreen{background:var(--os-bg);transform:scale(.88);opacity:0;pointer-events:none;transform-origin:var(--ox,50%) var(--oy,60%);transition:transform .38s cubic-bezier(.2,.9,.25,1),opacity .24s}
+#phone .pscreen.show{transform:none;opacity:1;pointer-events:auto}
+#phone .pscreen.home{background:none;transform:none;opacity:1;pointer-events:auto;display:flex;flex-direction:column}
+#phone .pstatus{color:#fff;font-weight:600;font-size:13.5px}
+#phone[data-app] .pstatus{color:var(--os-ink)}
+#phone .phome .bar{background:#fff;opacity:.85;width:118px}
+#phone[data-app] .phome .bar{background:var(--os-ink);opacity:.9}
+#phone[data-app] .phome{background:var(--os-bg)}
+html.tgapp #app .pstatus{display:none}
+/* Dynamic Island */
+#phone .pnotch{width:auto;min-width:98px;height:26px;top:8px;background:#000;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;color:#fff;font-size:11.5px;font-weight:600;transition:min-width .35s cubic-bezier(.2,.9,.25,1);cursor:pointer}
+#phone .pnotch.live{min-width:190px}
+#phone .pnotch #pisl{display:flex;align-items:center;gap:6px;width:100%;white-space:nowrap;overflow:hidden}
+#phone .pnotch #pisl i{width:16px;height:16px;border-radius:50%;background:var(--red);flex:none}
+#phone .pnotch #pisl em{margin-left:auto;padding-left:8px;font-style:normal;color:#FF6B78}
+html.tgapp #app .pnotch.live{display:flex;position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px)}
+/* home: widgets, grid, dock */
+#phone .pwall{padding:6px 14px 0;gap:14px;display:flex;flex-direction:column}
+#phone .pwrow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#phone .pwd,#phone .pwme{background:var(--wd);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-radius:22px;box-shadow:0 8px 24px rgba(40,0,10,.16);text-align:left;color:var(--os-ink);display:flex;flex-direction:column;padding:12px 13px;min-width:0}
+#phone .pwnext{min-height:122px}
+#phone .pwnext .k{font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.03em}
+#phone .pwnext b{font-size:15px;font-weight:700;line-height:1.2;margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#phone .pwnext .s{font-size:12px;color:var(--os-ink2);margin-top:3px}
+#phone .pwd .h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+#phone .pwd .h b{font-size:14px;font-weight:700}#phone .pwd .h i{font-style:normal;font-size:19px;font-weight:700;color:#F27B1A}
+#phone .pwd .tl{display:flex;flex-direction:column;gap:7px}
+#phone .pwd .tr{display:block;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:21px;position:relative}
+#phone .pwd .tr::before{content:"";position:absolute;left:0;top:1px;width:12px;height:12px;border-radius:50%;border:1.7px solid #C7C7CC}
+#phone .pwd .tr.e{padding-left:0;color:var(--os-ink2)}#phone .pwd .tr.e::before{display:none}
+#phone .pwme{flex-direction:row;align-items:center;gap:10px;background:var(--glass);border:1px solid var(--gb);color:#fff;padding:10px 12px;box-shadow:none}
+#phone .pwme .av{width:40px;height:40px;font-size:14px}
+#phone .pwme .tx{flex:1;min-width:0;display:flex;flex-direction:column}#phone .pwme .tx b{font-size:14px;font-weight:600}#phone .pwme .tx span{font-size:11.5px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#phone .pwme .mood{font-size:22px}
+#phone .pwchats .h i{font-size:11px;font-weight:600;color:#fff;background:var(--red);border-radius:999px;padding:2px 8px}
+#phone .pwchats .h i:empty{display:none}
+#phone .pwchats .cr{display:flex;gap:9px;align-items:center;padding:3px 0}
+#phone .pwchats .cr .av{width:32px;height:32px;font-size:12px}
+#phone .pwchats .cr .t{flex:1;min-width:0;display:flex;flex-direction:column;font-size:12.5px}#phone .pwchats .cr .t b{font-size:13px;font-weight:600}
+#phone .pwchats .cr .t span{color:var(--os-ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#phone .pwchats .cr .n{min-width:18px;height:18px;border-radius:999px;background:var(--red);color:#fff;font-size:10.5px;font-weight:700;display:grid;place-items:center;padding:0 5px}
+#phone .pgrid{grid-template-columns:repeat(4,1fr);gap:14px 4px}
+#phone .papp .ic{width:54px;height:54px;border-radius:23%;background:linear-gradient(160deg,var(--g1,#9AA1AA),var(--g2,#5B626B));box-shadow:0 6px 14px rgba(40,0,10,.28),inset 0 1px 0 rgba(255,255,255,.4)}
+#phone .papp .ic svg{width:27px;height:27px;stroke-width:2}
+#phone .papp .lb{color:#fff;font-weight:500;font-size:11px;text-shadow:0 1px 3px rgba(0,0,0,.45);white-space:nowrap}
+#phone .papp .badge{right:-4px;top:-4px;background:#FF3B30;font-weight:600}
+#phone .pdock{flex:none;margin:8px 10px 2px;height:78px;border-radius:30px;background:var(--glass);border:1px solid var(--gb);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);display:flex;justify-content:space-around;align-items:center}
+#phone .pdock .papp .ic.pcalic{background:#fff;display:flex;flex-direction:column;justify-content:center;gap:0}
+#phone .pcalic i{font-style:normal;font-size:9px;font-weight:700;color:var(--red)}#phone .pcalic b{font-size:24px;font-weight:400;color:#111114;line-height:1}
+/* app chrome: compact glass header, inset-grouped lists */
+#phone .phead{height:50px;border-bottom:.5px solid var(--os-sep);background:var(--os-surf)}
+#phone .phead .ti{font-size:17px;font-weight:700;letter-spacing:-.01em}
+#phone .phead .bk{background:none;width:30px}#phone .phead .bk svg{stroke:var(--red);width:22px;height:22px}
+#phone .phead .act{width:34px;height:34px;border-radius:12px;box-shadow:0 6px 14px rgba(226,0,26,.35)}
+#phone .pscroll,#phone .pdetail{background:var(--os-bg)}
+#phone .prow{background:var(--os-surf);margin:0 12px;padding:10px 14px;border-bottom:.5px solid var(--os-sep)}
+#phone .prow:hover{background:var(--os-surf);filter:brightness(.97)}
+#phone .pscroll>.prow:first-of-type{border-radius:14px 14px 0 0;margin-top:10px}
+#phone .pscroll>.prow:last-of-type{border-radius:0 0 14px 14px;border-bottom:0;margin-bottom:12px}
+#phone .prow .tx .nm{font-weight:600;font-size:15px}#phone .prow .tx .sub{font-weight:400;font-size:13px}
+#phone .psearch input{border:0;background:var(--chip);border-radius:11px;font-weight:400;font-size:15px}
+#phone .pchip{font-weight:600;border:0;padding:8px 13px;font-size:12.5px}
+#phone .pchip[aria-pressed="true"]{background:var(--os-ink);color:var(--os-surf)}
+#phone .pbtn{border-radius:16px;font-weight:600;box-shadow:0 8px 20px rgba(226,0,26,.28)}
+#phone .pbtn.ghost,#phone .pbtn.danger{box-shadow:none}
+#phone .ptog{width:51px;height:31px}#phone .ptog::after{width:27px;height:27px;top:2px;left:2px}
+#phone .ptog[aria-pressed="true"]{background:#34C759}#phone .ptog[aria-pressed="true"]::after{transform:translateX(20px)}
+#phone .psetrow,#phone .ptask,#phone .pev{background:var(--os-surf);margin:0 12px;border-bottom:.5px solid var(--os-sep)}
+#phone .psetrow .lb,#phone .pev .tt{font-weight:600}
+#phone .ptask .cb{border-radius:50%}#phone .ptask.done .cb{background:#F27B1A;border-color:#F27B1A}
+#phone .ptask .t{font-weight:500}
+#phone .pform input[type=text],#phone .pform input[type=date],#phone .pform input[type=time],#phone .pform input[type=datetime-local],#phone .pform textarea,#phone .pform select{border:0;background:var(--os-surf);border-radius:12px;font-weight:400}
+#phone .pform{background:var(--os-bg)}
+/* iMessage bubbles */
+#phone .pbub{border-radius:20px;font-size:15px;font-weight:400;padding:8px 13px}
+#phone .pbub.them{background:#E9E9EB;color:#111114;border-bottom-left-radius:6px}
+#app[data-ui="dark"] #phone .pbub.them{background:#2C2C2E;color:#F5F5F7}
+#phone .pbub.me{background:linear-gradient(170deg,#F0213A,#C8001A);border-bottom-right-radius:6px}
+#phone .pconv{background:var(--os-surf)}
+#phone .pinput{border-top:.5px solid var(--os-sep)}
+#phone .pinput input{font-weight:400;font-size:15px}
+#phone .pday{background:none;font-weight:600}
+#phone .pdetail .big{border-radius:50%}
+#phone .pact{background:var(--os-surf);font-weight:600}
+@media (prefers-reduced-motion:reduce){#phone .pscreen{transition:opacity .15s}}
 .psec{padding:12px 16px 4px;font-size:11.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
 .pvoice{display:flex;align-items:center;gap:6px}.pvoice audio{height:34px;max-width:210px}
 .prec{flex:none;display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--line);font-weight:800}
@@ -661,7 +758,7 @@ html.tgapp #app #preview{display:none}
 <div id="phone" aria-hidden="true">
   <button id="phoneClose" aria-label="Закрити телефон" title="Закрити"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   <div class="pscreenwrap">
-    <div class="pnotch"></div>
+    <div class="pnotch"><span id="pisl"></span></div>
     <div class="pstatus">
       <span id="pclock">09:41</span>
       <span class="r">
@@ -672,19 +769,26 @@ html.tgapp #app #preview{display:none}
     <div class="pbody" id="pbody">
       <div class="pscreen home" data-scr="home">
         <div class="pwall">
-          <div class="pgreet"><b>AllianceOS</b><span id="pdate">Офіс · Харків</span></div>
-          <div class="pgrid">
-            <button class="papp" data-go="profile"><span class="ic" style="background:#E2001A"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span><span class="lb">Мій профіль</span></button>
-            <button class="papp" data-go="contacts"><span class="ic" style="background:#5B76E6"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3.4"/><path d="M2 19a6 6 0 0 1 12 0"/><path d="M16 5a3.4 3.4 0 0 1 0 6.8M22 19a6 6 0 0 0-4.5-5.8"/></svg></span><span class="lb">Контакти</span></button>
-            <button class="papp" data-go="chatlist"><span class="ic" style="background:#5DBE7C"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4V5Z"/></svg></span><span class="lb">Чат</span><span class="badge" id="chatBadge" style="display:none">0</span></button>
-            <button class="papp" data-go="calls"><span class="ic" style="background:var(--red)"><svg viewBox="0 0 24 24"><path d="M6.5 3h3l1.6 4-2 1.4a12 12 0 0 0 5 5l1.4-2 4 1.6v3a2 2 0 0 1-2.1 2A16 16 0 0 1 4 5.1 2 2 0 0 1 6.5 3Z"/></svg></span><span class="lb">Дзвінки</span></button>
-            <button class="papp" data-go="calendar"><span class="ic" style="background:#3EA8C9"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9.5h16M8 3v4M16 3v4"/></svg></span><span class="lb">Календар</span><span class="badge" id="calBadge" style="display:none">0</span></button>
-            <button class="papp" data-go="tasks"><span class="ic" style="background:#F2A03D"><svg viewBox="0 0 24 24"><path d="M9 4h6v2.5H9zM8 5H5v15h14V5h-3M8.5 13l2.2 2.2L15 11"/></svg></span><span class="lb">Задачі</span><span class="badge" id="taskBadge" style="display:none">0</span></button>
-            <button class="papp" data-go="desk"><span class="ic" style="background:#2EAD8B"><svg viewBox="0 0 24 24"><path d="M3 10h18M5 10v9M19 10v9M8 10V6h8v4"/></svg></span><span class="lb">Моє місце</span></button>
-            <button class="papp" data-go="broadcast"><span class="ic" style="background:#A36BE0"><svg viewBox="0 0 24 24"><path d="M4 10v4h3l8 4V6l-8 4H4Z"/><path d="M18 9a4 4 0 0 1 0 6"/></svg></span><span class="lb">Оголошення</span></button>
-            <button class="papp" data-go="coffee"><span class="ic" style="background:#B5714E"><svg viewBox="0 0 24 24"><path d="M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Z"/><path d="M17 9h2.2a2.5 2.5 0 0 1 0 5H17"/><path d="M7.5 3v2M11 3v2"/></svg></span><span class="lb">Кава</span></button>
-            <button class="papp" data-go="settings"><span class="ic" style="background:#7C8590"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 13a1.7 1.7 0 0 0 .3 1.9 2 2 0 1 1-2.8 2.8 1.7 1.7 0 0 0-2.9 1.2 2 2 0 0 1-4 0 1.7 1.7 0 0 0-2.9-1.2 2 2 0 1 1-2.8-2.8A1.7 1.7 0 0 0 4.6 13a2 2 0 0 1 0-4 1.7 1.7 0 0 0 1.2-2.9 2 2 0 1 1 2.8-2.8A1.7 1.7 0 0 0 11 4.6a2 2 0 0 1 4 0 1.7 1.7 0 0 0 2.9 1.2 2 2 0 1 1 2.8 2.8A1.7 1.7 0 0 0 19.4 11a2 2 0 0 1 0 4Z"/></svg></span><span class="lb">Налаштування</span></button>
+          <div class="pwrow">
+            <button class="pwd pwnext" data-go="calendar"><span class="k" id="wNextWhen">Сьогодні</span><b id="wNextTitle">Календар</b><span class="s" id="wNextSub"></span></button>
+            <button class="pwd pwtasks" data-go="tasks"><span class="h"><b>Задачі</b><i id="wTaskN"></i></span><span class="tl" id="wTaskList"></span></button>
           </div>
+          <button class="pwme" data-go="profile"><span id="wMeAv"><div class="av" style="background:var(--red)">AO</div></span><span class="tx"><b id="wMeSt">AllianceOS</b><span id="pdate">Офіс · Харків</span></span><span class="mood" id="wMood"></span></button>
+          <div class="pgrid">
+            <button class="papp" data-go="profile"><span class="ic" style="--g1:#FF6B78;--g2:#C8001A"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span><span class="lb">Профіль</span></button>
+            <button class="papp" data-go="contacts"><span class="ic" style="--g1:#8EA2F5;--g2:#4A5FD6"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3.4"/><path d="M2 19a6 6 0 0 1 12 0"/><path d="M16 5a3.4 3.4 0 0 1 0 6.8M22 19a6 6 0 0 0-4.5-5.8"/></svg></span><span class="lb">Контакти</span></button>
+            <button class="papp" data-go="desk"><span class="ic" style="--g1:#4FE0BC;--g2:#16917A"><svg viewBox="0 0 24 24"><path d="M3 10h18M5 10v9M19 10v9M8 10V6h8v4"/></svg></span><span class="lb">Моє місце</span></button>
+            <button class="papp" data-go="broadcast"><span class="ic" style="--g1:#C59CF4;--g2:#8442D6"><svg viewBox="0 0 24 24"><path d="M4 10v4h3l8 4V6l-8 4H4Z"/><path d="M18 9a4 4 0 0 1 0 6"/></svg></span><span class="lb">Оголошення</span></button>
+            <button class="papp" data-go="coffee"><span class="ic" style="--g1:#D49A74;--g2:#8A5132"><svg viewBox="0 0 24 24"><path d="M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Z"/><path d="M17 9h2.2a2.5 2.5 0 0 1 0 5H17"/><path d="M7.5 3v2M11 3v2"/></svg></span><span class="lb">Кава</span></button>
+            <button class="papp" data-go="settings"><span class="ic" style="--g1:#A9AFB7;--g2:#5B626B"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></span><span class="lb">Налаштування</span></button>
+          </div>
+          <button class="pwd pwchats" data-go="chatlist"><span class="h"><b>Чати</b><i id="wChatN"></i></span><span id="wChatList"></span></button>
+        </div>
+        <div class="pdock">
+          <button class="papp" data-go="chatlist" aria-label="Чат"><span class="ic" style="--g1:#6FE08E;--g2:#25A24E"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4V5Z"/></svg></span><span class="badge" id="chatBadge" style="display:none">0</span></button>
+          <button class="papp" data-go="calls" aria-label="Дзвінки"><span class="ic" style="--g1:#FF6B78;--g2:#C8001A"><svg viewBox="0 0 24 24"><path d="M6.5 3h3l1.6 4-2 1.4a12 12 0 0 0 5 5l1.4-2 4 1.6v3a2 2 0 0 1-2.1 2A16 16 0 0 1 4 5.1 2 2 0 0 1 6.5 3Z"/></svg></span></button>
+          <button class="papp" data-go="calendar" aria-label="Календар"><span class="ic pcalic"><i id="pCalW">ПТ</i><b id="pCalD">16</b></span><span class="badge" id="calBadge" style="display:none">0</span></button>
+          <button class="papp" data-go="tasks" aria-label="Задачі"><span class="ic" style="--g1:#FFC163;--g2:#F27B1A"><svg viewBox="0 0 24 24"><path d="M9 4h6v2.5H9zM8 5H5v15h14V5h-3M8.5 13l2.2 2.2L15 11"/></svg></span><span class="badge" id="taskBadge" style="display:none">0</span></button>
         </div>
       </div>
       <div class="pscreen" data-scr="contacts"></div>

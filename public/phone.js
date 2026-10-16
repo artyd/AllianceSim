@@ -21,10 +21,37 @@ export function initPhone(O){
   const load=(k,f)=>{try{const v=JSON.parse(localStorage.getItem(k)); return v==null?f:v;}catch(e){return f;}};
   const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}};
   const setBadge=(el,n)=>{el.style.display=n?'grid':'none'; el.textContent=n>99?'99+':n;};
-  function badges(){const n=personal()?unreadTotal():0, t=personal()?tasksDue():0, v=personal()?PM.invites||0:0; setBadge($('#phoneDot'),n+t+v); setBadge($('#calBadge'),v); setBadge($('#chatBadge'),n); setBadge($('#taskBadge'),t);}
+  function badges(){const n=personal()?unreadTotal():0, t=personal()?tasksDue():0, v=personal()?PM.invites||0:0; setBadge($('#phoneDot'),n+t+v); setBadge($('#calBadge'),v); setBadge($('#chatBadge'),n); setBadge($('#taskBadge'),t); widgets();}
 
   function tick(){const d=new Date(); $('#pclock').textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
-    $('#pdate').textContent=d.toLocaleDateString('uk-UA',{weekday:'long',day:'numeric',month:'long'});}
+    $('#pdate').textContent=d.toLocaleDateString('uk-UA',{weekday:'long',day:'numeric',month:'long'});
+    $('#pCalD').textContent=d.getDate(); $('#pCalW').textContent=d.toLocaleDateString('uk-UA',{weekday:'short'}).replace('.','').toUpperCase();
+    widgets();}
+
+  // ── AllianceOS 2.0 home (spec 006): widgets + Dynamic Island. Read-only views over PM data. ──
+  let nextEv=null;
+  async function loadNext(){if(!personal()) return; const a=new Date(), b=new Date(); b.setHours(23,59,59,999);
+    try{const l=await meApi('GET',`/me/events?from=${encodeURIComponent(a.toISOString())}&to=${encodeURIComponent(b.toISOString())}`);
+      nextEv=l.filter(e=>!e.allDay&&e.myStatus!=='declined'&&new Date(e.endsAt||e.startsAt)>a).sort((x,y)=>new Date(x.startsAt)-new Date(y.startsAt))[0]||null;}catch(e){}
+    widgets();}
+  function widgets(){
+    const set=(id,v)=>{const el=$('#'+id); if(el) el.textContent=v;}, html=(id,v)=>{const el=$('#'+id); if(el) el.innerHTML=v;};
+    const p=personal(), now=Date.now();
+    if(nextEv&&new Date(nextEv.endsAt||nextEv.startsAt)>now){const a=new Date(nextEv.startsAt), mins=Math.round((a-now)/60000);
+      set('wNextWhen',mins<=0?'Зараз':mins<60?`Через ${mins} хв`:'Сьогодні'); set('wNextTitle',nextEv.title||'Подія');
+      set('wNextSub',hm(a)+(nextEv.endsAt?'–'+hm(new Date(nextEv.endsAt)):''));
+    }else{set('wNextWhen','Сьогодні'); set('wNextTitle',p?'Подій більше немає':'Календар'); set('wNextSub',p?'Вільний день':'Відкрийте в Telegram');}
+    const live=nextEv&&new Date(nextEv.startsAt)-now<3600e3&&new Date(nextEv.endsAt||nextEv.startsAt)>now, mins=live?Math.max(0,Math.round((new Date(nextEv.startsAt)-now)/60000)):0;
+    $('.pnotch').classList.toggle('live',!!live);
+    html('pisl',live?`<i></i>${esc(nextEv.title||'Подія')}<em>${mins?mins+' хв':'зараз'}</em>`:'');
+    const mine=p?(PM.tasks||[]).filter(t=>!t.done&&t.assigneeId===TG.me.id):[];
+    set('wTaskN',p?mine.length:'');
+    html('wTaskList',mine.length?mine.slice(0,3).map(t=>`<span class="tr">${esc(t.text)}</span>`).join(''):`<span class="tr e">${p?'Усе зроблено':'Ваші задачі тут'}</span>`);
+    const chats=p?(PM.chats||[]).slice().sort((x,y)=>(y.unread>0)-(x.unread>0)||new Date(y.lastAt||0)-new Date(x.lastAt||0)).slice(0,2):[];
+    const un=p?unreadTotal():0; set('wChatN',un?un+' нові':'');
+    html('wChatList',chats.length?chats.map(c=>`<span class="cr">${chatAv(c)}<span class="t"><b>${esc(chatTitle(c))}</b><span>${!c.last?'Ще немає повідомлень':c.last.deleted?'Повідомлення видалено':esc(c.last.text||'Вкладення')}</span></span>${c.unread?`<span class="n">${c.unread}</span>`:''}</span>`).join(''):`<span class="tr e">${p?'Чатів поки немає':'Особисті чати — у Telegram'}</span>`);
+    if(p){const me=emp(TG.me.id)||TG.me; html('wMeAv',avHTML(me)); set('wMeSt',(STATUS[statusOf(me)]||{}).n||'AllianceOS'); set('wMood',(MOODS[me.mood]||MOODS.good).e);}
+  }
   const wire=s=>s.querySelectorAll('[data-back]').forEach(b=>b.onclick=back);
   const head=t=>`<div class="phead"><button class="bk" data-back>${IC.back}</button><div class="ti">${t}</div><div class="sp"></div></div>`;
   const rowHTML=(e,sub)=>`<div class="prow" data-id="${e.id}">${avHTML(e)}<div class="tx"><div class="nm">${esc(e.name)}</div><div class="sub">${esc(sub||e.position||e.dept)}</div></div><div class="meta">${STATUS[statusOf(e)].icon}</div></div>`;
@@ -132,8 +159,10 @@ export function initPhone(O){
   const tasksDue=()=>{if(!PM.tasks) return 0; const end=new Date(); end.setHours(23,59,59,999); return PM.tasks.filter(t=>!t.done&&t.assigneeId===TG.me.id&&t.dueAt&&new Date(t.dueAt)<=end).length;};
 
   function setZ(){scr('home').style.zIndex=0; stack.forEach((id,i)=>scr(id).style.zIndex=i+1);}
-  function go(id,build){if(build)build(scr(id)); if(!stack.includes(id))stack.push(id); setZ(); const s=scr(id); void s.offsetWidth; s.classList.add('show');}
-  function pop(){const id=stack.pop(); const s=scr(id); if(s._stop){s._stop();s._stop=null;} s.classList.remove('show'); setZ(); return id;}
+  const haptic=k=>{try{if(TG.active&&settings.haptic!==false) Telegram.WebApp.HapticFeedback.impactOccurred(k||'light');}catch(e){}};
+  const appMode=()=>stack.length?phone.setAttribute('data-app',''):phone.removeAttribute('data-app');
+  function go(id,build){if(build)build(scr(id)); if(!stack.includes(id))stack.push(id); setZ(); appMode(); const s=scr(id); void s.offsetWidth; s.classList.add('show');}
+  function pop(){const id=stack.pop(); const s=scr(id); if(s._stop){s._stop();s._stop=null;} s.classList.remove('show'); setZ(); appMode(); return id;}
   function back(){if(!stack.length){close();return;} pop();}
   function home(){while(stack.length)pop();}
   function popIf(id){if(stack[stack.length-1]===id) pop();}
@@ -727,7 +756,7 @@ export function initPhone(O){
     await session(5);
     setInterval(()=>{if(PM.exp*1000-Date.now()<3600e3) session();},10*60e3);
     meApi('GET','/me/contacts').then(l=>{PM.contacts=new Map(l.map(c=>[c.id,c.username]));}).catch(()=>{});
-    loadTasks(); loadInvites();
+    loadTasks(); loadInvites(); loadNext(); setInterval(loadNext,5*60e3);
     await loadChats();
     connect();
     showTour();
@@ -746,7 +775,13 @@ export function initPhone(O){
   $('#phoneFab').onclick=open;
   $('#phoneClose').onclick=close;
   $('#pbar').onclick=()=>{if(stack.length)home(); else close();};
-  scr('home').querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go,appFor(b.dataset.go)));
+  // Zoom-from-icon: the app screen grows out of the tapped icon/widget.
+  scr('home').querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{const r=b.getBoundingClientRect(), w=body.getBoundingClientRect();
+    body.style.setProperty('--ox',(r.left+r.width/2-w.left)+'px'); body.style.setProperty('--oy',(r.top+r.height/2-w.top)+'px'); haptic(); go(b.dataset.go,appFor(b.dataset.go));});
+  $('.pnotch').onclick=()=>{if(nextEv) go('calendar',appFor('calendar'));};
+  // Theme follows Telegram; glass is dropped on weak devices / "reduce transparency".
+  try{if(TG.active&&Telegram.WebApp.colorScheme==='dark'&&!app.dataset.ui) app.dataset.ui='dark';}catch(e){}
+  if((navigator.deviceMemory&&navigator.deviceMemory<=2)||matchMedia('(prefers-reduced-transparency: reduce)').matches) phone.setAttribute('data-reduce','');
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&app.dataset.phone){if(stack.length)back(); else close();}});
   tick(); setInterval(tick,20000); badges();
   return PHONE;
