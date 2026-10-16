@@ -42,19 +42,35 @@ export function initPhone(O){
       set('wNextSub',hm(a)+(nextEv.endsAt?'–'+hm(new Date(nextEv.endsAt)):''));
     }else{set('wNextWhen','Сьогодні'); set('wNextTitle',p?'Подій більше немає':'Календар'); set('wNextSub',p?'Вільний день':'Відкрийте в Telegram');}
     const live=nextEv&&new Date(nextEv.startsAt)-now<3600e3&&new Date(nextEv.endsAt||nextEv.startsAt)>now, mins=live?Math.max(0,Math.round((new Date(nextEv.startsAt)-now)/60000)):0;
-    $('.pnotch').classList.toggle('live',!!live);
-    html('pisl',live?`<i></i>${esc(nextEv.title||'Подія')}<em>${mins?mins+' хв':'зараз'}</em>`:'');
+    renderIsland(live,mins);
     const mine=p?(PM.tasks||[]).filter(t=>!t.done&&t.assigneeId===TG.me.id):[];
     set('wTaskN',p?mine.length:'');
     html('wTaskList',mine.length?mine.slice(0,3).map(t=>`<span class="tr">${esc(t.text)}</span>`).join(''):`<span class="tr e">${p?'Усе зроблено':'Ваші задачі тут'}</span>`);
     const chats=p?(PM.chats||[]).slice().sort((x,y)=>(y.unread>0)-(x.unread>0)||new Date(y.lastAt||0)-new Date(x.lastAt||0)).slice(0,2):[];
     const un=p?unreadTotal():0; set('wChatN',un?un+' нові':'');
     html('wChatList',chats.length?chats.map(c=>`<span class="cr">${chatAv(c)}<span class="t"><b>${esc(chatTitle(c))}</b><span>${!c.last?'Ще немає повідомлень':c.last.deleted?'Повідомлення видалено':esc(c.last.text||'Вкладення')}</span></span>${c.unread?`<span class="n">${c.unread}</span>`:''}</span>`).join(''):`<span class="tr e">${p?'Чатів поки немає':'Особисті чати — у Telegram'}</span>`);
-    if(p){const me=emp(TG.me.id)||TG.me; html('wMeAv',avHTML(me)); set('wMeSt',(STATUS[statusOf(me)]||{}).n||'AllianceOS'); set('wMood',(MOODS[me.mood]||MOODS.good).e);}
+    if(p){const me=emp(TG.me.id)||TG.me; html('wMeAv',avHTML(me)); set('wMeSt',(STATUS[statusOf(me)]||{}).n||'AllianceOS'); html('wMood',Object.keys(MOODS).map(k=>`<button type="button" class="mb" data-mood-set="${k}" aria-label="${MOODS[k].n}" aria-pressed="${(me.mood||'good')===k}">${moodSvg(k)}</button>`).join('')); $('#wMood').querySelectorAll('[data-mood-set]').forEach(b=>b.onclick=ev=>{ev.stopPropagation(); haptic(); setMe('mood',b.dataset.moodSet);});}
   }
-  const wire=s=>s.querySelectorAll('[data-back]').forEach(b=>b.onclick=back);
-  const head=t=>`<div class="phead"><button class="bk" data-back>${IC.back}</button><div class="ti">${t}</div><div class="sp"></div></div>`;
-  const rowHTML=(e,sub)=>`<div class="prow" data-id="${e.id}">${avHTML(e)}<div class="tx"><div class="nm">${esc(e.name)}</div><div class="sub">${esc(sub||e.position||e.dept)}</div></div><div class="meta">${STATUS[statusOf(e)].icon}</div></div>`;
+  // ── app chrome (spec 006): large collapsing titles, bottom sheets, floating tab bars ──
+  const SHEETS=new Set(['evform','taskform','chatnew','groupnew','pick','wall']);
+  const TABS={chatlist:'comm',calls:'comm',contacts:'comm',calendar:'day',tasks:'day'};
+  const TABDEF={comm:[['chatlist','Чати',IC.chat],['calls','Дзвінки',IC.phone],['contacts','Контакти','<svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3.4"/><path d="M2 19a6 6 0 0 1 12 0"/><path d="M16 5a3.4 3.4 0 0 1 0 6.8M22 19a6 6 0 0 0-4.5-5.8"/></svg>']],
+    day:[['calendar','Календар','<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9.5h16M8 3v4M16 3v4"/></svg>'],['tasks','Задачі','<svg viewBox="0 0 24 24"><path d="M9 4h6v2.5H9zM8 5H5v15h14V5h-3M8.5 13l2.2 2.2L15 11"/></svg>']]};
+  function chrome(s){const id=s.dataset.scr, sheet=SHEETS.has(id), pos=stack.includes(id)?stack.indexOf(id):stack.length;
+    s.classList.toggle('sheet',sheet); s.classList.toggle('tabbed',!!TABS[id]);
+    const bl=s.querySelector('.phead .bk .bl'); if(bl) bl.textContent=sheet?'Скасувати':pos>0?'Назад':'Додому';
+    if(sheet&&!s.querySelector('.pgrab')) s.insertAdjacentHTML('afterbegin','<div class="pgrab" data-back></div>');
+    if(sheet&&!s._sw){s._sw=1; let y0=null; s.addEventListener('touchstart',e=>{const t=e.target.closest('.pgrab,.phead'); y0=t?e.touches[0].clientY:null;},{passive:true});
+      s.addEventListener('touchend',e=>{if(y0!=null&&e.changedTouches[0].clientY-y0>70) back(); y0=null;});}
+    // Sheets get the iOS «Скасувати · Title · Додати» header; the action mirrors the form’s main button.
+    if(sheet){const hd=s.querySelector('.phead'), main=s.querySelector('button[type=submit],[data-ok],[data-create]');
+      if(hd&&main&&!hd.querySelector('.sbtn')){const b=document.createElement('button'); b.type='button'; b.className='sbtn'; b.textContent=(main.textContent||'Готово').replace(/s*·.*$/,'').trim().split(' ')[0]; b.onclick=()=>main.click(); hd.appendChild(b);}}
+    const lt=s.querySelector('.plt'); s.classList.toggle('haslt',!!lt); s.classList.remove('collapsed');
+    if(lt) s.querySelectorAll('.pscroll').forEach(sc=>{if(sc._lt) return; sc._lt=1; sc.addEventListener('scroll',()=>s.classList.toggle('collapsed',sc.scrollTop>24),{passive:true});});}
+  const wire=s=>{chrome(s); s.querySelectorAll('[data-back]').forEach(b=>b.onclick=back);};
+  const head=(t,act)=>`<div class="phead"><button class="bk" data-back>${IC.back}<span class="bl">Назад</span></button><div class="ti">${t}</div><div class="sp"></div>${act||''}</div>${t?`<h1 class="plt">${t}</h1>`:''}`;
+  const stDot=e=>`<span class="pavw">${avHTML(e)}<i style="background:${(STATUS[statusOf(e)]||{}).c||'#8E8E93'}"></i></span>`;
+  const rowHTML=(e,sub)=>`<div class="prow" data-id="${e.id}">${stDot(e)}<div class="tx"><div class="nm">${esc(e.name)}</div><div class="sub">${esc(sub||[e.position,e.dept].filter(Boolean).join(' · '))}</div></div></div>`;
   const empty=(b,s)=>`<div class="pempty"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M3 19a6 6 0 0 1 12 0M17 5a3.4 3.4 0 0 1 0 6.8M22 19a6 6 0 0 0-4.5-5.8"/></svg><b>${b}</b><span>${s}</span></div>`;
   const fld=(k,v)=>`<div class="pfield"><span class="k">${k}</span><span class="v">${esc(v)}</span></div>`;
 
@@ -86,7 +102,7 @@ export function initPhone(O){
   const dayLabel=d=>d.toLocaleDateString('uk-UA',{weekday:'short',day:'numeric',month:'long'});
   const nameOf=id=>{const e=emp(id); return e?e.name:'Колега';};
   const first=id=>nameOf(id).split(' ')[0];
-  const headP=(t,act)=>`<div class="phead"><button class="bk" data-back>${IC.back}</button><div class="ti">${t}</div><div class="sp"></div>${act||''}</div>`;
+  const headP=(t,act)=>head(t,act);
   const redraw=id=>{const s=scr(id); if(s&&s._redraw&&stack.includes(id)) s._redraw();};
   const PALETTE=['#E2001A','#F28C28','#F2C036','#5DBE7C','#3EA8C9','#5B76E6','#A36BE0','#E06CA6'];
   const REMIND=[[null,'Без нагадування'],[10,'За 10 хв'],[30,'За 30 хв'],[60,'За 1 год']];
@@ -139,7 +155,8 @@ export function initPhone(O){
       PM.typing.delete(m.chatId);
       if(!c){loadChats(); return;}
       c.last=m; c.lastAt=m.createdAt; if(m.senderId!==TG.me.id&&!(cv&&!document.hidden)) c.unread++;
-      upsertChat(c); if(cv&&cv._onMsg) cv._onMsg(m); badges(); redraw('chatlist');});
+      upsertChat(c); if(cv&&cv._onMsg) cv._onMsg(m); badges(); redraw('chatlist');
+      if(m.senderId!==TG.me.id&&!c.muted&&!(cv&&!document.hidden)&&m.kind!=='system'){islandTemp('msg',m,4500); haptic('medium');}});
     on('message_update',m=>{const c=chatById(m.chatId); if(c&&c.last&&c.last.id===m.id) c.last=m; const cv=convOpen(m.chatId); if(cv&&cv._onUpd) cv._onUpd(m); redraw('chatlist');});
     on('read',r=>{const c=chatById(r.chatId); if(!c) return; const mm=c.members.find(x=>x.id===r.employeeId); if(mm) mm.lastRead=r.lastRead;
       if(r.employeeId===TG.me.id&&c.last&&+r.lastRead>=+c.last.id){c.unread=0; badges(); redraw('chatlist');}
@@ -159,69 +176,205 @@ export function initPhone(O){
   const tasksDue=()=>{if(!PM.tasks) return 0; const end=new Date(); end.setHours(23,59,59,999); return PM.tasks.filter(t=>!t.done&&t.assigneeId===TG.me.id&&t.dueAt&&new Date(t.dueAt)<=end).length;};
 
   function setZ(){scr('home').style.zIndex=0; stack.forEach((id,i)=>scr(id).style.zIndex=i+1);}
-  const haptic=k=>{try{if(TG.active&&settings.haptic!==false) Telegram.WebApp.HapticFeedback.impactOccurred(k||'light');}catch(e){}};
-  const appMode=()=>stack.length?phone.setAttribute('data-app',''):phone.removeAttribute('data-app');
+  const hapticOk=()=>{try{if(TG.active&&load('alliancesim.phone.haptic',true)) Telegram.WebApp.HapticFeedback.notificationOccurred('success');}catch(e){}};
+  const haptic=k=>{try{if(TG.active&&load('alliancesim.phone.haptic',true)) Telegram.WebApp.HapticFeedback.impactOccurred(k||'light');}catch(e){}};
+  const wrap=phone.querySelector('.pscreenwrap');
+  // Floating glass tab bar, shared by the screens of one group (Зв’язок / Мій день).
+  const tabbar=document.createElement('nav'); tabbar.className='ptabbar'; tabbar.setAttribute('aria-label','Розділи'); wrap.appendChild(tabbar);
+  tabbar.onclick=e=>{const b=e.target.closest('[data-tab-go]'); if(!b) return; const id=b.dataset.tabGo, cur=stack[stack.length-1]; if(id===cur) return;
+    haptic('light'); pop(); go(id,appFor(id));};
+  function appMode(){const top=stack[stack.length-1];
+    stack.length?phone.setAttribute('data-app',''):phone.removeAttribute('data-app');
+    const g=top&&TABS[top]; tabbar.classList.toggle('on',!!g);
+    if(g) tabbar.innerHTML=TABDEF[g].map(([id,l,ic])=>`<button type="button" data-tab-go="${id}" aria-current="${id===top?'page':'false'}">${ic}<span>${l}</span></button>`).join('');}
   function go(id,build){if(build)build(scr(id)); if(!stack.includes(id))stack.push(id); setZ(); appMode(); const s=scr(id); void s.offsetWidth; s.classList.add('show');}
-  function pop(){const id=stack.pop(); const s=scr(id); if(s._stop){s._stop();s._stop=null;} s.classList.remove('show'); setZ(); appMode(); return id;}
+  function pop(){const id=stack.pop(); const s=scr(id); if(s._stop){s._stop();s._stop=null;} s.classList.remove('show','collapsed'); setZ(); appMode(); return id;}
   function back(){if(!stack.length){close();return;} pop();}
   function home(){while(stack.length)pop();}
   function popIf(id){if(stack[stack.length-1]===id) pop();}
-  function open(){app.dataset.phone='1'; phone.setAttribute('aria-hidden','false'); tick(); badges();}
-  function close(){delete app.dataset.phone; phone.setAttribute('aria-hidden','true');}
+  function open(){app.dataset.phone='1'; phone.setAttribute('aria-hidden','false'); if(!html.classList.contains('tgapp')) lockShow(); tick(); badges();}
+  function close(){delete app.dataset.phone; phone.setAttribute('aria-hidden','true'); ccShow(false);}
+  const html=document.documentElement;
+
+  // ── Dynamic Island: transient states (message, recording, coffee) win over the next meeting ──
+  const ISL={t:null};
+  function islandTemp(kind,data,ms){ISL.t={kind,data,until:Date.now()+ms}; widgets(); if(ms<36e5) setTimeout(()=>{if(ISL.t&&ISL.t.until<=Date.now()){ISL.t=null; widgets();}},ms+50);}
+  function islandEnd(kind){if(ISL.t&&ISL.t.kind===kind){ISL.t=null; widgets();}}
+  function renderIsland(live,mins){const n=$('.pnotch'), t=ISL.t&&ISL.t.until>Date.now()?ISL.t:null, el=$('#pisl');
+    n.classList.remove('live','big'); n.onclick=null;
+    if(t&&t.kind==='msg'){const m=t.data, c=chatById(m.chatId); n.classList.add('big');
+      el.innerHTML=`${c?chatAv(c):''}<span class="bt"><b>${esc(c?chatTitle(c):senderName(m.senderId))}</b><span>${esc(m.text||(m.attachment?'Вкладення':'Повідомлення'))}</span></span><button type="button" class="ib">Відповісти</button>`;
+      n.onclick=()=>{ISL.t=null; widgets(); if(!app.dataset.phone) open(); lockHide(); if(!stack.includes('chatlist')) go('chatlist',P.chatlist); openChat(m.chatId);}; return;}
+    if(t&&t.kind==='rec'){n.classList.add('live'); const s=Math.floor((Date.now()-t.data)/1000); el.innerHTML=`<i class="rec"></i>${Math.floor(s/60)}:${pad(s%60)}<span class="wave"><b></b><b></b><b></b><b></b><b></b><b></b><b></b></span>`; return;}
+    if(t&&t.kind==='coffee'){n.classList.add('live'); const k=Math.min(1,(Date.now()-t.data.at)/(t.until-t.data.at));
+      el.innerHTML=`<i class="cof">${IC.coffee}</i>${esc(t.data.label)}<span class="prog"><b style="width:${Math.round(k*100)}%"></b></span>`; return;}
+    if(live){n.classList.add('live'); el.innerHTML=`<i></i>${esc(nextEv.title||'Подія')}<em>${mins?mins+' хв':'зараз'}</em>`; n.onclick=()=>{lockHide(); go('calendar',appFor('calendar'));}; return;}
+    el.innerHTML='';}
+  setInterval(()=>{if(ISL.t&&(ISL.t.kind==='rec'||ISL.t.kind==='coffee')) widgets();},1000);
+
+  // ── Lock screen (office frame only): big clock, next meeting, notifications, swipe up ──
+  const lock=document.createElement('div'); lock.className='plock'; wrap.appendChild(lock);
+  function lockHide(){lock.classList.remove('on');}
+  function lockShow(){const d=new Date(), p=personal(), items=[];
+    if(p){(PM.chats||[]).filter(c=>c.unread&&c.last).slice(0,2).forEach(c=>items.push(`<button type="button" class="nt" data-lc="${c.id}"><span class="ni" style="--g1:#6FE08E;--g2:#25A24E">${IC.chat}</span><span class="nb"><span class="nh"><b>${esc(chatTitle(c))}</b><span>${shortTime(c.last.createdAt)}</span></span><span>${esc(c.last.text||'Вкладення')}</span></span></button>`));
+      if(PM.invites) items.push(`<button type="button" class="nt" data-lgo="calendar"><span class="ni pcalic"><i>${d.toLocaleDateString('uk-UA',{weekday:'short'}).replace('.','').toUpperCase()}</i><b>${d.getDate()}</b></span><span class="nb"><span class="nh"><b>Запрошення</b></span><span>${PM.invites} нов${PM.invites>1?'их':'е'} у календарі</span></span></button>`);
+      const due=tasksDue(); if(due) items.push(`<button type="button" class="nt" data-lgo="tasks"><span class="ni" style="--g1:#FFC163;--g2:#F27B1A"><svg viewBox="0 0 24 24"><path d="M9 4h6v2.5H9zM8 5H5v15h14V5h-3M8.5 13l2.2 2.2L15 11"/></svg></span><span class="nb"><span class="nh"><b>Задачі</b></span><span>${due} на сьогодні</span></span></button>`);}
+    const ev=nextEv&&new Date(nextEv.endsAt||nextEv.startsAt)>Date.now()?`<span class="chip">${hm(new Date(nextEv.startsAt))} · ${esc(nextEv.title||'Подія')}</span>`:'';
+    lock.innerHTML=`<div class="lk"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
+      <div class="dt">${d.toLocaleDateString('uk-UA',{weekday:'long',day:'numeric',month:'long'})}</div><div class="tm">${d.getHours()}:${pad(d.getMinutes())}</div>${ev}
+      <div class="nts">${items.length?'<div class="nl">Сповіщення</div>'+items.join(''):''}</div>
+      <div class="bt"><button type="button" class="qb" data-lgo="profile" aria-label="Мій статус"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-5h6v5"/></svg></button><span>Проведіть угору</span><button type="button" class="qb" data-lgo="coffee" aria-label="Кава">${IC.coffee}</button></div>`;
+    lock.classList.add('on');
+    lock.querySelectorAll('[data-lgo]').forEach(b=>b.onclick=e=>{e.stopPropagation(); lockHide(); go(b.dataset.lgo,appFor(b.dataset.lgo));});
+    lock.querySelectorAll('[data-lc]').forEach(b=>b.onclick=e=>{e.stopPropagation(); lockHide(); go('chatlist',appFor('chatlist')); openChat(b.dataset.lc);});}
+  lock.onclick=e=>{if(e.target.closest('.bt span')||e.target===lock) lockHide();};
+  {let y0=null; lock.addEventListener('pointerdown',e=>{y0=e.clientY;}); lock.addEventListener('pointerup',e=>{if(y0!=null&&y0-e.clientY>60) lockHide(); y0=null;});}
+
+  // ── Control Center: status, do-not-disturb, haptics, theme, glass, mood, quick tiles ──
+  const cc=document.createElement('div'); cc.className='pcc'; wrap.appendChild(cc);
+  const themeMode=()=>load('alliancesim.phone.theme',TG.active?'auto':(settings.theme==='dark'?'dark':'light'));
+  function applyTheme2(){const m=themeMode(); let dark=m==='dark';
+    if(m==='auto'){try{dark=TG.active?Telegram.WebApp.colorScheme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;}catch(e){}}
+    const want=dark?'dark':(settings.theme==='dark'?'pastel':settings.theme); if(settings.theme!==want){settings.theme=want; applySettings();}}
+  const THEME_N={auto:'Авто',light:'Світла',dark:'Темна'};
+  function cycleTheme(){const order=TG.active?['auto','light','dark']:['light','dark'], m=themeMode(); save('alliancesim.phone.theme',order[(order.indexOf(m)+1)%order.length]); applyTheme2();}
+  const applyGlass=()=>{const weak=(navigator.deviceMemory&&navigator.deviceMemory<=2)||matchMedia('(prefers-reduced-transparency: reduce)').matches;
+    load('alliancesim.phone.reduce',weak)?phone.setAttribute('data-reduce',''):phone.removeAttribute('data-reduce');};
+  const applyWall=()=>{const w=load('alliancesim.phone.wall','alliance'); w==='alliance'?phone.removeAttribute('data-wall'):phone.setAttribute('data-wall',w);};
+  const dndOn=()=>personal()?!!(PM.prefs&&!PM.prefs.messages&&!PM.prefs.events&&!PM.prefs.tasks):!load('alliancesim.phone.notif',true);
+  async function setDnd(on){if(personal()){try{PM.prefs=await meApi('PUT','/me/prefs',{messages:!on,events:!on,tasks:!on});}catch(e){fail(e);}} else save('alliancesim.phone.notif',!on); ccDraw();}
+  const meEmp=()=>TG.me?(emp(TG.me.id)||TG.me):null;
+  function setMe(k,v){const e=meEmp(); if(!e){toast('Доступно в Telegram'); return;} e[k]=v; empUpsert(e); syncAvatars(); renderPeople(); renderLabels(); widgets(); ccDraw();}
+  const MOOD_SVG={great:['M9 9.5h.01M15 9.5h.01','M7.5 13.5c1.5 3 7.5 3 9 0'],good:['M9 9.5h.01M15 9.5h.01','M8.5 14.5c1.4 1.4 5.6 1.4 7 0'],ok:['M9 9.5h.01M15 9.5h.01','M9 15h6'],tired:['M7.5 10h3M13.5 10h3','M9.5 15.5h5'],stressed:['M9 9.5h.01M15 9.5h.01','M8.5 16.5c1.4-1.6 5.6-1.6 7 0']};
+  const moodSvg=k=>{const [a,b]=MOOD_SVG[k]||MOOD_SVG.good; return `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="${a}"/><path d="${b}"/></svg>`;};
+  function ccDraw(){const e=meEmp(), st=e?statusOf(e):null, md=e?(e.mood||'good'):null;
+    const tog=(k,l,on,svg)=>`<button type="button" class="rt" data-cc="${k}" aria-pressed="${on}">${svg}<span>${l}</span></button>`;
+    cc.innerHTML=`<div class="g">
+      <div class="row"><div class="tile st"><span class="cap">Мій статус</span>${['office','remote','vacation'].map(k=>`<button type="button" class="sb" data-st="${k}" aria-pressed="${st===k}"><i style="background:${STATUS[k].c}"></i>${STATUS[k].n}</button>`).join('')}</div>
+        <div class="tg">${tog('dnd','Не турбувати',dndOn(),'<svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></svg>')}${tog('hap','Вібрація',load('alliancesim.phone.haptic',true),'<svg viewBox="0 0 24 24"><rect x="8" y="3" width="8" height="18" rx="2"/><path d="M4 8v8M20 8v8"/></svg>')}${tog('theme',THEME_N[themeMode()],false,'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16Z" fill="currentColor"/></svg>')}${tog('glass','Менше скла',phone.hasAttribute('data-reduce'),'<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="5"/><path d="M4 12h16"/></svg>')}</div></div>
+      <div class="tile"><span class="cap">Як ви сьогодні?</span><div class="mds">${Object.keys(MOODS).map(k=>`<button type="button" class="md" data-md="${k}" aria-pressed="${md===k}">${moodSvg(k)}<span>${MOODS[k].n}</span></button>`).join('')}</div></div>
+      <div class="row2"><button type="button" class="tile qa" data-ccgo="desk"><span class="i" style="background:#16917A"><svg viewBox="0 0 24 24"><path d="M3 10h18M5 10v9M19 10v9M8 10V6h8v4"/></svg></span><span><b>Моє місце</b><span>Стіл на сьогодні</span></span></button>
+        <button type="button" class="tile qa" data-ccgo="coffee"><span class="i" style="background:#8A5132">${IC.coffee}</span><span><b>Кава</b><span>До вашого столу</span></span></button></div>
+      <button type="button" class="tile qa" data-ccgo="contacts"><span class="i" style="background:#4A5FD6"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg></span><span><b>Знайти колегу в офісі</b><span>Покажемо на плані</span></span></button></div>
+      <button type="button" class="cl" data-ccx aria-label="Закрити центр керування"><i></i></button>`;
+    cc.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{haptic(); setMe('status',b.dataset.st);});
+    cc.querySelectorAll('[data-md]').forEach(b=>b.onclick=()=>{haptic(); setMe('mood',b.dataset.md);});
+    cc.querySelectorAll('[data-cc]').forEach(b=>b.onclick=()=>{haptic(); const k=b.dataset.cc;
+      if(k==='dnd') setDnd(!dndOn()); else if(k==='hap'){save('alliancesim.phone.haptic',!load('alliancesim.phone.haptic',true)); ccDraw();}
+      else if(k==='theme'){cycleTheme(); ccDraw();} else {save('alliancesim.phone.reduce',!phone.hasAttribute('data-reduce')); applyGlass(); ccDraw();}});
+    cc.querySelectorAll('[data-ccgo]').forEach(b=>b.onclick=()=>{ccShow(false); go(b.dataset.ccgo,appFor(b.dataset.ccgo));});
+    cc.querySelector('[data-ccx]').onclick=()=>ccShow(false);}
+  function ccShow(on){if(on){ccDraw(); if(personal()&&!PM.prefs) meApi('GET','/me/prefs').then(v=>{PM.prefs=v; ccDraw();}).catch(()=>{});} cc.classList.toggle('on',!!on);}
+  {let y0=null; cc.addEventListener('pointerdown',e=>{y0=e.clientY;}); cc.addEventListener('pointerup',e=>{if(y0!=null&&y0-e.clientY>70) ccShow(false); y0=null;});}
+
+  if(!scr('wall')) body.insertAdjacentHTML('beforeend','<div class="pscreen" data-scr="wall"></div>');
+  const CHEV='<svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>';
+  const SI={moon:'<svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></svg>',half:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16Z" fill="#fff"/></svg>',
+    img:'<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m4 16 5-5 4 4 2-2 5 5"/></svg>',glass:'<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="5"/><path d="M4 12h16"/></svg>',
+    bell:'<svg viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9Z"/><path d="M10 20a2.2 2.2 0 0 0 4 0"/></svg>',vib:'<svg viewBox="0 0 24 24"><rect x="8" y="3" width="8" height="18" rx="2"/><path d="M4 8v8M20 8v8"/></svg>',
+    cal:'<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9.5h16M8 3v4M16 3v4"/></svg>',task:'<svg viewBox="0 0 24 24"><path d="M9 4h6v2.5H9zM8 5H5v15h14V5h-3M8.5 13l2.2 2.2L15 11"/></svg>',
+    sun:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5"/></svg>',
+    desk:'<svg viewBox="0 0 24 24"><path d="M3 10h18M5 10v9M19 10v9M8 10V6h8v4"/></svg>',tg:'<svg viewBox="0 0 24 24"><path d="M3 11l17-7-3 16-5-4-3 3v-4l8-7-10 6Z"/></svg>',
+    sound:'<svg viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6l-5 4H4Z"/><path d="M17 9a4 4 0 0 1 0 6"/></svg>',cam:'<svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4Z"/><circle cx="12" cy="13" r="3.5"/></svg>'};
+  const WALLS=[['alliance','Alliance','radial-gradient(120% 70% at 15% 0%,#FF7A5C 0%,rgba(255,122,92,0) 55%),linear-gradient(165deg,#E2001A 0%,#B0001E 45%,#4A0B1E 100%)'],
+    ['sunset','Захід','linear-gradient(170deg,#FFB36B 0%,#FF6A5C 45%,#B0124F 100%)'],['night','Ніч','linear-gradient(170deg,#1B1F3B 0%,#3B1A3F 50%,#0B0B12 100%)'],['graphite','Графіт','linear-gradient(170deg,#4A4D55 0%,#1A1B1F 100%)']];
+  const segHTML=(attr,opts,cur)=>`<div class="pseg" ${attr}>${opts.map(([v,l])=>`<button type="button" data-v="${esc(v)}" aria-pressed="${String(v)===String(cur)}">${l}</button>`).join('')}</div>`;
+  const heroHTML=(e,inner)=>`<div class="phero">${head('')}<div class="hav">${avHTML(e,'av big')}<i style="background:${(STATUS[statusOf(e)]||{}).c||'#8E8E93'}"></i>${inner||''}</div><div class="hn">${esc(e.name)}</div><div class="hd">${esc([e.position,e.dept].filter(Boolean).join(' · '))}</div>`;
+  // One Settings screen for both modes; personal mode adds the Telegram notification prefs.
+  function settingsView(s){
+    const p=personal(), e=meEmp(), pr=PM.prefs||{}, wall=(WALLS.find(w=>w[0]===load('alliancesim.phone.wall','alliance'))||WALLS[0])[1];
+    const row=(ic,bg,l,right,attr='')=>`<div class="pset" ${attr}><span class="sic" style="background:${bg}">${ic}</span><span class="t"><span class="l">${l}</span>${right}</span></div>`;
+    const tog=(attr,on)=>`<span class="ptog" ${attr} aria-pressed="${!!on}"></span>`, val=v=>`<span class="v">${v}</span>${CHEV}`;
+    s.innerHTML=head('Налаштування')+`<div class="pscroll">
+      ${e?`<button type="button" class="pcard" data-goto="profile">${avHTML(e)}<span class="t"><b>${esc(e.name)}</b><span>${esc([e.position,e.dept].filter(Boolean).join(' · '))}</span><span>Профіль, статус, настрій</span></span>${CHEV}</button>`
+        :`<div class="pcard"><div class="av" style="background:var(--red)">AO</div><span class="t"><b>AllianceOS</b><span>Свій профіль — у Telegram-боті</span></span></div>`}
+      <div class="pgt">Вигляд</div><div class="pgrp">
+        ${row(SI.half,'#111114','Тема',val(THEME_N[themeMode()]),'data-theme')}
+        ${row(SI.img,'linear-gradient(160deg,#FF7A5C,#B0001E)','Шпалери',val(wall),'data-goto="wall"')}
+        ${row(SI.glass,'#5B626B','Зменшити прозорість',tog('data-glass',phone.hasAttribute('data-reduce')))}</div>
+      <div class="pgt">Сповіщення${p?' в Telegram':''}</div><div class="pgrp">
+        ${p?row(SI.bell,'#FF3B30','Повідомлення',tog('data-pref="messages"',pr.messages!==false))+row(SI.cal,'#3EA8C9','Календар',tog('data-pref="events"',pr.events!==false))+row(SI.task,'#F27B1A','Задачі',tog('data-pref="tasks"',pr.tasks!==false))+row(SI.sun,'#F2C036','Ранковий дайджест',tog('data-pref="digest"',pr.digest!==false))
+          :row(SI.bell,'#FF3B30','Сповіщення',tog('data-notif',load('alliancesim.phone.notif',true)))+row(SI.sound,'#34C759','Звук дзвінка',tog('data-sound',load('alliancesim.phone.sound',true)))}
+        ${row(SI.moon,'#5B4FD6','Не турбувати',tog('data-dnd',dndOn()))}
+        ${p?row(SI.vib,'#F27B1A','Вібрація',tog('data-hap',load('alliancesim.phone.haptic',true))):''}</div>
+      <div class="pgt">Офіс</div><div class="pgrp">
+        ${p?row(SI.desk,'#16917A','Моє місце',val(''),'data-goto="desk"'):''}
+        ${row(SI.tg,'#2AABEE','Telegram-бот',`<span class="v">${p?'підключено':'не підключено'}</span>`)}</div>
+      ${p?'<div class="pnote">Ваші чати, календар і задачі бачите лише ви та учасники. HR-доступ до них не відкриває. Дані зберігаються на сервері компанії; вкладення з чатів видаляються через 90 днів.</div>':''}
+      <div class="pver">AllianceOS 2.0</div></div>`;
+    s.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>{const id=b.dataset.goto; go(id,appFor(id));});
+    const th=s.querySelector('[data-theme]'); th.onclick=()=>{cycleTheme(); settingsView(s);};
+    const flip=t=>{const on=t.getAttribute('aria-pressed')!=='true'; t.setAttribute('aria-pressed',on); haptic(); return on;};
+    s.querySelector('[data-glass]').onclick=ev=>{save('alliancesim.phone.reduce',flip(ev.currentTarget)); applyGlass();};
+    s.querySelector('[data-dnd]').onclick=async ev=>{const on=flip(ev.currentTarget); await setDnd(on); settingsView(s);};
+    const hp=s.querySelector('[data-hap]'); if(hp) hp.onclick=ev=>save('alliancesim.phone.haptic',flip(ev.currentTarget));
+    const nt=s.querySelector('[data-notif]'); if(nt) nt.onclick=ev=>save('alliancesim.phone.notif',flip(ev.currentTarget));
+    const sd=s.querySelector('[data-sound]'); if(sd) sd.onclick=ev=>save('alliancesim.phone.sound',flip(ev.currentTarget));
+    s.querySelectorAll('[data-pref]').forEach(t=>t.onclick=async()=>{const k=t.dataset.pref, on=flip(t);
+      try{PM.prefs=await meApi('PUT','/me/prefs',{[k]:on});}catch(err){t.setAttribute('aria-pressed',!on); fail(err);}});
+    if(p&&!PM.prefs) meApi('GET','/me/prefs').then(v=>{PM.prefs=v; if(stack.includes('settings')) settingsView(s);}).catch(()=>{});
+    wire(s);}
 
   const R={
-    contacts(s){const es=O.state.employees;
-      s.innerHTML=head('Контакти')+`<div class="psearch"><input placeholder="Пошук колеги" data-q></div><div class="pscroll" data-list></div>`;
-      const box=s.querySelector('[data-list]');
-      function draw(q){if(!es.length){box.innerHTML=empty('Ще немає колег','Додайте співробітників у режимі будівника — вкладка «Люди».');return;}
-        const r=es.filter(e=>!q||(e.name+' '+e.dept+' '+(e.position||'')).toLowerCase().includes(q));
-        box.innerHTML=r.length?r.map(e=>rowHTML(e)).join(''):empty('Нічого не знайшли','Спробуйте інше ім\'я або відділ.');
+    contacts(s){const es=O.state.employees.slice().sort((a,b)=>a.name.localeCompare(b.name,'uk'));
+      const depts=[...new Set(es.map(e=>(e.dept||'').trim()).filter(Boolean))].slice(0,4);
+      let f='all', q='';
+      s.innerHTML=head('Контакти')+`<div class="psearch"><input type="search" placeholder="Ім’я, посада або відділ" data-q></div><div class="pfilt" data-f></div><div class="pscroll" data-list></div><div class="paz" data-az></div>`;
+      const box=s.querySelector('[data-list]'), fb=s.querySelector('[data-f]'), az=s.querySelector('[data-az]');
+      function draw(){
+        fb.innerHTML=[['all','Усі'],['here','Зараз в офісі'],...depts.map(d=>[d,d])].map(([k,l])=>`<button type="button" class="pchip" data-k="${esc(k)}" aria-pressed="${f===k}">${esc(l)}</button>`).join('');
+        fb.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{f=b.dataset.k; draw();});
+        if(!es.length){box.innerHTML=empty('Ще немає колег','Додайте співробітників у режимі будівника — вкладка «Люди».'); az.innerHTML=''; return;}
+        const r=es.filter(e=>(f==='all'||(f==='here'?statusOf(e)==='office':(e.dept||'').trim()===f))&&(!q||(e.name+' '+e.dept+' '+(e.position||'')).toLowerCase().includes(q)));
+        const g=new Map(); r.forEach(e=>{const L=(e.name||'#')[0].toUpperCase(); if(!g.has(L)) g.set(L,[]); g.get(L).push(e);});
+        box.innerHTML=r.length?[...g].map(([L,arr])=>`<div class="psec" data-l="${esc(L)}">${esc(L)}</div>${arr.map(e=>rowHTML(e)).join('')}`).join(''):empty('Нічого не знайшли','Спробуйте інше ім\'я або відділ.');
+        az.innerHTML=r.length>8?[...g.keys()].map(L=>`<button type="button" data-az="${esc(L)}">${esc(L)}</button>`).join(''):'';
+        az.querySelectorAll('[data-az]').forEach(b=>b.onclick=()=>{const h=box.querySelector(`[data-l="${b.dataset.az}"]`); if(h) box.scrollTop=h.offsetTop-box.offsetTop;});
         box.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>go('contact',x=>R.contact(x,el.dataset.id)));}
-      draw(''); s.querySelector('[data-q]').oninput=e=>draw(e.target.value.trim().toLowerCase()); wire(s);}
+      draw(); s.querySelector('[data-q]').oninput=e=>{q=e.target.value.trim().toLowerCase(); draw();}; wire(s);}
 ,
     contact(s,id){const e=emp(id),st=STATUS[statusOf(e)];
-      s.innerHTML=head('')+`<div class="pdetail">${avHTML(e,'av big')}<div class="nm">${esc(e.name)}</div><div class="dp">${esc(e.dept)}${e.position?' · '+esc(e.position):''}</div><div class="status" style="color:${st.c}">${st.icon} ${st.n}</div>
-        <div class="pactions"><button class="pact" data-call>${IC.phone}Подзвонити</button><button class="pact" data-msg>${IC.chat}Написати</button><button class="pact" data-loc>${IC.pin}Знайти</button></div>
-        <div class="pfields">${e.email?fld('Email',e.email):''}${e.phone?fld('Телефон',e.phone):''}${e.ext?fld('Робочий №',e.ext):''}${fld('Відділ',e.dept)}</div></div>`;
+      s.innerHTML=heroHTML(e)+`<div class="pactions"><button class="pact" data-msg>${IC.chat}Написати</button><button class="pact" data-call>${IC.phone}Подзвонити</button><button class="pact" data-loc>${IC.pin}На плані</button></div></div>
+        <div class="pscroll"><div class="pgt">Статус</div><div class="pgrp"><div class="pfield"><span class="k">Зараз</span><span class="v" style="color:${st.c}">${st.n}</span></div></div>
+        <div class="pgt">Контакти</div><div class="pgrp">${fld('Відділ',e.dept||'—')}${e.phone?fld('Телефон',e.phone):''}${e.ext?fld('Робочий №',e.ext):''}${e.email?fld('Email',e.email):''}</div></div>`;
       s.querySelector('[data-call]').onclick=()=>callPerson(id);
       s.querySelector('[data-msg]').onclick=()=>personal()?openDirect(id):go('chatlist',appFor('chatlist'));
       s.querySelector('[data-loc]').onclick=()=>{notify(id,'mark'); close(); focusEmployee(id,true);}; wire(s);}
 ,
     calls(s){
       const es=O.state.employees.filter(e=>!TG.me||e.id!==TG.me.id).sort((x,y)=>x.name.localeCompare(y.name,'uk'));
-      s.innerHTML=head('Дзвінки')+'<div class="psearch"><input placeholder="Кому подзвонити?" data-q></div><div class="pscroll" data-list></div>';
+      s.innerHTML=head('Дзвінки')+'<div class="psearch"><input type="search" placeholder="Кому подзвонити?" data-q></div><div class="pscroll" data-list></div>';
       const box=s.querySelector('[data-list]');
       const how=e=>PM.contacts.get(e.id)?'Telegram · @'+PM.contacts.get(e.id):e.phone?'Телефон · '+e.phone:'Немає контакту';
       const draw=q=>{const r=es.filter(e=>!q||(e.name+' '+(e.dept||'')).toLowerCase().includes(q));
-        box.innerHTML=r.length?r.map(e=>rowHTML(e,how(e))).join(''):empty(es.length?'Нікого не знайшли':'Немає колег','');
-        box.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>callPerson(el.dataset.id));};
+        box.innerHTML=r.length?r.map(e=>rowHTML(e,how(e)).replace(/<\/div>$/,`<span class="pcallb">${IC.phone}</span></div>`)).join(''):empty(es.length?'Нікого не знайшли':'Немає колег','');
+        box.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>{haptic(); callPerson(el.dataset.id);});};
       draw(''); s.querySelector('[data-q]').oninput=e=>draw(e.target.value.trim().toLowerCase()); wire(s);}
 ,
     coffee(s){
-      const drinks=[['Еспресо','☕'],['Американо','☕'],['Капучино','🥛'],['Лате','🥛'],['Раф','🥛'],['Чай','🍵']];
+      const CUP={small:'M7 9h9v4a4 4 0 0 1-4 4h-1a4 4 0 0 1-4-4V9Z',tall:'M5 7h12l-1.3 10.5A2.5 2.5 0 0 1 13.2 20H8.8a2.5 2.5 0 0 1-2.5-2.5L5 7Z',mug:'M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Z'};
+      const drinks=[['Еспресо','small'],['Американо','mug'],['Капучино','mug'],['Лате','tall'],['Раф','tall'],['Чай','mug']];
       let pick='Капучино', size='M';
       // Server keeps an allow-list (COFFEE_ALLOWED); known-refused Mini App users get a locked screen.
-      if(TG.active&&TG.canCoffee===false){ s.innerHTML=head('Кава')+`<div class="pscroll" style="padding:28px 18px;text-align:center"><div style="font-size:40px;margin-bottom:10px">☕🔒</div><div style="font-weight:800;margin-bottom:6px">Замовлення кави недоступне</div><div style="font-size:13px;color:var(--muted);font-weight:600">Ця функція доступна лише керівництву.</div></div>`; wire(s); return; }
-      s.innerHTML=head('Кава')+`<div class="pscroll" style="padding:16px">
-        <div style="font-size:12px;font-weight:800;color:var(--muted);margin-bottom:9px;text-transform:uppercase;letter-spacing:.04em">Напій</div>
-        <div class="pchips" data-drink style="margin-bottom:18px">${drinks.map(d=>`<button class="pchip" data-v="${d[0]}" aria-pressed="${d[0]===pick}">${d[1]} ${d[0]}</button>`).join('')}</div>
-        <div style="font-size:12px;font-weight:800;color:var(--muted);margin-bottom:9px;text-transform:uppercase;letter-spacing:.04em">Розмір</div>
-        <div class="pchips" data-size style="margin-bottom:22px">${['S','M','L'].map(z=>`<button class="pchip" data-v="${z}" aria-pressed="${z===size}">${z}</button>`).join('')}</div>
-        <button class="pbtn" data-order>${IC.coffee}Замовити на кухню</button>
-        <div style="text-align:center;font-size:11.5px;color:var(--muted);font-weight:700;margin-top:12px">Принесуть до вашого столу ☕</div></div>`;
-      s.querySelectorAll('[data-drink] .pchip').forEach(b=>b.onclick=()=>{pick=b.dataset.v; b.parentElement.querySelectorAll('.pchip').forEach(x=>x.setAttribute('aria-pressed',x===b));});
-      s.querySelectorAll('[data-size] .pchip').forEach(b=>b.onclick=()=>{size=b.dataset.v; b.parentElement.querySelectorAll('.pchip').forEach(x=>x.setAttribute('aria-pressed',x===b));});
+      if(TG.active&&TG.canCoffee===false){ s.innerHTML=head('Кава')+`<div class="pscroll"><div class="plocked"><div class="lic">${IC.coffee}</div><b>Замовлення кави недоступне</b><span>Ця функція доступна лише керівництву.</span></div></div>`; wire(s); return; }
+      s.innerHTML=head('Кава')+`<div class="pscroll"><p class="plead">Принесуть до вашого столу</p>
+        <div class="pgt">Напій</div><div class="pdrinks" data-drink>${drinks.map(([n,k])=>`<button type="button" class="pdr" data-v="${n}" aria-pressed="${n===pick}"><svg viewBox="0 0 24 24"><path d="${CUP[k]}"/><path d="M17 10h1.8a2.3 2.3 0 0 1 0 4.6H16.6"/></svg>${n}</button>`).join('')}</div>
+        <div class="pgt">Розмір</div>${segHTML('data-size',[['S','S'],['M','M'],['L','L']],size)}</div>
+        <div class="pfoot"><button class="pbtn" data-order>${IC.coffee}<span data-ol></span></button></div>`;
+      const lbl=()=>{s.querySelector('[data-ol]').textContent=`Замовити ${pick} ${size}`;}; lbl();
+      s.querySelectorAll('[data-drink] [data-v]').forEach(b=>b.onclick=()=>{pick=b.dataset.v; haptic(); s.querySelectorAll('[data-drink] [data-v]').forEach(x=>x.setAttribute('aria-pressed',x===b)); lbl();});
+      s.querySelectorAll('[data-size] [data-v]').forEach(b=>b.onclick=()=>{size=b.dataset.v; haptic(); s.querySelectorAll('[data-size] [data-v]').forEach(x=>x.setAttribute('aria-pressed',x===b)); lbl();});
       s.querySelector('[data-order]').onclick=()=>{
-        try{const h={'content-type':'application/json'}; if(TG.active) h['X-Telegram-Init-Data']=TG.initData; fetch(API+'/coffee',{method:'POST',headers:h,body:JSON.stringify({drink:pick,size})}).then(r=>{ if(r.status===403) toast('Замовлення кави доступне лише керівництву 🔒'); }).catch(()=>{});}catch(e){}
-        toast(`Замовлено: ${pick} (${size}) ☕`); home(); close();}; wire(s);}
+        try{const h={'content-type':'application/json'}; if(TG.active) h['X-Telegram-Init-Data']=TG.initData; fetch(API+'/coffee',{method:'POST',headers:h,body:JSON.stringify({drink:pick,size})}).then(r=>{ if(r.status===403){islandEnd('coffee'); toast('Замовлення кави доступне лише керівництву');} }).catch(()=>{});}catch(e){}
+        haptic('medium'); toast(`Замовлено: ${pick} (${size})`); islandTemp('coffee',{label:`${pick} ${size}`,at:Date.now()},3*60e3); home(); if(!html.classList.contains('tgapp')) close();}; wire(s);}
 ,
     // Announcements (spec 005): in Telegram → office or my department chat; on the web → HR
-    // with the access code, to the office or any department. Delivered as a 📢 chat post +
+    // with the access code, to the office or any department. Delivered as a chat post +
     // a Telegram push to everyone (muted chats too).
     broadcast(s){
       const tg=personal(), depts=tg?[TG.me.dept||(emp(TG.me.id)||{}).dept].filter(Boolean):[...new Set(O.state.employees.map(e=>(e.dept||'').trim()).filter(Boolean))];
       let aud='office';
-      s.innerHTML=head('Оголошення')+`<div class="pbroad"><div style="font-size:12px;font-weight:800;color:var(--muted)">Кому</div><div class="pchips" data-aud><button class="pchip" data-a="office" aria-pressed="true">🏢 Весь офіс</button>${depts.map(d=>`<button class="pchip" data-a="${esc(d)}">🏷️ ${esc(d)}</button>`).join('')}</div><textarea placeholder="Напишіть оголошення для команди…" data-txt maxlength="4000"></textarea><div style="font-size:11.5px;color:var(--muted);font-weight:600">Прийде всім у чат і сповіщенням у Telegram.</div><button class="pbtn" data-send>${IC.send}Надіслати</button></div>`;
+      s.innerHTML=head('Оголошення')+`<div class="pscroll"><div class="pbroad"><div class="pgt" style="padding-left:4px">Кому</div><div class="pchips" data-aud><button class="pchip" data-a="office" aria-pressed="true">Весь офіс</button>${depts.map(d=>`<button class="pchip" data-a="${esc(d)}">${esc(d)}</button>`).join('')}</div><textarea placeholder="Напишіть оголошення для команди…" data-txt maxlength="4000"></textarea><div class="phint">Прийде всім у чат і сповіщенням у Telegram.</div><button class="pbtn" data-send>${IC.send}Надіслати</button></div></div>`;
       s.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{aud=b.dataset.a; s.querySelectorAll('[data-a]').forEach(x=>x.setAttribute('aria-pressed',x===b));});
       s.querySelector('[data-send]').onclick=async()=>{const v=s.querySelector('[data-txt]').value.trim(); if(!v){toast('Напишіть текст оголошення'); return;}
         try{
@@ -229,48 +382,41 @@ export function initPhone(O){
           else{const tok=getToken(); if(!tok){toast('Оголошення надсилає HR — увійдіть з кодом доступу'); return;}
             const r=await fetch(API+'/announce',{method:'POST',headers:{'content-type':'application/json','X-Edit-Token':tok},body:JSON.stringify({target:aud,text:v})});
             if(r.status===401||r.status===503){toast('Невірний код доступу'); return;} if(r.status===404){toast('У цьому відділі ще ніхто не підключив бота'); return;} if(!r.ok) throw new Error('http '+r.status);}
-          toast('📢 Оголошення надіслано'); home();}
+          toast('Оголошення надіслано'); home();}
         catch(e){if(e.code===403) toast('Оголошення можуть надсилати лише відповідальні особи'); else fail(e);}}; wire(s);}
 ,
     profile(s){
       const me=TG.me?(emp(TG.me.id)||TG.me):null;
       if(!me){ s.innerHTML=head('Мій профіль')+empty('Профіль недоступний','Відкрий офіс через Telegram-бота, щоб керувати своїм профілем.'); wire(s); return; }
       const e=me;
-      const chip=(v,label,on)=>`<button class="pchip" data-v="${v}" aria-pressed="${on}">${label}</button>`;
-      const ttl=t=>`<div style="font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:16px 2px 8px">${t}</div>`;
-      s.innerHTML=head('Мій профіль')+`<div class="pscroll">
-        <div class="pdetail" style="padding-bottom:6px">${avHTML(e,'av big')}<div class="nm">${esc(e.name)}</div><div class="dp">${esc(e.dept)}${e.position?' · '+esc(e.position):''}</div>
-          <label class="pbtn" style="cursor:pointer;margin-top:14px;width:100%">📷 Змінити фото<input type="file" accept="image/*" data-photo style="display:none"></label></div>
-        <div style="padding:0 16px 18px">
-          ${ttl('Статус')}<div class="pchips" data-status>${Object.keys(STATUS).map(k=>chip(k,`${STATUS[k].icon} ${STATUS[k].n}`,statusOf(e)===k)).join('')}</div>
-          ${ttl('Настрій')}<div class="pchips" data-mood>${Object.keys(MOODS).map(k=>chip(k,`${MOODS[k].e} ${MOODS[k].n}`,(e.mood||'good')===k)).join('')}</div>
-          ${ttl('Колір аватара')}<div class="pchips" data-color>${DEPT_COLORS.map(c=>`<button class="pchip" data-c="${c}" title="колір" style="background:${c};width:32px;height:32px;padding:0;border-radius:50%;border:none${(e.color===c&&!e.photo)?';outline:3px solid var(--ink);outline-offset:2px':''}"></button>`).join('')}</div>
-          ${TG.active?`${ttl('День народження')}<div class="row2" style="display:flex;gap:8px"><input class="field" data-bday placeholder="ДД.ММ" inputmode="numeric" maxlength="5" value="${TG.me&&TG.me.birthday?TG.me.birthday.slice(3)+'.'+TG.me.birthday.slice(0,2):''}" style="flex:1;height:40px;border-radius:12px;border:1.5px solid var(--line);padding:0 12px;font:inherit;font-weight:700;background:var(--panel-solid);color:var(--ink)"><button class="pbtn sm" data-bdsave style="padding:0 16px">Зберегти</button></div><div style="font-size:11.5px;color:var(--muted);font-weight:600;margin-top:6px">Привітаємо в чаті офісу 🎂 Рік не потрібен і нікому не показується.</div>`:''}
-        </div></div>`;
+      const chip=(v,label,on,dot)=>`<button class="pchip" data-v="${v}" aria-pressed="${on}">${dot?`<i class="dot" style="background:${dot}"></i>`:''}${label}</button>`;
+      s.innerHTML=heroHTML(e,`<label class="cam" aria-label="Змінити фото">${SI.cam}<input type="file" accept="image/*" data-photo hidden></label>`)+`<div class="pactions"><button class="pact" data-goto="chatlist">${IC.chat}Чати</button><button class="pact" data-goto="calendar">${SI.cal}Календар</button><button class="pact" data-goto="desk">${IC.pin}Моє місце</button></div></div>
+        <div class="pscroll">
+          <div class="pgt">Статус</div><div class="pchips pad" data-status>${Object.keys(STATUS).map(k=>chip(k,STATUS[k].n,statusOf(e)===k,STATUS[k].c)).join('')}</div>
+          <div class="pgt">Настрій</div><div class="pmoods" data-mood>${Object.keys(MOODS).map(k=>`<button class="pchip pmd" data-v="${k}" aria-pressed="${(e.mood||'good')===k}">${moodSvg(k)}<span>${MOODS[k].n}</span></button>`).join('')}</div>
+          <div class="pgt">Колір аватара</div><div class="pchips pad" data-color>${DEPT_COLORS.map(c=>`<button class="pcol" data-c="${c}" aria-label="Колір" aria-pressed="${e.color===c&&!e.photo}" style="background:${c}"></button>`).join('')}</div>
+          ${TG.active?`<div class="pgt">День народження</div><div class="pgrp"><div class="pset"><span class="t"><input class="pin" data-bday placeholder="ДД.ММ" inputmode="numeric" maxlength="5" value="${TG.me&&TG.me.birthday?TG.me.birthday.slice(3)+'.'+TG.me.birthday.slice(0,2):''}"><button class="pbtn sm" data-bdsave>Зберегти</button></span></div></div><div class="phint pad">Привітаємо в чаті офісу. Рік не потрібен і нікому не показується.</div>`:''}
+        </div>`;
+      s.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>{const id=b.dataset.goto; go(id,appFor(id));});
+      if(!personal()) s.querySelectorAll('[data-goto]').forEach(b=>{if(b.dataset.goto!=='chatlist') b.remove();});
       const bs=s.querySelector('[data-bdsave]'); if(bs) bs.onclick=async()=>{const v=s.querySelector('[data-bday]').value.trim();
         try{const u=await apiEmpWrite('PUT','/employees/'+e.id,{birthday:v||null}); if(TG.me) TG.me.birthday=u&&u.birthday||null;
-          toast(v&&!(u&&u.birthday)?'Не схоже на дату — формат ДД.ММ':v?'Збережено 🎂':'День народження прибрано'); R.profile(s);}catch(err){toast('Не вдалося зберегти');}};
-      const save=()=>{ empUpsert(e); syncAvatars(); renderPeople(); renderLabels(); };
-      s.querySelectorAll('[data-status] .pchip').forEach(b=>b.onclick=()=>{ e.status=b.dataset.v; save(); R.profile(s); });
-      s.querySelectorAll('[data-mood] .pchip').forEach(b=>b.onclick=()=>{ e.mood=b.dataset.v; save(); R.profile(s); });
-      s.querySelectorAll('[data-color] [data-c]').forEach(b=>b.onclick=()=>{ e.color=b.dataset.c; e.photo=null; save(); R.profile(s); });
-      s.querySelector('[data-photo]').onchange=ev=>{ const f=ev.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ e.photo=rd.result; save(); toast('Фото оновлено'); R.profile(s); }; rd.readAsDataURL(f); };
+          toast(v&&!(u&&u.birthday)?'Не схоже на дату — формат ДД.ММ':v?'Збережено':'День народження прибрано'); R.profile(s);}catch(err){toast('Не вдалося зберегти');}};
+      const saveE=()=>{ empUpsert(e); syncAvatars(); renderPeople(); renderLabels(); widgets(); };
+      s.querySelectorAll('[data-status] .pchip').forEach(b=>b.onclick=()=>{ haptic(); e.status=b.dataset.v; saveE(); R.profile(s); });
+      s.querySelectorAll('[data-mood] .pchip').forEach(b=>b.onclick=()=>{ haptic(); e.mood=b.dataset.v; saveE(); R.profile(s); });
+      s.querySelectorAll('[data-color] [data-c]').forEach(b=>b.onclick=()=>{ e.color=b.dataset.c; e.photo=null; saveE(); R.profile(s); });
+      s.querySelector('[data-photo]').onchange=ev=>{ const f=ev.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ e.photo=rd.result; saveE(); toast('Фото оновлено'); R.profile(s); }; rd.readAsDataURL(f); };
       wire(s);}
 ,
-    settings(s){
-      const dark=settings.theme==='dark';
-      let sound=load('alliancesim.phone.sound',true), notif=load('alliancesim.phone.notif',true);
-      s.innerHTML=head('Налаштування')+`<div class="pscroll">
-        <div class="psetrow"><div><div class="lb">Темна тема</div><div class="sub">Змінює вигляд офісу й телефону</div></div><div class="ptog" data-set="dark" aria-pressed="${dark}"></div></div>
-        <div class="psetrow"><div><div class="lb">Звук дзвінка</div></div><div class="ptog" data-set="sound" aria-pressed="${sound}"></div></div>
-        <div class="psetrow"><div><div class="lb">Сповіщення</div></div><div class="ptog" data-set="notif" aria-pressed="${notif}"></div></div>
-        <div class="psetrow"><div class="lb">Версія</div><div class="sub">AllianceOS 1.0</div></div></div>`;
-      s.querySelectorAll('.ptog').forEach(t=>t.onclick=()=>{const on=t.getAttribute('aria-pressed')!=='true'; t.setAttribute('aria-pressed',on);
-        const k=t.dataset.set;
-        if(k==='dark'){settings.theme=on?'dark':'pastel'; applySettings();}
-        else if(k==='sound') save('alliancesim.phone.sound',on);
-        else save('alliancesim.phone.notif',on);}); wire(s);}
+    settings(s){settingsView(s);}
+,
+    wall(s){const cur=load('alliancesim.phone.wall','alliance');
+      s.innerHTML=head('Шпалери')+`<div class="pscroll"><div class="pwalls">${WALLS.map(([k,n,bg])=>`<button type="button" data-w="${k}" aria-pressed="${k===cur}"><span style="background:${bg}"></span>${n}</button>`).join('')}</div></div>`;
+      s.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>{haptic(); save('alliancesim.phone.wall',b.dataset.w); applyWall(); s.querySelectorAll('[data-w]').forEach(x=>x.setAttribute('aria-pressed',x===b)); redraw('settings');});
+      wire(s);}
   };
+  scr('settings')._redraw=()=>settingsView(scr('settings'));
 
   // ── personal apps (Telegram user with a linked character) ──
   const P={
@@ -278,34 +424,43 @@ export function initPhone(O){
       const DOW=['Пн','Вт','Ср','Чт','Пт','Сб','Нд'], MON=['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
       const today=new Date(); today.setHours(0,0,0,0);
       const wd=d=>(d.getDay()+6)%7, same=(a,b)=>a.toDateString()===b.toDateString();
-      if(!s._view){s._view=new Date(today.getFullYear(),today.getMonth(),1); s._sel=new Date(today);}
+      const weekStart=d=>{const x=new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()-wd(x)); return x;};
+      if(!s._sel) s._sel=new Date(today);
       let evs=[];
-      const evOn=d=>{const d1=new Date(d); d1.setDate(d1.getDate()+1); return evs.filter(e=>{const a=new Date(e.startsAt), b=e.endsAt?new Date(e.endsAt):a; return a<d1&&b>=d;});};
-      async function load(){const v=s._view, from=new Date(v); from.setDate(1-wd(v)); const to=new Date(from); to.setDate(to.getDate()+43);
-        try{const want=s._view; const got=await meApi('GET',`/me/events?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`); got.forEach(e=>PM.ev.set(e.id,e)); if(s._view!==want) return; evs=got; draw();}catch(e){}}
+      const evOn=d=>{const d0=new Date(d); d0.setHours(0,0,0,0); const d1=new Date(d0); d1.setDate(d1.getDate()+1); return evs.filter(e=>{const a=new Date(e.startsAt), b=e.endsAt?new Date(e.endsAt):a; return a<d1&&b>=d0;});};
+      async function load(){const from=weekStart(s._sel), to=new Date(from); to.setDate(to.getDate()+7); const want=+from;
+        try{const got=await meApi('GET',`/me/events?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`); got.forEach(e=>PM.ev.set(e.id,e)); if(+weekStart(s._sel)!==want) return; evs=got; draw();}catch(e){}}
+      const PX=56;
       function draw(){
-        const view=s._view, sel=s._sel, y=view.getFullYear(), m=view.getMonth(), lead=wd(new Date(y,m,1)), dim=new Date(y,m+1,0).getDate();
-        let cells=''; for(let i=0;i<lead;i++) cells+='<div></div>';
-        for(let dn=1;dn<=dim;dn++){const d=new Date(y,m,dn);
-          cells+=`<button class="pcell${same(d,sel)?' sel':''}${same(d,today)?' tod':''}" data-d="${dn}"><span>${dn}</span>${evOn(d).length?'<i></i>':''}</button>`;}
-        const list=evOn(sel);
-        const row=(e,i)=>{const a=new Date(e.startsAt), b=e.endsAt?new Date(e.endsAt):null;
-          const tm=(e.allDay?'Весь день':hm(a)+(b?'–'+hm(b):''))+(e.repeat?' 🔁':'');
-          const tag=e.myStatus==='pending'?'<span class="ptag">очікує відповіді</span>':(e.organizerId!==TG.me.id?`<span class="ptag muted">від ${esc(first(e.organizerId))}</span>`:'');
-          return `<div class="pev ${e.myStatus==='declined'?'declined':''}" data-ev="${e.id}" data-i="${i}"><div class="bar" style="background:${esc(e.color||'#5B76E6')}"></div><div style="flex:1;min-width:0"><div class="tm">${tm}${tag}</div><div class="tt">${esc(e.title)}</div>${e.place?`<div class="pl">📍 ${esc(e.place)}</div>`:''}</div></div>`;};
-        s.innerHTML=headP('Календар','<button class="act" data-new aria-label="Нова подія">+</button>')+
-          `<div class="pcalbar"><button class="bk" data-prev>${IC.back}</button><div class="ti">${MON[m]} ${y}</div><button class="bk" data-next style="transform:scaleX(-1)">${IC.back}</button></div>
-           <div class="pcalgrid">${DOW.map(x=>`<div class="pdowc">${x}</div>`).join('')}</div>
-           <div class="pcalgrid" style="padding-bottom:6px">${cells}</div>
-           <div class="pscroll" style="border-top:1px solid var(--line);padding:4px 0">
-             <div style="padding:9px 16px 4px;font-size:13px;font-weight:900">${esc(dayLabel(sel))}${same(sel,today)?' · сьогодні':''}</div>
-             ${list.length?list.map(row).join(''):'<div style="padding:26px 16px;text-align:center;color:var(--muted);font-weight:700;font-size:13px">Немає запланованих справ<br><span style="font-weight:600;font-size:12px">Натисніть «+», щоб додати подію чи нотатку</span></div>'}
-           </div>`;
-        s.querySelector('[data-prev]').onclick=()=>{s._view=new Date(y,m-1,1); draw(); load();};
-        s.querySelector('[data-next]').onclick=()=>{s._view=new Date(y,m+1,1); draw(); load();};
-        s.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{s._sel=new Date(y,m,+b.dataset.d); draw();});
+        const sel=new Date(s._sel); sel.setHours(0,0,0,0); const ws=weekStart(sel), days=[...Array(7)].map((_,i)=>{const d=new Date(ws); d.setDate(d.getDate()+i); return d;});
+        const list=evOn(sel), allDay=list.filter(e=>e.allDay), sel1=new Date(sel); sel1.setDate(sel1.getDate()+1);
+        const items=list.filter(e=>!e.allDay).map(e=>{const a=new Date(e.startsAt), b=e.endsAt?new Date(e.endsAt):new Date(a.getTime()+30*60e3);
+          const st=a<sel?0:a.getHours()*60+a.getMinutes(), en=b>=sel1?24*60:b.getHours()*60+b.getMinutes(); return {e,a,b,st,en:Math.max(en,st+28)};}).sort((x,y)=>x.st-y.st||y.en-x.en);
+        // Overlapping events share the width in columns (like iOS Calendar).
+        let cols=[], cluster=[], maxEnd=-1; const flush=()=>{const n=cluster.reduce((m,i)=>Math.max(m,i.col+1),1); cluster.forEach(i=>i.n=n); cluster=[]; cols=[];};
+        items.forEach(it=>{if(it.st>=maxEnd&&cluster.length){flush(); maxEnd=-1;} let c=cols.findIndex(end=>end<=it.st); if(c<0){c=cols.length; cols.push(0);} cols[c]=it.en; it.col=c; cluster.push(it); maxEnd=Math.max(maxEnd,it.en);}); flush();
+        const H0=Math.min(8,...items.map(i=>Math.floor(i.st/60))), H1=Math.max(20,...items.map(i=>Math.ceil(i.en/60)));
+        const tm=(e,a,b)=>(e.allDay?'Весь день':hm(a)+(e.endsAt?'–'+hm(b):''))+(e.repeat?' 🔁':'');
+        const tag=e=>e.myStatus==='pending'?' · очікує відповіді':(e.organizerId!==TG.me.id?` · від ${esc(first(e.organizerId))}`:'');
+        const cls=e=>(e.myStatus==='pending'?' pend':'')+(e.myStatus==='declined'?' decl':'');
+        const idx=e=>list.indexOf(e);
+        const blocks=items.map(({e,a,b,st,en,col,n})=>`<button type="button" class="pevb${cls(e)}${en-st<50?' short':''}" data-ev="${e.id}" data-i="${idx(e)}" style="--c:${esc(e.color||'#5B76E6')};top:${(st-H0*60)/60*PX+1}px;height:${(en-st)/60*PX-3}px;left:calc(50px + (100% - 58px) * ${col} / ${n});width:calc((100% - 58px) / ${n} - 3px)"><b>${esc(e.title)}</b><span>${tm(e,a,b)}${e.place?' · '+esc(e.place):''}${tag(e)}</span></button>`).join('');
+        const hours=[...Array(H1-H0+1)].map((_,i)=>`<div class="phr" style="top:${i*PX}px"><span>${pad(H0+i)}:00</span></div>`).join('');
+        const nowM=new Date().getHours()*60+new Date().getMinutes(), now=same(sel,today)&&nowM>=H0*60&&nowM<=H1*60?`<div class="pnow" style="top:${(nowM-H0*60)/60*PX}px"><span>${hm(new Date())}</span></div>`:'';
+        const dots=d=>Math.min(3,evOn(d).length);
+        s.innerHTML=head(MON[sel.getMonth()],`<button type="button" class="tbtn" data-today>Сьогодні</button>${PM.invites?`<span class="tpill">${PM.invites} запрош.</span>`:''}<button class="act" data-new aria-label="Нова подія">+</button>`)+
+          `<div class="pweek"><button type="button" class="wnav" data-prev aria-label="Попередній тиждень">${IC.back}</button>${days.map(d=>`<button type="button" class="wd${same(d,sel)?' sel':''}${same(d,today)?' tod':''}" data-d="${dKey(d)}"><span>${DOW[wd(d)]}</span><b>${d.getDate()}</b><i>${'<u></u>'.repeat(dots(d))}</i></button>`).join('')}<button type="button" class="wnav nx" data-next aria-label="Наступний тиждень">${IC.back}</button></div>
+           <div class="pdaylbl">${esc(dayLabel(sel))}${same(sel,today)?' · сьогодні':''}</div>
+           ${allDay.length?`<div class="pallday">${allDay.map(e=>`<button type="button" class="pevb ad${cls(e)}" data-ev="${e.id}" data-i="${idx(e)}" style="--c:${esc(e.color||'#5B76E6')}"><b>${esc(e.title)}</b><span>${tm(e,new Date(e.startsAt))}${tag(e)}</span></button>`).join('')}</div>`:''}
+           <div class="pscroll ptl" data-tl>${list.length?'':'<div class="ptlempty">Немає запланованих справ · натисніть «+»</div>'}<div class="ptlin" style="height:${(H1-H0)*PX+20}px">${hours}${blocks}${now}</div></div>`;
+        const tl=s.querySelector('[data-tl]'); tl.scrollTop=Math.max(0,((items[0]?Math.min(items[0].st,same(sel,today)?nowM:1e9):same(sel,today)?nowM:9*60)-H0*60-60)/60*PX);
+        const shift=k=>{const d=new Date(s._sel); d.setDate(d.getDate()+k); s._sel=d; draw(); load();};
+        s.querySelector('[data-prev]').onclick=()=>shift(-7); s.querySelector('[data-next]').onclick=()=>shift(7);
+        s.querySelector('[data-today]').onclick=()=>{s._sel=new Date(today); draw(); load();};
+        s.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{haptic(); const [y,m,dd]=b.dataset.d.split('-').map(Number); s._sel=new Date(y,m-1,dd); draw();});
         s.querySelectorAll('[data-ev]').forEach(b=>b.onclick=()=>{const o=list[+b.dataset.i]; if(o) PM.ev.set(o.id,o); go('event',x=>P.event(x,b.dataset.ev));});
         s.querySelector('[data-new]').onclick=()=>go('evform',x=>P.evform(x,null,s._sel));
+        {let x0=null; tl.addEventListener('touchstart',e=>{x0=e.touches[0].clientX;},{passive:true}); tl.addEventListener('touchend',e=>{if(x0==null) return; const dx=e.changedTouches[0].clientX-x0; x0=null; if(Math.abs(dx)>70){const d=new Date(s._sel); d.setDate(d.getDate()+(dx<0?1:-1)); s._sel=d; if(+weekStart(d)!==+ws) load(); draw();}});}
         wire(s);
       }
       s._redraw=load; draw(); load();}
@@ -315,7 +470,7 @@ export function initPhone(O){
       if(!e){s.innerHTML=head('Подія')+empty('Подію не знайдено','Можливо, її скасували.'); wire(s); return;}
       const a=new Date(e.startsAt), b=e.endsAt?new Date(e.endsAt):null, mineOrg=e.organizerId===TG.me.id;
       const when=dayLabel(a)+(e.allDay?' · весь день':', '+hm(a)+(b?'–'+hm(b):''));
-      s.innerHTML=head('Подія')+`<div class="pscroll"><div class="pinfo">
+      s.innerHTML=head('')+`<div class="pscroll"><div class="pinfo">
         <div style="height:5px;width:44px;border-radius:3px;background:${esc(e.color||'#5B76E6')};margin-top:8px"></div>
         <div class="h">${esc(e.title)}</div>
         <div class="r"><span class="k">Коли</span><span>${esc(when)}</span></div>
@@ -401,22 +556,24 @@ export function initPhone(O){
       wire(s);}
 ,
     chatlist(s){
-      s.innerHTML=headP('Чати','<button class="act" data-new aria-label="Новий чат">+</button>')+`<div class="psearch"><input placeholder="Пошук чатів і повідомлень" data-q></div><div class="pscroll" data-list></div>`;
-      const box=s.querySelector('[data-list]'); let q='', found=[], st=null;
+      s.innerHTML=headP('Чати','<button class="act" data-new aria-label="Новий чат">+</button>')+`<div class="psearch"><input type="search" placeholder="Пошук у чатах" data-q></div><div class="pfilt" data-flt></div><div class="pscroll" data-list></div>`;
+      const box=s.querySelector('[data-list]'), fl=s.querySelector('[data-flt]'); let q='', found=[], st=null, f='all';
       const preview=(c,l)=>{if(!l) return 'Немає повідомлень'; if(l.deleted) return 'Повідомлення видалено';
         const txt=esc(l.text||(l.attachment?(/^audio\//.test(l.attachment.mime)?'🎤 Голосове':'📎 '+l.attachment.name):'…'));
         if(l.kind==='announce') return '📢 '+txt; if(l.kind==='system') return txt;
         return (l.senderId===TG.me.id?'Ви: ':(c.kind!=='direct'&&l.senderId?esc(first(l.senderId))+': ':''))+txt;};
       function draw(){
         if(!PM.chats){box.innerHTML=empty('Завантаження…',''); return;}
-        const list=PM.chats.filter(c=>!q||chatTitle(c).toLowerCase().includes(q));
+        fl.innerHTML=[['all','Усі'],['unread','Непрочитані'],['group','Групи']].map(([k,l])=>`<button type="button" class="pchip" data-k="${k}" aria-pressed="${f===k}">${l}</button>`).join('');
+        fl.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{f=b.dataset.k; draw();});
+        const list=PM.chats.filter(c=>(!q||chatTitle(c).toLowerCase().includes(q))&&(f==='all'||(f==='unread'?c.unread>0:c.kind!=='direct')));
         let h=list.map(c=>{const l=c.last, ty=typingIn(c.id);
           const prev=ty?`<i>${esc(first(ty))} друкує…</i>`:preview(c,l);
           return `<div class="prow" data-c="${c.id}">${chatAv(c)}<div class="tx"><div class="nm">${esc(chatTitle(c))}${c.muted?' 🔕':''}</div><div class="sub">${prev}</div></div><div class="meta pcm"><span>${l?shortTime(l.createdAt):''}</span>${c.unread?`<b class="pun${c.muted?' m':''}">${c.unread}</b>`:''}</div></div>`;}).join('');
         // Message hits (server search) under the chat matches.
         const hits=found.map(m=>{const c=chatById(m.chatId); return c?`<div class="prow" data-c="${c.id}" data-f="${m.id}">${chatAv(c)}<div class="tx"><div class="nm">${esc(chatTitle(c))}</div><div class="sub">${m.senderId===TG.me.id?'Ви: ':esc(first(m.senderId||''))+': '}${esc(m.text)}</div></div><div class="meta pcm"><span>${shortTime(m.createdAt)}</span></div></div>`:'';}).join('');
         if(q&&hits) h+=`<div class="psec">Повідомлення</div>`+hits;
-        box.innerHTML=h||empty(q?'Нічого не знайшли':'Ще немає чатів',q?'':'Натисніть «+», щоб написати колезі.');
+        box.innerHTML=h||empty(q||f!=='all'?'Нічого не знайшли':'Ще немає чатів',q||f!=='all'?'':'Натисніть «+», щоб написати колезі.');
         box.querySelectorAll('[data-c]').forEach(el=>el.onclick=()=>openChat(el.dataset.c,el.dataset.f));}
       s.querySelector('[data-q]').oninput=e=>{q=e.target.value.trim().toLowerCase(); found=[]; draw(); clearTimeout(st);
         if(q.length>=2){const want=q; st=setTimeout(async()=>{try{const r=await meApi('GET','/me/search?q='+encodeURIComponent(want)); if(want===q){found=r; draw();}}catch(err){}},300);}};
@@ -519,21 +676,23 @@ export function initPhone(O){
     tasks(s){
       if(!s._tab) s._tab='mine';
       s.innerHTML=headP('Задачі','<button class="act" data-new aria-label="Нова задача">+</button>')+
-        `<div class="ptabs" data-tabs></div><div class="pscroll" data-list></div><div class="pinput"><input placeholder="Швидка задача для себе…" data-in maxlength="500"><button class="send" data-add>${IC.send}</button></div>`;
+        `<div class="pseg wide" data-tabs></div><div class="pscroll" data-list></div><div class="pinput pquick"><input placeholder="Швидка задача для себе…" data-in maxlength="500"><button class="send" data-add>${IC.send}</button></div>`;
       const box=s.querySelector('[data-list]'), inp=s.querySelector('[data-in]'), tabs=s.querySelector('[data-tabs]');
-      const due=t=>{if(!t.dueAt) return ''; const d=new Date(t.dueAt), late=!t.done&&d<new Date(); return `<span class="meta${late?' late':''}">⏰ ${esc(dayLabel(d))}, ${hm(d)}${late?' · прострочено':''}</span>`;};
+      const dueTag=t=>{if(!t.dueAt) return ''; const d=new Date(t.dueAt), late=!t.done&&d<new Date(), tod=d.toDateString()===new Date().toDateString();
+        return `<span class="meta tg${t.done?'':late?' late':' soon'}">${tod?'до '+hm(d):esc(dayLabel(d))+', '+hm(d)}${late?' · прострочено':''}</span>`;};
       const who=t=>t.authorId!==TG.me.id?`<span class="meta">від ${esc(nameOf(t.authorId))}</span>`:(t.assigneeId!==TG.me.id?`<span class="meta">→ ${esc(nameOf(t.assigneeId))}</span>`:'');
       function draw(){
         if(!PM.tasks){box.innerHTML=empty('Завантаження…',''); return;}
         const mine=PM.tasks.filter(t=>t.assigneeId===TG.me.id), byMe=PM.tasks.filter(t=>t.authorId===TG.me.id&&t.assigneeId!==TG.me.id);
-        tabs.style.display=byMe.length||s._tab==='byme'?'':'none';
-        tabs.innerHTML=[['mine',`Мої · ${mine.filter(t=>!t.done).length}`],['byme',`Поставлені мною · ${byMe.filter(t=>!t.done).length}`]].map(([k,l])=>`<button class="pchip" data-tab="${k}" aria-pressed="${s._tab===k}">${l}</button>`).join('');
+        tabs.innerHTML=[['mine',`Мої · ${mine.filter(t=>!t.done).length}`],['byme',`Поставлені мною · ${byMe.filter(t=>!t.done).length}`]].map(([k,l])=>`<button type="button" data-tab="${k}" aria-pressed="${s._tab===k}">${l}</button>`).join('');
         tabs.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{s._tab=b.dataset.tab; draw();});
-        const arr=s._tab==='mine'?mine:byMe;
-        box.innerHTML=arr.length?arr.map(t=>`<div class="ptask ${t.done?'done':''}" data-id="${t.id}"><span class="cb"><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg></span><span class="t">${esc(t.text)}${due(t)}${who(t)}</span></div>`).join('')
-          :`<div class="pempty"><b>${s._tab==='mine'?'Задач немає 🎉':'Ви ще нікому не ставили задач'}</b><span>${s._tab==='mine'?'Додайте задачу внизу або натисніть «+».':''}</span></div>`;
+        const arr=s._tab==='mine'?mine:byMe, now=new Date(), end=new Date(); end.setHours(23,59,59,999);
+        const G=[['Прострочено',t=>!t.done&&t.dueAt&&new Date(t.dueAt)<now],['Сьогодні',t=>!t.done&&t.dueAt&&new Date(t.dueAt)>=now&&new Date(t.dueAt)<=end],['Пізніше',t=>!t.done&&t.dueAt&&new Date(t.dueAt)>end],['Без терміну',t=>!t.done&&!t.dueAt],['Виконано',t=>t.done]];
+        const row=t=>`<div class="ptask ${t.done?'done':''}" data-id="${t.id}"><span class="cb"><svg viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg></span><span class="t">${esc(t.text)}<span class="tags">${dueTag(t)}${who(t)}</span></span></div>`;
+        box.innerHTML=arr.length?G.map(([n,f])=>{const g=arr.filter(f); return g.length?`<div class="pgt">${n}</div><div class="pgrp">${g.map(row).join('')}</div>`:'';}).join('')
+          :`<div class="pempty"><b>${s._tab==='mine'?'Задач немає':'Ви ще нікому не ставили задач'}</b><span>${s._tab==='mine'?'Додайте задачу внизу або натисніть «+».':''}</span></div>`;
         box.querySelectorAll('.ptask').forEach(el=>{const t=PM.tasks.find(x=>x.id===el.dataset.id);
-          el.querySelector('.cb').onclick=async()=>{if(t._busy) return; t._busy=true; const was=t.done; t.done=!was; draw(); badges();
+          el.querySelector('.cb').onclick=async()=>{if(t._busy) return; t._busy=true; const was=t.done; t.done=!was; if(!was) hapticOk(); draw(); badges();
             try{Object.assign(t,await meApi('PATCH','/me/tasks/'+t.id,{done:!was}));}catch(err){t.done=was; fail(err);} t._busy=false; draw(); badges();};
           el.querySelector('.t').onclick=()=>go('taskform',x=>P.taskform(x,t.id));});
       }
@@ -569,23 +728,7 @@ export function initPhone(O){
       const del=s.querySelector('[data-del]'); if(del) confirm2(del,'Точно видалити?',async()=>{try{await meApi('DELETE','/me/tasks/'+t.id); PM.tasks=PM.tasks.filter(x=>x.id!==t.id); popIf('taskform'); redraw('tasks'); badges(); toast('Задачу видалено');}catch(err){fail(err);}});
       wire(s);}
 ,
-    settings(s){
-      const dark=settings.theme==='dark', p=PM.prefs;
-      const row=(k,l,sub)=>`<div class="psetrow"><div><div class="lb">${l}</div><div class="sub">${sub}</div></div><div class="ptog" data-pref="${k}" aria-pressed="${p?p[k]:true}"></div></div>`;
-      s.innerHTML=head('Налаштування')+`<div class="pscroll">
-        <div class="psetrow"><div><div class="lb">Темна тема</div><div class="sub">Змінює вигляд офісу й телефону</div></div><div class="ptog" data-dark aria-pressed="${dark}"></div></div>
-        <div style="padding:16px 18px 4px;font-size:11.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em">Сповіщення в Telegram</div>
-        ${row('messages','Повідомлення','Нові повідомлення в чатах')}
-        ${row('events','Календар','Запрошення та нагадування про події')}
-        ${row('tasks','Задачі','Нові задачі, виконання, дедлайни')}
-        ${row('digest','Ранковий дайджест','Події та задачі на день — у будні зранку')}
-        <div class="pnote">🔒 Ваші чати, календар і задачі бачите лише ви та учасники. HR-доступ до них не відкриває. Дані зберігаються на сервері компанії; вкладення з чатів видаляються через 90 днів.</div>
-        <div class="psetrow"><div class="lb">Версія</div><div class="sub">AllianceOS 2.0</div></div></div>`;
-      s.querySelector('[data-dark]').onclick=e=>{const on=e.currentTarget.getAttribute('aria-pressed')!=='true'; e.currentTarget.setAttribute('aria-pressed',on); settings.theme=on?'dark':'pastel'; applySettings();};
-      s.querySelectorAll('[data-pref]').forEach(t=>t.onclick=async()=>{const k=t.dataset.pref, on=t.getAttribute('aria-pressed')!=='true'; t.setAttribute('aria-pressed',on);
-        try{PM.prefs=await meApi('PUT','/me/prefs',{[k]:on});}catch(err){t.setAttribute('aria-pressed',!on); fail(err);}});
-      if(!p) meApi('GET','/me/prefs').then(v=>{PM.prefs=v; if(stack.includes('settings')) P.settings(s);}).catch(()=>{});
-      wire(s);}
+    settings(s){settingsView(s);}
   };
   // ── groups, chat info, people picker, attachments ──
   const linkedColleagues=()=>O.state.employees.filter(e=>e.tg_linked&&e.id!==TG.me.id).sort((a,b)=>a.name.localeCompare(b.name,'uk'));
@@ -630,13 +773,22 @@ export function initPhone(O){
       const box=s.querySelector('[data-list]'); box.innerHTML=empty('Завантаження…','');
       const me=emp(TG.me.id)||TG.me;
       async function load(){let d; try{d=await meApi('GET','/me/desks');}catch(err){box.innerHTML=empty('Не вдалося завантажити',''); return;}
-        if(me.seat){box.innerHTML='<div class="pnote">🪑 У вас є постійне робоче місце — бронювати стіл на день не потрібно.</div>'; return;}
+        if(me.seat){box.innerHTML=`<div class="pdesk"><div class="info"><span class="dic">${SI.desk}</span><span class="t"><b>Постійне місце</b><span>У вас є постійне робоче місце — бронювати стіл на день не потрібно.</span></span></div></div>`; return;}
         if(!d.desks.length){box.innerHTML=empty('Немає столів для бронювання','HR ще не розставив столи на плані офісу.'); return;}
-        const rows=d.desks.map((x,k)=>{const room=roomName(roomAt(x.x,x.z))||'Офіс', mine=!!d.mine&&d.mine.f===x.f&&d.mine.i===x.i, owner=x.owner&&!mine?x.owner:null;
-          return `<div class="prow" data-f="${esc(x.f)}" data-i="${x.i}"><div class="av gav">🪑</div><div class="tx"><div class="nm">Стіл ${k+1}${x.i?' · місце '+(x.i+1):''}</div><div class="sub">${esc(room)} · ${mine?'<b style="color:#2e9b57">ваше на сьогодні</b>':owner?esc(owner.name)+(owner.permanent?' (постійне)':''):'вільний'}</div></div>${mine?'<button class="rm" data-rel>Звільнити</button>':owner?'':'<button class="rm" data-book style="color:#2e9b57">Сісти тут</button>'}</div>`;}).join('');
-        box.innerHTML='<div class="pnote">Оберіть стіл на сьогодні — в офісі ви з’явитесь саме там. Бронь діє до кінця дня.</div>'+rows;
+        const xs=d.desks.map(x=>x.x), zs=d.desks.map(x=>x.z), x0=Math.min(...xs), x1=Math.max(...xs), z0=Math.min(...zs), z1=Math.max(...zs);
+        const px=v=>x1>x0?6+(v-x0)/(x1-x0)*88:50, pz=v=>z1>z0?10+(v-z0)/(z1-z0)*80:50;
+        const info=d.desks.map((x,k)=>({x,k,room:roomName(roomAt(x.x,x.z))||'Офіс',mine:!!d.mine&&d.mine.f===x.f&&d.mine.i===x.i,owner:x.owner}));
+        const name=o=>`Стіл ${o.k+1}${o.x.i?' · місце '+(o.x.i+1):''}`, mine=info.find(o=>o.mine);
+        const free=info.filter(o=>!o.mine&&!o.owner), taken=info.filter(o=>!o.mine&&o.owner);
+        const rowF=o=>`<div class="prow" data-f="${esc(o.x.f)}" data-i="${o.x.i}"><span class="dic sm">${SI.desk}</span><div class="tx"><div class="nm">${name(o)}</div><div class="sub">${esc(o.room)} · вільний</div></div><button type="button" class="pbtn sm" data-book>Забронювати</button></div>`;
+        const rowT=o=>`<div class="prow"><span class="dic sm busy">${SI.desk}</span><div class="tx"><div class="nm">${name(o)}</div><div class="sub">${esc(o.room)} · ${esc(o.owner.name)}${o.owner.permanent?' (постійне)':''}</div></div></div>`;
+        box.innerHTML=`<div class="pdesk"><div class="map" aria-hidden="true">${info.map(o=>`<i class="${o.mine?'mine':o.owner?'busy':'free'}" style="left:${px(o.x.x)}%;top:${pz(o.x.z)}%"></i>`).join('')}</div>
+          <div class="info"><span class="dic">${SI.desk}</span><span class="t"><b>${mine?name(mine)+' — ваше на сьогодні':'Місце не заброньоване'}</b><span>${mine?esc(mine.room)+' · до кінця дня':'Оберіть вільний стіл нижче'}</span></span>${mine?'<button type="button" class="pbtn sm danger" data-rel>Звільнити</button>':''}</div></div>
+          <div class="plegend"><span><i class="mine"></i>Ваше</span><span><i class="busy"></i>Зайнято</span><span><i class="free"></i>Вільно</span></div>
+          ${free.length?`<div class="pgt">Вільні столи на сьогодні</div><div class="pgrp">${free.map(rowF).join('')}</div>`:''}
+          ${taken.length?`<div class="pgt">Зайняті</div><div class="pgrp">${taken.map(rowT).join('')}</div>`:''}`;
         box.querySelectorAll('[data-book]').forEach(b=>b.onclick=async()=>{const row=b.closest('[data-f]');
-          try{await meApi('POST','/me/desk',{f:row.dataset.f,i:+row.dataset.i}); toast('🪑 Місце на сьогодні ваше'); refreshLive(); load();}
+          try{await meApi('POST','/me/desk',{f:row.dataset.f,i:+row.dataset.i}); hapticOk(); toast('Місце на сьогодні ваше'); refreshLive(); load();}
           catch(err){if(err.code===409){toast('Це місце вже зайняте'); load();} else fail(err);}});
         box.querySelectorAll('[data-rel]').forEach(b=>b.onclick=async()=>{try{await meApi('DELETE','/me/desk'); toast('Місце звільнено'); refreshLive(); load();}catch(err){fail(err);}});}
       load(); wire(s);},
@@ -733,9 +885,9 @@ export function initPhone(O){
         const rec=new MediaRecorder(stream,type?{mimeType:type}:undefined), parts=[]; let cancel=false;
         const bar=document.createElement('div'); bar.className='prec';
         bar.innerHTML='<span class="dot"></span><span data-t>0:00</span><span style="flex:1"></span><button type="button" data-c title="Скасувати">✕</button><button type="button" class="send" data-ok title="Надіслати">➤</button>';
-        inbar.style.display='none'; inbar.after(bar);
+        inbar.style.display='none'; inbar.after(bar); islandTemp('rec',Date.now(),36e5);
         const t0=Date.now(), tick=setInterval(()=>{const sec=Math.floor((Date.now()-t0)/1000); bar.querySelector('[data-t]').textContent=Math.floor(sec/60)+':'+pad(sec%60); if(sec>=300) rec.stop();},250);
-        const done=()=>{clearInterval(tick); stream.getTracks().forEach(t=>t.stop()); bar.remove(); inbar.style.display='';};
+        const done=()=>{islandEnd('rec'); clearInterval(tick); stream.getTracks().forEach(t=>t.stop()); bar.remove(); inbar.style.display='';};
         rec.ondataavailable=e=>{if(e.data&&e.data.size) parts.push(e.data);};
         rec.onstop=async()=>{done(); if(cancel||!parts.length) return;
           const mime=(rec.mimeType||type||'audio/webm').split(';')[0], ext=mime.includes('mp4')?'m4a':mime.includes('ogg')?'ogg':'webm';
@@ -780,8 +932,12 @@ export function initPhone(O){
     body.style.setProperty('--ox',(r.left+r.width/2-w.left)+'px'); body.style.setProperty('--oy',(r.top+r.height/2-w.top)+'px'); haptic(); go(b.dataset.go,appFor(b.dataset.go));});
   $('.pnotch').onclick=()=>{if(nextEv) go('calendar',appFor('calendar'));};
   // Theme follows Telegram; glass is dropped on weak devices / "reduce transparency".
-  try{if(TG.active&&Telegram.WebApp.colorScheme==='dark'&&!app.dataset.ui) app.dataset.ui='dark';}catch(e){}
-  if((navigator.deviceMemory&&navigator.deviceMemory<=2)||matchMedia('(prefers-reduced-transparency: reduce)').matches) phone.setAttribute('data-reduce','');
+  applyWall(); applyGlass(); if(TG.active) applyTheme2();
+  try{Telegram.WebApp.onEvent('themeChanged',()=>{if(themeMode()==='auto') applyTheme2();});}catch(e){}
+  // Gestures: pull down on the status bar / top of the home screen → Control Center; swipe up on the home bar → home.
+  $('.pstatus').onclick=()=>ccShow(true);
+  {const wall=scr('home'); let y0=null; wall.addEventListener('pointerdown',e=>{y0=e.clientY;}); wall.addEventListener('pointerup',e=>{if(y0!=null&&e.clientY-y0>70&&!e.target.closest('.pwall')?.scrollTop) ccShow(true); y0=null;});}
+  {const hb=$('.phome'); let y0=null; hb.addEventListener('pointerdown',e=>{y0=e.clientY;}); hb.addEventListener('pointerup',e=>{if(y0!=null&&y0-e.clientY>20){haptic(); home();} y0=null;});}
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&app.dataset.phone){if(stack.length)back(); else close();}});
   tick(); setInterval(tick,20000); badges();
   return PHONE;
