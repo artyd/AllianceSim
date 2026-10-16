@@ -1,5 +1,5 @@
 // Spec 006 (UI): AllianceOS 2.0 shell — widgets, tab bars, sheets, Control Center, lock screen, island.
-import { launch, close, openAs, tap, js, shot, sleep, ok, report, home } from '../br.mjs';
+import { launch, close, openAs, tap, type, text, js, shot, sleep, ok, report, home } from '../br.mjs';
 
 await launch();
 try {
@@ -30,7 +30,19 @@ try {
   // profile hero, settings, coffee
   await tap(a, '[data-go=profile]'); await sleep(500);
   ok(await js(a, () => !!document.querySelector('[data-scr=profile] .phero')), 'profile hero');
-  await shot(a, 'g10-profile'); await home(a);
+  await shot(a, 'g10-profile');
+  // «Анкета»: the user edits their own card in a sheet; department from a wheel
+  await tap(a, '[data-edit]'); await sleep(600);
+  ok(await js(a, () => document.querySelector('[data-scr=meedit]').classList.contains('sheet')), 'profile edit is a sheet');
+  await type(a, '[data-f=position]', 'Провідна дизайнерка'); await type(a, '[data-f=phone]', '+380 50 123 45 67');
+  await tap(a, '[data-dept]'); await sleep(500);
+  ok(await js(a, () => document.querySelectorAll('.pwov.on .pwcol').length === 1), 'department wheel opens');
+  await js(a, () => document.querySelector('.pwov [data-done]').click()); await sleep(400);
+  await shot(a, 'g10-meedit');
+  await tap(a, 'button[type=submit]'); await sleep(900);
+  ok((await text(a)).includes('Провідна дизайнерка') && (await text(a)).includes('+380 50 123 45 67'), 'profile shows edited fields');
+  ok(await js(a, async () => { const r = await fetch('/api/employees'); const l = await r.json(); return l.some((e) => e.position === 'Провідна дизайнерка'); }), 'edit saved on the server');
+  await home(a);
   await tap(a, '[data-go=coffee]'); await sleep(500); await shot(a, 'g10-coffee'); await home(a);
 
   // Control Center: pull down on the home screen

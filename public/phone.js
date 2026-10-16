@@ -52,7 +52,7 @@ export function initPhone(O){
     {const me=p?(emp(TG.me.id)||TG.me):null; if(me){html('wMeAv',avHTML(me)); set('wMeSt',(STATUS[statusOf(me)]||{}).n||'AllianceOS');} html('wMood',Object.keys(MOODS).map(k=>`<button type="button" class="mb" data-mood-set="${k}" aria-label="${MOODS[k].n}" aria-pressed="${!!me&&(me.mood||'good')===k}">${moodSvg(k)}</button>`).join('')); $('#wMood').querySelectorAll('[data-mood-set]').forEach(b=>b.onclick=ev=>{ev.stopPropagation(); haptic(); setMe('mood',b.dataset.moodSet);});}
   }
   // ── app chrome (spec 006): large collapsing titles, bottom sheets, floating tab bars ──
-  const SHEETS=new Set(['evform','taskform','chatnew','groupnew','pick','wall']);
+  const SHEETS=new Set(['evform','taskform','chatnew','groupnew','pick','wall','meedit']);
   const TABS={chatlist:'comm',calls:'comm',contacts:'comm',calendar:'day',tasks:'day'};
   const TABDEF={comm:[['chatlist','Чати',IC.chat],['calls','Дзвінки',IC.phone],['contacts','Контакти','<svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3.4"/><path d="M2 19a6 6 0 0 1 12 0"/><path d="M16 5a3.4 3.4 0 0 1 0 6.8M22 19a6 6 0 0 0-4.5-5.8"/></svg>']],
     day:[['calendar','Календар','<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9.5h16M8 3v4M16 3v4"/></svg>'],['tasks','Задачі','<svg viewBox="0 0 24 24"><path d="M9 4h6v2.5H9zM8 5H5v15h14V5h-3M8.5 13l2.2 2.2L15 11"/></svg>']]};
@@ -273,7 +273,7 @@ export function initPhone(O){
   function ccShow(on){if(on){ccDraw(); if(personal()&&!PM.prefs) meApi('GET','/me/prefs').then(v=>{PM.prefs=v; ccDraw();}).catch(()=>{});} cc.classList.toggle('on',!!on);}
   {let y0=null; cc.addEventListener('pointerdown',e=>{y0=e.clientY;}); cc.addEventListener('pointerup',e=>{if(y0!=null&&y0-e.clientY>70) ccShow(false); y0=null;});}
 
-  if(!scr('wall')) body.insertAdjacentHTML('beforeend','<div class="pscreen" data-scr="wall"></div>');
+  for(const id of ['wall','meedit']) if(!scr(id)) body.insertAdjacentHTML('beforeend',`<div class="pscreen" data-scr="${id}"></div>`);
   const CHEV='<svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>';
   const SI={moon:'<svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></svg>',half:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16Z" fill="#fff"/></svg>',
     img:'<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m4 16 5-5 4 4 2-2 5 5"/></svg>',glass:'<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="5"/><path d="M4 12h16"/></svg>',
@@ -320,6 +320,54 @@ export function initPhone(O){
       try{PM.prefs=await meApi('PUT','/me/prefs',{[k]:on});}catch(err){t.setAttribute('aria-pressed',!on); fail(err);}});
     if(p&&!PM.prefs) meApi('GET','/me/prefs').then(v=>{PM.prefs=v; if(stack.includes('settings')) settingsView(s);}).catch(()=>{});
     wire(s);}
+
+  // ── iOS-style wheel picker in a bottom sheet (birthday, department) ──
+  // cols: [{items:[{v,l}], value}] · onDone(values) · onChange(values, setIndex) to fix dependent wheels.
+  const ROW=36;
+  function wheelPicker({title,cols,onDone,onChange,extra}){
+    const ov=document.createElement('div'); ov.className='pwov';
+    ov.innerHTML=`<div class="pwsheet" role="dialog" aria-label="${esc(title)}"><div class="pwhead"><button type="button" data-x>Скасувати</button><b>${esc(title)}</b><button type="button" class="ok" data-done>Готово</button></div>
+      <div class="pwbody"><div class="pwsel"></div>${cols.map((c,i)=>`<div class="pwcol" data-col="${i}" tabindex="0">${c.items.map((it,k)=>`<div class="pwit" data-k="${k}">${esc(it.l)}</div>`).join('')}</div>`).join('')}</div>
+      ${extra?`<button type="button" class="pwextra" data-extra>${esc(extra.label)}</button>`:''}</div>`;
+    wrap.appendChild(ov);
+    const colsEl=[...ov.querySelectorAll('.pwcol')], idx=colsEl.map(()=>0);
+    const values=()=>colsEl.map((c,i)=>cols[i].items[idx[i]].v);
+    // 3D drum: rows tilt and fade with the distance from the selection band.
+    const paint=c=>{const mid=c.scrollTop+c.clientHeight/2; c.querySelectorAll('.pwit').forEach(it=>{const d=(it.offsetTop+ROW/2-mid)/ROW, a=Math.min(Math.abs(d),3.2);
+      it.style.transform=`rotateX(${(-d*20).toFixed(1)}deg) scale(${(1-a*.05).toFixed(3)})`; it.style.opacity=(1-a*.26).toFixed(2); it.classList.toggle('on',Math.abs(d)<.5);});};
+    const setIndex=(i,k,smooth)=>{const c=colsEl[i]; k=Math.max(0,Math.min(cols[i].items.length-1,k)); c.scrollTo({top:k*ROW,behavior:smooth?'smooth':'auto'}); idx[i]=k; paint(c);};
+    colsEl.forEach((c,i)=>{const k=Math.max(0,cols[i].items.findIndex(it=>String(it.v)===String(cols[i].value)));
+      requestAnimationFrame(()=>setIndex(i,k,false));
+      let raf=0, settle=0;
+      c.addEventListener('scroll',()=>{cancelAnimationFrame(raf); raf=requestAnimationFrame(()=>{paint(c); const k2=Math.round(c.scrollTop/ROW);
+        if(k2!==idx[i]&&k2>=0&&k2<cols[i].items.length){idx[i]=k2; try{if(TG.active) Telegram.WebApp.HapticFeedback.selectionChanged();}catch(e){}}});
+        clearTimeout(settle); settle=setTimeout(()=>{if(onChange) onChange(values(),setIndex);},140);},{passive:true});
+      c.addEventListener('click',ev=>{const it=ev.target.closest('.pwit'); if(it) setIndex(i,+it.dataset.k,true);});
+      c.addEventListener('keydown',ev=>{if(ev.key==='ArrowDown'||ev.key==='ArrowUp'){ev.preventDefault(); setIndex(i,idx[i]+(ev.key==='ArrowDown'?1:-1),true);}});});
+    const shut=()=>{ov.classList.remove('on'); setTimeout(()=>ov.remove(),320);};
+    ov.querySelector('[data-x]').onclick=shut;
+    ov.onclick=ev=>{if(ev.target===ov) shut();};
+    ov.querySelector('[data-done]').onclick=()=>{const v=values(); shut(); hapticOk(); onDone(v);};
+    const ex=ov.querySelector('[data-extra]'); if(ex) ex.onclick=()=>{shut(); extra.onClick();};
+    {let y0=null; const sh=ov.querySelector('.pwhead'); sh.addEventListener('pointerdown',e=>{y0=e.clientY;}); sh.addEventListener('pointerup',e=>{if(y0!=null&&e.clientY-y0>60) shut(); y0=null;});}
+    requestAnimationFrame(()=>ov.classList.add('on'));
+    haptic('light');
+    return ov;}
+  const MON_GEN=['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
+  const MON_NOM=['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+  const bdayText=md=>{const m=/^(\d\d)-(\d\d)$/.exec(md||''); return m?`${+m[2]} ${MON_GEN[+m[1]-1]}`:'';};
+  // Birthday = day + month wheels (no year — nobody's business), 29 Feb allowed.
+  function pickBirthday(md,onPick){
+    const m=/^(\d\d)-(\d\d)$/.exec(md||''), now=new Date(), mm=m?+m[1]:now.getMonth()+1, dd=m?+m[2]:now.getDate();
+    const dim=mo=>new Date(2000,mo,0).getDate();
+    wheelPicker({title:'День народження',
+      cols:[{items:[...Array(31)].map((_,i)=>({v:i+1,l:String(i+1)})),value:dd},{items:MON_NOM.map((l,i)=>({v:i+1,l})),value:mm}],
+      onChange:([d,mo],setIndex)=>{if(d>dim(mo)) setIndex(0,dim(mo)-1,true);},
+      onDone:([d,mo])=>onPick(`${pad(mo)}-${pad(Math.min(d,dim(mo)))}`),
+      extra:md?{label:'Прибрати день народження',onClick:()=>onPick(null)}:null});}
+  async function saveBirthday(e,md,quiet){
+    try{const u=await apiEmpWrite('PUT','/employees/'+e.id,{birthday:md?md.slice(3)+'.'+md.slice(0,2):null}); if(TG.me) TG.me.birthday=u&&u.birthday||null;
+      if(!quiet) toast(md?'Збережено':'День народження прибрано');}catch(err){toast('Не вдалося зберегти');}}
 
   const R={
     contacts(s){const es=O.state.employees.slice().sort((a,b)=>a.name.localeCompare(b.name,'uk'));
@@ -394,25 +442,64 @@ export function initPhone(O){
     profile(s){
       const me=TG.me?(emp(TG.me.id)||TG.me):null;
       if(!me){ s.innerHTML=head('Мій профіль')+empty('Профіль недоступний','Відкрий офіс через Telegram-бота, щоб керувати своїм профілем.'); wire(s); return; }
-      const e=me;
+      const e=me, val=v=>v?esc(v):'<span class="ph">Не вказано</span>';
       const chip=(v,label,on,dot)=>`<button class="pchip" data-v="${v}" aria-pressed="${on}">${dot?`<i class="dot" style="background:${dot}"></i>`:''}${label}</button>`;
-      s.innerHTML=heroHTML(e,`<label class="cam" aria-label="Змінити фото">${SI.cam}<input type="file" accept="image/*" data-photo hidden></label>`)+`<div class="pactions"><button class="pact" data-goto="chatlist">${IC.chat}Чати</button><button class="pact" data-goto="calendar">${SI.cal}Календар</button><button class="pact" data-goto="desk">${IC.pin}Моє місце</button></div></div>
+      const row=(k,v,attr)=>`<button type="button" class="pfrow" ${attr||'data-edit'}><span class="k">${k}</span><span class="v">${v}</span>${CHEV}</button>`;
+      s.innerHTML=heroHTML(e,`<label class="cam" aria-label="Змінити фото">${SI.cam}<input type="file" accept="image/*" data-photo hidden></label>`).replace('<div class="sp"></div></div>','<div class="sp"></div><button type="button" class="hedit" data-edit>Редагувати</button></div>')+`<div class="pactions"><button class="pact" data-goto="chatlist">${IC.chat}Чати</button><button class="pact" data-goto="calendar">${SI.cal}Календар</button><button class="pact" data-goto="desk">${IC.pin}Моє місце</button></div></div>
         <div class="pscroll">
           <div class="pgt">Статус</div><div class="pchips pad" data-status>${Object.keys(STATUS).map(k=>chip(k,STATUS[k].n,statusOf(e)===k,STATUS[k].c)).join('')}</div>
           <div class="pgt">Настрій</div><div class="pmoods" data-mood>${Object.keys(MOODS).map(k=>`<button class="pchip pmd" data-v="${k}" aria-pressed="${(e.mood||'good')===k}">${moodSvg(k)}<span>${MOODS[k].n}</span></button>`).join('')}</div>
+          <div class="pgt">Анкета</div><div class="pgrp">
+            ${row('Посада',val(e.position))}${row('Відділ',val(e.dept))}${row('Телефон',val(e.phone))}${row('Email',val(e.email))}${row('Робочий №',val(e.ext))}
+            ${TG.active?row('День народження',TG.me&&TG.me.birthday?esc(bdayText(TG.me.birthday)):'<span class="ph">Не вказано</span>','data-bdpick'):''}</div>
+          ${TG.active?'<div class="phint pad">День народження: привітаємо в чаті офісу. Рік не потрібен і нікому не показується.</div>':''}
           <div class="pgt">Колір аватара</div><div class="pchips pad" data-color>${DEPT_COLORS.map(c=>`<button class="pcol" data-c="${c}" aria-label="Колір" aria-pressed="${e.color===c&&!e.photo}" style="background:${c}"></button>`).join('')}</div>
-          ${TG.active?`<div class="pgt">День народження</div><div class="pgrp"><div class="pset"><span class="t"><input class="pin" data-bday placeholder="ДД.ММ" inputmode="numeric" maxlength="5" value="${TG.me&&TG.me.birthday?TG.me.birthday.slice(3)+'.'+TG.me.birthday.slice(0,2):''}"><button class="pbtn sm" data-bdsave>Зберегти</button></span></div></div><div class="phint pad">Привітаємо в чаті офісу. Рік не потрібен і нікому не показується.</div>`:''}
+          <div style="height:24px"></div>
         </div>`;
       s.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>{const id=b.dataset.goto; go(id,appFor(id));});
       if(!personal()) s.querySelectorAll('[data-goto]').forEach(b=>{if(b.dataset.goto!=='chatlist') b.remove();});
-      const bs=s.querySelector('[data-bdsave]'); if(bs) bs.onclick=async()=>{const v=s.querySelector('[data-bday]').value.trim();
-        try{const u=await apiEmpWrite('PUT','/employees/'+e.id,{birthday:v||null}); if(TG.me) TG.me.birthday=u&&u.birthday||null;
-          toast(v&&!(u&&u.birthday)?'Не схоже на дату — формат ДД.ММ':v?'Збережено':'День народження прибрано'); R.profile(s);}catch(err){toast('Не вдалося зберегти');}};
+      s.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{haptic(); go('meedit',x=>R.meedit(x));});
+      const bp=s.querySelector('[data-bdpick]'); if(bp) bp.onclick=()=>pickBirthday(TG.me.birthday,async v=>{await saveBirthday(e,v); R.profile(s);});
       const saveE=()=>{ empUpsert(e); syncAvatars(); renderPeople(); renderLabels(); widgets(); };
       s.querySelectorAll('[data-status] .pchip').forEach(b=>b.onclick=()=>{ haptic(); e.status=b.dataset.v; saveE(); R.profile(s); });
       s.querySelectorAll('[data-mood] .pchip').forEach(b=>b.onclick=()=>{ haptic(); e.mood=b.dataset.v; saveE(); R.profile(s); });
       s.querySelectorAll('[data-color] [data-c]').forEach(b=>b.onclick=()=>{ e.color=b.dataset.c; e.photo=null; saveE(); R.profile(s); });
       s.querySelector('[data-photo]').onchange=ev=>{ const f=ev.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ e.photo=rd.result; saveE(); toast('Фото оновлено'); R.profile(s); }; rd.readAsDataURL(f); };
+      s._redraw=()=>R.profile(s);
+      wire(s);}
+,
+    // «Анкета» — the user edits their own card (sheet). Public fields go through the employee
+    // upsert queue; the private birthday through PUT /employees/:id (server keeps 'MM-DD').
+    meedit(s){
+      const e=meEmp(); if(!e){s.innerHTML=head('Анкета')+empty('Профіль недоступний',''); wire(s); return;}
+      let dept=e.dept||'', bday=TG.me&&TG.me.birthday||null;
+      const depts=[...new Set(O.state.employees.map(x=>(x.dept||'').trim()).filter(Boolean).concat(dept?[dept]:[]))].sort((a,b)=>a.localeCompare(b,'uk'));
+      const inp=(k,label,v,type,attrs='')=>`<label class="pfin"><span class="k">${label}</span><input type="${type}" data-f="${k}" value="${esc(v||'')}" ${attrs}></label>`;
+      s.innerHTML=head('Анкета')+`<div class="pscroll"><form class="pmeedit" data-form>
+        <div class="pmeav">${avHTML(e,'av big')}<label class="pmeph">Змінити фото<input type="file" accept="image/*" data-photo hidden></label></div>
+        <div class="pgrp">${inp('name','Ім’я',e.name,'text','maxlength="80" autocomplete="name" required')}</div>
+        <div class="pgt">Робота</div><div class="pgrp">${inp('position','Посада',e.position,'text','maxlength="80" placeholder="Напр. Дизайнерка"')}
+          <button type="button" class="pfrow" data-dept><span class="k">Відділ</span><span class="v" data-deptv></span>${CHEV}</button>
+          ${inp('ext','Робочий №',e.ext,'text','maxlength="12" inputmode="numeric" placeholder="Напр. 214"')}</div>
+        <div class="pgt">Контакти</div><div class="pgrp">${inp('phone','Телефон',e.phone,'tel','maxlength="20" autocomplete="tel" placeholder="+380…"')}${inp('email','Email',e.email,'email','maxlength="80" autocomplete="email" placeholder="name@company.com"')}</div>
+        ${TG.active?`<div class="pgt">Особисте</div><div class="pgrp"><button type="button" class="pfrow" data-bd><span class="k">День народження</span><span class="v" data-bdv></span>${CHEV}</button></div>`:''}
+        <div class="pfoot"><button class="pbtn" type="submit">Зберегти</button></div></form></div>`;
+      const draw=()=>{s.querySelector('[data-deptv]').innerHTML=dept?esc(dept):'<span class="ph">Не вказано</span>'; const bv=s.querySelector('[data-bdv]'); if(bv) bv.innerHTML=bday?esc(bdayText(bday)):'<span class="ph">Не вказано</span>';};
+      draw();
+      s.querySelector('[data-dept]').onclick=()=>{const items=[{v:'',l:'Без відділу'}].concat(depts.map(d=>({v:d,l:d})));
+        wheelPicker({title:'Відділ',cols:[{items,value:dept}],onDone:([v])=>{dept=v; draw();}});};
+      const bd=s.querySelector('[data-bd]'); if(bd) bd.onclick=()=>pickBirthday(bday,v=>{bday=v; draw();});
+      let photo;
+      s.querySelector('[data-photo]').onchange=ev=>{const f=ev.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{photo=rd.result; const a=s.querySelector('.pmeav .av'); a.style.backgroundImage=`url(${photo})`; a.style.backgroundSize='cover'; a.textContent='';}; rd.readAsDataURL(f);};
+      s.querySelector('[data-form]').onsubmit=async ev=>{ev.preventDefault();
+        const v=k=>s.querySelector(`[data-f="${k}"]`).value.trim();
+        if(!v('name')){toast('Вкажіть ім’я'); return;}
+        if(v('email')&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v('email'))){toast('Перевірте email'); return;}
+        if(v('phone')&&!/^[+\d][\d\s()\-]{5,}$/.test(v('phone'))){toast('Перевірте номер телефону'); return;}
+        Object.assign(e,{name:v('name'),position:v('position'),dept,ext:v('ext'),phone:v('phone'),email:v('email')}); if(photo) e.photo=photo;
+        empUpsert(e); syncAvatars(); renderPeople(); renderLabels();
+        if(TG.active&&(bday||null)!==(TG.me.birthday||null)) await saveBirthday(e,bday,true);
+        hapticOk(); toast('Анкету збережено'); popIf('meedit'); redraw('profile'); widgets();};
       wire(s);}
 ,
     settings(s){settingsView(s);}

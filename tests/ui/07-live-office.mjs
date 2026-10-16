@@ -27,7 +27,12 @@ try {
   const md = await js(c, () => { const d = new Date(); return String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0'); });
   await js(c, () => { const b = document.querySelector('#pbar'); b.click(); }); await sleep(400);
   await tap(c, '[data-go=profile]'); await sleep(400);
-  await type(c, '[data-bday]', md); await tap(c, '[data-bdsave]'); await sleep(800);
+  // iOS-style wheel: day + month drums in a bottom sheet
+  await tap(c, '[data-bdpick]'); await sleep(500);
+  ok(await js(c, () => document.querySelectorAll('.pwov.on .pwcol').length === 2), 'birthday wheel picker opens');
+  await js(c, (md) => { const [d, m] = md.split('.').map(Number); const cols = document.querySelectorAll('.pwov .pwcol');
+    cols[0].scrollTop = (d - 1) * 36; cols[1].scrollTop = (m - 1) * 36; cols.forEach((c) => c.dispatchEvent(new Event('scroll'))); }, md);
+  await sleep(400); await js(c, () => document.querySelector('.pwov [data-done]').click()); await sleep(900);
   ok(await js(c, () => document.getElementById('toast').textContent.includes('Збережено')), 'birthday saved');
 
   // a meeting right now in «Київ» (r12) for Anna

@@ -735,6 +735,38 @@ html.tgapp #app .ptabbar{bottom:calc(34px + var(--sab))}
 #phone .pactbar button{background:var(--os-fill);font-weight:600}
 #phone .pdetail .big{border-radius:50%}
 #phone .pact{background:var(--os-surf);font-weight:600}
+/* profile «Анкета» + edit sheet */
+#phone .phero .hedit{height:32px;padding:0 14px;border-radius:999px;background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:14.5px;font-weight:600;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+#phone .pfrow{display:flex;align-items:center;gap:10px;width:100%;min-height:46px;padding:0 14px;text-align:left;color:var(--os-ink);border-bottom:.5px solid var(--os-sep);font-size:16px}
+#phone .pgrp>.pfrow:last-child,#phone .pgrp>.pfin:last-child{border-bottom:0}
+#phone .pfrow .k{flex:none;min-width:96px;white-space:nowrap;color:var(--os-ink)}
+#phone .pfrow .v{flex:1;min-width:0;text-align:right;color:var(--os-ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#phone .ph{color:#AEAEB2}
+#phone .pfin{display:flex;align-items:center;gap:10px;min-height:46px;padding:0 14px;border-bottom:.5px solid var(--os-sep)}
+#phone .pfin .k{flex:none;width:96px;font-size:16px;color:var(--os-ink)}
+#phone .pfin input{flex:1;min-width:0;width:0;height:44px;border:0;background:transparent;font:inherit;font-size:16px;color:var(--os-ink);text-align:right;outline:0;padding:0}
+#phone .pfin input::placeholder{color:#AEAEB2}
+#phone .pfin:focus-within .k{color:var(--red)}
+#phone .pmeedit{padding:4px 0 20px}
+#phone .pmeav{display:flex;flex-direction:column;align-items:center;gap:8px;padding:6px 0 16px}
+#phone .pmeav .av{width:84px;height:84px;border-radius:50%;font-size:30px;margin:0}
+#phone .pmeph{color:var(--red);font-size:15px;font-weight:600;cursor:pointer;min-height:30px;display:flex;align-items:center}
+/* iOS wheel picker sheet */
+#phone .pwov{position:absolute;inset:0;z-index:88;background:rgba(0,0,0,0);display:flex;align-items:flex-end;transition:background .3s}
+#phone .pwov.on{background:rgba(0,0,0,.34)}
+#phone .pwsheet{width:100%;background:var(--os-surf);border-radius:22px 22px 0 0;padding:0 0 calc(14px + var(--sab,0px));transform:translateY(100%);transition:transform .38s cubic-bezier(.2,.9,.25,1);box-shadow:0 -10px 30px rgba(0,0,0,.18)}
+#phone .pwov.on .pwsheet{transform:none}
+#phone .pwhead{display:flex;align-items:center;justify-content:space-between;height:52px;padding:0 6px;border-bottom:.5px solid var(--os-sep);touch-action:none}
+#phone .pwhead b{font-size:16.5px;font-weight:600}
+#phone .pwhead button{height:44px;padding:0 12px;font-size:16.5px;color:var(--red)}
+#phone .pwhead .ok{font-weight:700}
+#phone .pwbody{position:relative;height:216px;display:flex;justify-content:center;gap:4px;padding:0 16px;-webkit-mask-image:linear-gradient(transparent,#000 30%,#000 70%,transparent);mask-image:linear-gradient(transparent,#000 30%,#000 70%,transparent)}
+#phone .pwsel{position:absolute;left:12px;right:12px;top:90px;height:36px;border-radius:10px;background:var(--os-fill);pointer-events:none}
+#phone .pwcol{position:relative;flex:1;max-width:170px;height:216px;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none;padding:90px 0;perspective:420px;outline:0;overscroll-behavior:contain}
+#phone .pwcol::-webkit-scrollbar{display:none}
+#phone .pwit{height:36px;line-height:36px;text-align:center;font-size:21px;color:var(--os-ink);scroll-snap-align:center;cursor:pointer;user-select:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transform-origin:center;will-change:transform}
+#phone .pwit.on{font-weight:500}
+#phone .pwextra{display:block;width:calc(100% - 32px);margin:10px 16px 0;height:44px;border-radius:12px;background:var(--os-acc-soft);color:var(--red);font-size:15.5px;font-weight:600}
 /* Dynamic Island */
 #phone .pnotch{width:auto;min-width:112px;height:30px;top:8px;background:#000;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;color:#fff;font-size:11.5px;font-weight:600;z-index:80;transition:min-width .35s cubic-bezier(.2,.9,.25,1),height .35s cubic-bezier(.2,.9,.25,1),border-radius .35s;cursor:pointer}
 #phone .pnotch.live{min-width:190px}

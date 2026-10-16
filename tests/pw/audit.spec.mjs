@@ -15,7 +15,7 @@ const test = base.extend({ tgPlatform: [null, { option: true }] });
 
 // In-page checker. Returns a list of {type, el, detail} for the given screen root.
 function audit(scrId) {
-  const root = scrId === 'home' ? document.querySelector('[data-scr=home]') : scrId === 'cc' ? document.querySelector('.pcc') : document.querySelector(`[data-scr="${scrId}"]`);
+  const root = scrId === 'wheel' ? document.querySelector('.pwov .pwsheet') : scrId === 'home' ? document.querySelector('[data-scr=home]') : scrId === 'cc' ? document.querySelector('.pcc') : document.querySelector(`[data-scr="${scrId}"]`);
   const issues = [];
   const R = root.getBoundingClientRect();
   const vis = (el) => { const s = getComputedStyle(el); if (s.display === 'none' || s.visibility === 'hidden' || +s.opacity < 0.05) return false; const r = el.getBoundingClientRect(); return r.width > 0.5 && r.height > 0.5; };
@@ -130,6 +130,11 @@ for (const theme of ['light', 'dark']) {
     await page.evaluate(() => document.querySelector('.ptabbar [data-tab-go=contacts]').click()); await check('contacts');
     await tap('[data-id]'); await check('contact'); await home();
     for (const app of ['desk', 'broadcast', 'coffee', 'profile', 'settings']) { await tap(`.pgrid [data-go=${app}]`); await page.waitForTimeout(500); await check(app); if (app === 'settings') { await tap('[data-goto=wall]'); await check('wall'); } await home(); }
+    await tap('.pgrid [data-go=profile]'); await tap('[data-edit]'); await check('meedit');
+    await tap('[data-bd]'); await page.waitForTimeout(500); await check('wheel-birthday', 'wheel');
+    await page.evaluate(() => document.querySelector('.pwov [data-x]').click()); await page.waitForTimeout(400);
+    await tap('[data-dept]'); await page.waitForTimeout(500); await check('wheel-dept', 'wheel');
+    await page.evaluate(() => document.querySelector('.pwov [data-x]').click()); await page.waitForTimeout(400); await home(); await home();
     await check('home', 'home');
     await page.evaluate(() => { const h = document.querySelector('[data-scr=home]'); h.dispatchEvent(new PointerEvent('pointerdown', { clientY: 20, bubbles: true })); h.dispatchEvent(new PointerEvent('pointerup', { clientY: 240, bubbles: true })); });
     await page.waitForTimeout(600); await check('control-center', 'cc');
