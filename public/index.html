@@ -1330,7 +1330,16 @@ function flipView(){view2.flip*=-1; dirty2d=true;}
 // pan in SCREEN space (keys stay intuitive after rotation): convert screen delta → world via inverse rotation
 function pan2FromKeys(dt){if(!panKeys.size) return; const px=520*dt; let sx=0,sy=0; if(panKeys.has('f'))sy-=px; if(panKeys.has('b'))sy+=px; if(panKeys.has('l'))sx-=px; if(panKeys.has('r'))sx+=px; const c=ROTC[view2.rot], s=ROTS[view2.rot]; view2.ox+=(sx*c+sy*s)/(view2.scale*view2.flip); view2.oz+=(-sx*s+sy*c)/view2.scale; dirty2d=true;}
 function resize2(){const dpr=Math.min(2,devicePixelRatio||1); c2.width=Math.round(innerWidth*dpr); c2.height=Math.round(innerHeight*dpr); c2.style.width=innerWidth+'px'; c2.style.height=innerHeight+'px'; ctx2.setTransform(dpr,0,0,dpr,0,0); dirty2d=true;}
-const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+// No WebGL (hardware acceleration off, RDP/VM, old GPU driver): never let the 3D engine crash the
+// whole app — hand out a no-op renderer, stay in the 2D plan and keep the phone etc. working.
+const GL_OK=(()=>{try{const c=document.createElement('canvas'); return !!c.getContext('webgl2');}catch(e){return false;}})();
+function glRenderer(o){
+  if(GL_OK){try{return new THREE.WebGLRenderer(o);}catch(e){console.warn('WebGL unavailable — 3D view off:',e.message);}}
+  const noop=()=>{}, cv=o.canvas||document.createElement('canvas');
+  return {domElement:cv,shadowMap:{},capabilities:{getMaxAnisotropy:()=>1},toneMapping:0,toneMappingExposure:1,stub:true,
+    setPixelRatio:noop,setSize:noop,setClearColor:noop,render:noop,dispose:noop,forceContextLoss:noop};}
+const renderer=glRenderer({canvas,antialias:true});
+const NO_GL=!!renderer.stub;
 renderer.setPixelRatio(Math.min(3,devicePixelRatio*1.5));
 renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.toneMapping=THREE.NoToneMapping; renderer.toneMappingExposure=1;
@@ -1696,7 +1705,7 @@ $('#saveBtn').onclick=()=>{ saveLayout(); };
 let toastT; function toast(msg){const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2400);}
 
 /* ---------- catalog ---------- */
-function makeThumbs(){const r=new THREE.WebGLRenderer({alpha:true,antialias:true,preserveDrawingBuffer:true}); r.setSize(168,168); r.setClearColor(0,0); r.toneMapping=THREE.NeutralToneMapping; const sc=new THREE.Scene(); sc.add(new THREE.HemisphereLight(0xffffff,0xc9b8a8,1.1)); const dl=new THREE.DirectionalLight(0xffffff,1.6); dl.position.set(3,5,4); sc.add(dl);
+function makeThumbs(){const r=glRenderer({alpha:true,antialias:true,preserveDrawingBuffer:true}); r.setSize(168,168); r.setClearColor(0,0); r.toneMapping=THREE.NeutralToneMapping; const sc=new THREE.Scene(); sc.add(new THREE.HemisphereLight(0xffffff,0xc9b8a8,1.1)); const dl=new THREE.DirectionalLight(0xffffff,1.6); dl.position.set(3,5,4); sc.add(dl);
   const cam=new THREE.OrthographicCamera(-1,1,1,-1,.1,50); const out={};
   for(const t in FURN){const g=buildFurn(t); sc.add(g); const box=new THREE.Box3().setFromObject(g); const c=box.getCenter(new THREE.Vector3()); const s=box.getSize(new THREE.Vector3()); const m=Math.max(s.x,s.y,s.z)*.72; cam.left=-m;cam.right=m;cam.top=m;cam.bottom=-m; cam.updateProjectionMatrix(); cam.position.copy(c).add(new THREE.Vector3(1,.9,1).normalize().multiplyScalar(10)); cam.lookAt(c); r.render(sc,cam); out[t]=r.domElement.toDataURL(); sc.remove(g);}
   r.dispose(); r.forceContextLoss(); return out;}
@@ -1774,7 +1783,7 @@ function renderPeople(){const holder=$('#people'); holder.innerHTML=''; $('#empC
 
 /* modal */
 const backdrop=$('#backdrop'); let fColor=DEPT_COLORS[0], fPhoto=null, fStatus='office', fMood='good', editingId=null;
-const pRenderer=new THREE.WebGLRenderer({canvas:$('#pc'),alpha:true,antialias:true}); pRenderer.setClearColor(0,0); pRenderer.toneMapping=THREE.NeutralToneMapping; 
+const pRenderer=glRenderer({canvas:$('#pc'),alpha:true,antialias:true}); pRenderer.setClearColor(0,0); pRenderer.toneMapping=THREE.NeutralToneMapping; 
 const pScene=new THREE.Scene(); pScene.add(new THREE.HemisphereLight(0xffffff,0xc9b8a8,1)); const pl=new THREE.DirectionalLight(0xfff3e4,1.8); pl.position.set(2,4,3); pl.castShadow=true; pScene.add(pl);
 const pCam=new THREE.PerspectiveCamera(30,480/560,.1,20*CS); pCam.position.set(0,1.1*CS,4.6*CS); pCam.lookAt(0,.8*CS,0);
 const pFloor=new THREE.Mesh(new THREE.CircleGeometry(.9*CS,32).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({color:'#ffffff',roughness:1,transparent:true,opacity:.6})); pFloor.receiveShadow=true; pScene.add(pFloor);
@@ -1937,13 +1946,14 @@ function hideWelcome(){$('#welcome').style.display='none';}
 $('#startBtn').onclick=hideWelcome;
 
 /* ---------- settings ---------- */
-function applySettings(){const viewChanged=view!==settings.view; view=settings.view; app.dataset.view=view; if(viewChanged){cancelDrag(); select(null); closePops();}
+function applySettings(){if(NO_GL&&settings.view==='3d') settings.view='2d'; const viewChanged=view!==settings.view; view=settings.view; app.dataset.view=view; if(viewChanged){cancelDrag(); select(null); closePops();}
   app.dataset.layout=settings.layout; $$('#settings .opt').forEach(o=>o.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===settings[o.dataset.set])));
   if(settings.layout==='sides') $('#dock2').appendChild($('#panePeople')); else $('#dock').appendChild($('#panePeople'));
   if(settings.layout==='sides'){$('#panePeople').classList.add('on'); if(tab==='people') $$('#tabs button[role="tab"]')[0].click();} else $('#panePeople').classList.toggle('on',tab==='people');
   applyTheme(); syncAvatars(); updateZoneHint(); if(backdrop.classList.contains('open')) refreshPreview(); localStorage.setItem(LS_SET,JSON.stringify(settings));
   if(view==='2d'){ if(viewChanged) fit2d(); dirty2d=true; } else { resize(); syncFurniture(); syncZones(); }}
 $$('#settings .opt').forEach(o=>o.querySelectorAll('button').forEach(b=>b.onclick=()=>{settings[o.dataset.set]=b.dataset.v; applySettings();}));
+if(NO_GL){const b=$('#settings [data-set="view"] [data-v="3d"]'); if(b){b.disabled=true; b.title='3D недоступний: у браузері вимкнено WebGL (апаратне прискорення)';}}
 $('#gear').onclick=e=>{e.stopPropagation(); const s=$('#settings'); const open=s.classList.contains('open'); closePops(); if(!open) s.classList.add('open');};
 $('#settingsClose').onclick=closePops;
 // "Clear office" wipes the HR-owned layout only; people are managed via the bot/DB

@@ -4,8 +4,8 @@
 import { defineConfig } from '@playwright/test';
 
 const PORT = Number(process.env.WEB_PORT || 5055);
-const tg = (name, platform, width, height) => ({ name, use: { viewport: { width, height }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, tgPlatform: platform } });
-const web = (name, width, height) => ({ name, use: { viewport: { width, height }, tgPlatform: null } });
+const tg = (name, platform, width, height) => ({ name, use: { viewport: { width, height }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, tgPlatform: platform, channel: 'chrome' } });
+const web = (name, width, height) => ({ name, use: { viewport: { width, height }, tgPlatform: null, channel: 'chrome' } });
 
 export default defineConfig({
   testDir: './pw',
@@ -15,7 +15,7 @@ export default defineConfig({
   fullyParallel: false,
   reporter: [['list'], ['html', { outputFolder: './.tmp/pw-report', open: 'never' }]],
   globalTeardown: './pw/teardown.mjs',
-  use: { channel: 'chrome', baseURL: `http://localhost:${PORT}/`, screenshot: 'only-on-failure', trace: 'retain-on-failure' },
+  use: { baseURL: `http://localhost:${PORT}/`, screenshot: 'only-on-failure', trace: 'retain-on-failure' },
   webServer: {
     command: 'node devstack.mjs',
     env: { STACK: 'dev' },
@@ -31,5 +31,9 @@ export default defineConfig({
     web('web-mobile', 390, 844),
     web('web-laptop', 1366, 768),
     web('web-fullhd', 1920, 1080),
+    // Real-world browsers: no WebGL (hardware acceleration off / RDP / VM), Firefox, Safari.
+    { name: 'web-no-webgl', use: { viewport: { width: 1366, height: 768 }, tgPlatform: null, channel: 'chrome', launchOptions: { args: ['--disable-3d-apis'] } } },
+    { name: 'web-firefox', use: { browserName: 'firefox', viewport: { width: 1366, height: 768 }, tgPlatform: null } },
+    { name: 'web-safari', use: { browserName: 'webkit', viewport: { width: 1440, height: 900 }, tgPlatform: null } },
   ],
 });
