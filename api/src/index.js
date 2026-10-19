@@ -8,6 +8,7 @@ import { requireMe } from './session.js';
 import { office, runDailyPosts, snapshotDay } from './office.js';
 import { games, initGames } from './games.js';
 import { people } from './people.js';
+import { analytics } from './analytics.js';
 
 const app = express();
 app.use(express.json({ limit: '25mb' })); // layout blob embeds employees (+ optional base64 photos)
@@ -440,7 +441,7 @@ app.use(router);
 app.use('/api', router);
 // Personal phone (spec 004): every /me/* route is the caller's own data only.
 app.use(['/me', '/api/me'], requireMe);
-for (const r of [personal, chats, office, games, people]) { app.use(r); app.use('/api', r); }
+for (const r of [personal, chats, office, games, people, analytics]) { app.use(r); app.use('/api', r); }
 
 // Central error handler
 app.use((err, _req, res, _next) => {

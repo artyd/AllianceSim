@@ -37,6 +37,13 @@ async function act(path, body) {
   return { status: r.status, data: await r.json().catch(() => null) };
 }
 
+// Binary download (xlsx/pdf exports) → Buffer.
+async function file(path) {
+  const r = await fetch(BASE + path, { headers: { 'X-Edit-Token': TOKEN } });
+  if (!r.ok) throw new Error(`GET ${path} → ${r.status}`);
+  return Buffer.from(await r.arrayBuffer());
+}
+
 export const api = {
   byTelegram: (tgId) => req('GET', `/employees/by-telegram/${tgId}`),
   search: (q) => req('GET', `/employees/search?q=${encodeURIComponent(q)}`),
@@ -56,4 +63,8 @@ export const api = {
   gameRespond: (id, tgId, accept) => act(`/bot/games/${encodeURIComponent(id)}/respond`, { tgId, accept }),
   vote: (msgId, tgId, option) => act(`/bot/messages/${encodeURIComponent(msgId)}/vote`, { tgId, option }),
   analytics: (days) => req('GET', `/analytics?days=${days}`),
+  // Spec 008: analytics v2 + exports for the weekly/monthly HR reports.
+  analyticsV2: (qs) => req('GET', `/analytics/v2?${qs}`),
+  hrRecipients: () => req('GET', '/analytics/hr-recipients'),
+  file,
 };

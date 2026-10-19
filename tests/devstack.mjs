@@ -38,7 +38,7 @@ async function reset() {
   await new Promise((r) => setTimeout(r, 1200)); // debounced office/dept chat sync after employee writes
 }
 
-await start({ QUIZ_Q_MS: '2500', QUIZ_REVEAL_MS: '500', QUIZ_N: '2' });
+await start({ QUIZ_Q_MS: '2500', QUIZ_REVEAL_MS: '500', QUIZ_N: '2', HR_NAMES: 'Анна Коваль' });
 await reset();
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.png': 'image/png', '.glb': 'model/gltf-binary', '.css': 'text/css' };
 http.createServer((req, res) => {

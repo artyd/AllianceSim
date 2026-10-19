@@ -2,6 +2,8 @@
 // Office internals come in through `O` (see the initPhone(...) call in index.html):
 // constants/functions by value, `state` through a getter because the office reassigns it.
 import { initGamesUI } from './games.js';
+import {mountAnalytics} from './analytics.js';
+
 export function initPhone(O){
   const {$, API, DEPT_COLORS, MOODS, ROOMS, STATUS, TG, ZONES, apiEmpWrite, app, applySettings, avHTML, empPos, empUpsert, esc, focusEmployee, getToken, params, refreshLive, renderLabels, renderPeople, roomAt, roomName, settings, statusOf, syncAvatars, toast}=O;
   const PHONE={}; // hooks for the office init: personalStart (and future deep links)
@@ -550,6 +552,26 @@ export function initPhone(O){
   // Spec 007: mini-games module
   const GM=initGamesUI({meApi,toast,haptic,hapticOk,wire,go,back,pop,popIf,scr,body,esc,personal,TG,emp,avHTML,IC,islandTemp,islandEnd,segHTML,CHEV,empty,stackTop:()=>stack[stack.length-1],load,save});
   R.games=x=>GM.screens.games(x); R.gtop=x=>GM.screens.gtop(x);
+  // ══════════ spec 008: «Аналітика» app — HR only (HR_NAMES / HR_TG_IDS on the server) ══════════
+  if(!scr('hranalytics')) body.insertAdjacentHTML('beforeend','<div class="pscreen" data-scr="hranalytics"></div>');
+  function hrAnalyticsApp(s){
+    if(s._an){s._an.reload(); return;}
+    s.innerHTML=head('Аналітика')+'<div class="pscroll"><div class="phan"></div></div>';
+    wire(s);
+    const map=p=>p.startsWith('/v2')?'/me/hr/analytics'+p.slice(3):'/me/hr'+p;
+    s._an=mountAnalytics(s.querySelector('.phan'),{compact:true,layer:phone,toast,exportMode:'chat',storeKey:'alliancesim.analytics.v2.phone',
+      get:p=>meApi('GET',map(p)),
+      async exportFile(_kind,q){const o=Object.fromEntries(new URLSearchParams(q)); await meApi('POST','/me/hr/export',o); haptic(); toast('Excel і PDF надіслано в чат із ботом');}});
+
+  }
+  function showHrApp(){
+    const grid=scr('home').querySelector('.papp[data-go="games"]')?.parentElement; if(!grid||grid.querySelector('[data-go="hranalytics"]')) return;
+    const b=document.createElement('button'); b.className='papp'; b.dataset.go='hranalytics';
+    b.innerHTML='<span class="ic" style="--g1:#6A82E8;--g2:#3346B8"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span><span class="lb">Аналітика</span>';
+    b.onclick=()=>{haptic(); go('hranalytics',hrAnalyticsApp);};
+    grid.insertBefore(b,grid.querySelector('[data-go="settings"]'));
+  }
+  async function checkHr(){try{const r=await meApi('GET','/me/hr'); if(r&&r.hr){showHrApp(); return true;}}catch(e){} return false;}
   // ══════════ spec 007: day screen, search, rooms now, onboarding, status timer, offline ══════════
   for(const id of ['search','rooms','myday','onboard']) if(!scr(id)) body.insertAdjacentHTML('beforeend',`<div class="pscreen" data-scr="${id}"></div>`);
   const noteText=e=>e&&e.statusNote?e.statusNote+(e.statusUntil?' · до '+hm(new Date(e.statusUntil)):''):'';
@@ -1173,7 +1195,7 @@ export function initPhone(O){
     await session(5);
     setInterval(()=>{if(PM.exp*1000-Date.now()<3600e3) session();},10*60e3);
     meApi('GET','/me/contacts').then(l=>{PM.contacts=new Map(l.map(c=>[c.id,c.username]));}).catch(()=>{});
-    loadTasks(); loadInvites(); loadNext(); setInterval(loadNext,5*60e3);
+    loadTasks(); loadInvites(); loadNext(); setInterval(loadNext,5*60e3); checkHr();
     await loadChats();
     connect();
     const firstRun=(()=>{try{return !localStorage.getItem('alliancesim.tour.v1');}catch(e){return false;}})();
@@ -1182,6 +1204,7 @@ export function initPhone(O){
     let deep=params.get('open'); try{deep=deep||(Telegram.WebApp.initDataUnsafe||{}).start_param;}catch(e){}
     const m=/^(chat|event|task|game)_(\d+)$/.exec(deep||'');
     if(deep==='games') setTimeout(()=>go('games',appFor('games')),400);
+    if(deep==='analytics') checkHr().then(hr=>{if(hr) go('hranalytics',hrAnalyticsApp);});
     if(m) setTimeout(()=>openDeep(m[1],m[2]),400);
     else if(!firstRun&&!deep&&load('alliancesim.myday','')!==new Date().toDateString()) setTimeout(()=>{if(!stack.length) go('myday',appFor('myday'));},600);
   }

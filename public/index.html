@@ -105,16 +105,17 @@ a{color:var(--red)}a:hover{color:#b5000f}
 #tabs button b{margin-left:6px;font-size:11px;background:var(--red);color:#fff;border-radius:999px;padding:1px 6px}
 /* HR analytics (spec 005 E): one series per chart → one validated hue per theme */
 #app{--viz:#4F6BDB}#app[data-ui="dark"]{--viz:#6A82E8}
-#stats{max-height:46vh;overflow:auto}
-#stats .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
-#stats .tile{background:var(--chip);border-radius:14px;padding:10px 14px}
-#stats .tile b{display:block;font-size:24px;font-weight:900;color:var(--ink)}#stats .tile span{font-size:12px;font-weight:700;color:var(--muted)}
-#stats .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
-#stats h5{font-size:13px;font-weight:900;margin:0 0 6px;color:var(--ink)}#stats h5 small{font-weight:700;color:var(--muted)}
-#stats svg{width:100%;display:block;overflow:visible}
-#stats .ax{font-size:10px;fill:var(--muted);font-weight:700}#stats .gl{stroke:var(--line);stroke-width:1}
-#stats .vtip{position:fixed;pointer-events:none;z-index:60;background:var(--ink);color:var(--panel-solid);font-size:12px;font-weight:800;padding:6px 9px;border-radius:9px;display:none;white-space:nowrap}
-#stats table{width:100%;border-collapse:collapse;font-size:12.5px}#stats td{padding:6px 4px;border-bottom:1px solid var(--line)}#stats td:last-child{text-align:right;color:var(--muted);font-weight:700}
+#stats{max-height:min(72vh,820px);overflow:auto;overscroll-behavior:contain}
+#app[data-layout="dock"][data-tab="stats"] #dock{width:min(1320px,calc(100% - 32px))}
+#app[data-layout="dock"][data-tab="stats"] .pane.on{max-height:80vh}
+#app[data-anfull] #dock{position:fixed;inset:12px;width:auto!important;max-height:none;transform:none!important;z-index:60}
+#app[data-anfull] #dock .pane.on{max-height:none!important;flex:1;min-height:0;display:flex;flex-direction:column}
+#app[data-anfull] #stats{max-height:none;flex:1;min-height:0}
+#app[data-anfull] .an-sheet{max-height:none}
+#hrToolsWrap{margin-top:18px;border-top:1px solid var(--line);padding-top:10px}
+#hrToolsWrap>summary{cursor:pointer;font-weight:900;font-size:13px;color:var(--ink);padding:4px 0}
+#hrToolsWrap h5{font-size:13px;font-weight:900;margin:0 0 6px;color:var(--ink)}#hrToolsWrap h5 small{font-weight:700;color:var(--muted)}
+#hrToolsWrap table{width:100%;border-collapse:collapse;font-size:12.5px}#hrToolsWrap td{padding:6px 4px;border-bottom:1px solid var(--line)}#hrToolsWrap td:last-child{text-align:right;color:var(--muted);font-weight:700}
 .pane{display:none;padding:14px;background:var(--panel-solid);border-radius:3px 14px 14px 14px;margin:0 10px 10px}.pane.on{display:block}
 .hint{font-size:12px;color:var(--muted);font-weight:600;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;text-align:center;gap:8px}
 .hint-i{width:13px;height:13px;fill:var(--red);flex:none;opacity:.85}
@@ -815,13 +816,13 @@ html.tgapp #app .ptabbar{bottom:calc(34px + var(--sab))}
 #phone .gstatus.mine{color:var(--red)}#phone .gstatus.win{color:#2E8B57}#phone .gstatus.lose{color:var(--red)}
 #phone .gacts{display:flex;gap:8px;width:100%;flex-wrap:wrap}#phone .gacts .pbtn{flex:1;min-width:120px}
 #phone .gsan{font-size:12.5px;color:var(--os-ink2)}
-#phone .gboard{width:min(100%,360px);aspect-ratio:1}
-#phone .gb-ttt{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:320px}
-#phone .tc{border-radius:18px;background:var(--os-surf);display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+#phone .gboard{width:min(100%,360px);aspect-ratio:1;flex-shrink:0}
+#phone .gb-ttt{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:8px;max-width:320px}
+#phone .tc{min-width:0;min-height:0;padding:0;overflow:hidden;border-radius:18px;background:var(--os-surf);display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.06)}
 #phone .tc svg{width:62%;height:62%;fill:none;stroke-width:2.6}
 #phone .tc.mX svg{stroke:var(--red)}#phone .tc.mO svg{stroke:#3A6FD8}#phone .tc.wl{background:color-mix(in srgb,#34C759 22%,var(--os-surf))}
-#phone .gb-checkers,#phone .gb-chess{display:grid;grid-template-columns:repeat(8,1fr);border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.14)}
-#phone .cq{position:relative;display:grid;place-items:center;aspect-ratio:1;padding:0}
+#phone .gb-checkers,#phone .gb-chess{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.14)}
+#phone .cq{position:relative;display:grid;place-items:center;aspect-ratio:1;padding:0;min-width:0;min-height:0;overflow:hidden}
 #phone .gb-checkers .cq.l{background:#F1E3C8}#phone .gb-checkers .cq.d{background:#9C6B43}
 #phone .gb-chess .cq.l{background:#EEEED2}#phone .gb-chess .cq.d{background:#769656}
 #phone .cq.sel{box-shadow:inset 0 0 0 3px #FFD60A}
@@ -841,19 +842,23 @@ html.tgapp #app .ptabbar{bottom:calc(34px + var(--sab))}
 #phone .gpromo em{font-style:normal;font-size:12px;color:var(--os-ink2)}
 #phone .gb-sea{aspect-ratio:auto;display:flex;flex-direction:column;gap:6px;align-items:center}
 #phone .slabel{align-self:flex-start;font-size:12.5px;font-weight:600;color:var(--os-ink2);text-transform:uppercase;letter-spacing:.03em}
-#phone .sgrid{display:grid;grid-template-columns:repeat(10,1fr);gap:2px;width:100%;background:#9EC9EC;border-radius:10px;padding:3px}
+#phone .sgrid{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:2px;width:100%;background:#9EC9EC;border-radius:10px;padding:3px}
 #phone .sgrid.small{width:58%}
-#phone .sc{aspect-ratio:1;border-radius:3px;background:#D6ECFA;padding:0;position:relative}
+#phone .sc{aspect-ratio:1;min-width:0;border-radius:3px;background:#D6ECFA;padding:0;position:relative}
 #phone .sgrid.enemy .sc:not(.miss):not(.hit):not(.sunk){cursor:crosshair}
 #phone .sc.ship{background:#6B7A8C}
 #phone .sc.miss::after{content:"";position:absolute;inset:38%;border-radius:50%;background:#5B7A99}
 #phone .sc.hit{background:#FF6B57}#phone .sc.sunk{background:#8E1F1F}
-#app[data-ui="dark"] #phone .sgrid{background:#16324F}#app[data-ui="dark"] #phone .sc{background:#1F4A73}
+#app[data-ui="dark"] #phone .sgrid{background:#16324F}#app[data-ui="dark"] #phone .sc:not(.ship):not(.hit):not(.sunk){background:#1F4A73}
+#app[data-ui="dark"] #phone .sc.ship{background:#B8C4D2}#app[data-ui="dark"] #phone .sc.miss::after{background:#9DBBD8}
+/* spec 008: HR analytics app (shared module public/analytics.js) */
+#phone .phan{padding:2px 14px 40px}
+#phone .phan .an-card{background:var(--os-surf);border-color:var(--os-sep)}
 /* 2048 */
 #phone .g2s{display:flex;gap:10px;width:100%}#phone .g2s>div{flex:1;padding:8px 12px;border-radius:14px;background:var(--os-surf);display:flex;flex-direction:column}
 #phone .g2s span{font-size:12px;color:var(--os-ink2)}#phone .g2s b{font-size:20px}
-#phone .g2048{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:8px;border-radius:16px;background:#BBADA0;width:min(100%,340px);aspect-ratio:1;outline:0}
-#phone .t2{border-radius:10px;background:rgba(238,228,218,.35);display:grid;place-items:center;font-weight:800;font-size:clamp(16px,6vw,28px);color:#776E65}
+#phone .g2048{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(4,minmax(0,1fr));flex-shrink:0;gap:8px;padding:8px;border-radius:16px;background:#BBADA0;width:min(100%,340px);aspect-ratio:1;outline:0}
+#phone .t2{min-width:0;min-height:0;overflow:hidden;border-radius:10px;background:rgba(238,228,218,.35);display:grid;place-items:center;font-weight:800;font-size:clamp(16px,6vw,28px);color:#776E65}
 #phone .t2.v2{background:#EEE4DA}#phone .t2.v4{background:#EDE0C8}#phone .t2.v8{background:#F2B179;color:#fff}#phone .t2.v16{background:#F59563;color:#fff}#phone .t2.v32{background:#F67C5F;color:#fff}#phone .t2.v64{background:#F65E3B;color:#fff}
 #phone .t2.v128{background:#EDCF72;color:#fff;font-size:clamp(14px,5vw,24px)}#phone .t2.v256{background:#EDCC61;color:#fff;font-size:clamp(14px,5vw,24px)}#phone .t2.v512{background:#EDC850;color:#fff;font-size:clamp(14px,5vw,24px)}
 #phone .t2.v1024,#phone .t2.v2048,#phone .t2.v4096{background:#E2001A;color:#fff;font-size:clamp(12px,4.2vw,20px)}
@@ -1320,6 +1325,7 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {initPhone} from './phone.js';
+import {mountAnalytics} from './analytics.js';
 
 /* ---------- data ---------- */
 const S=2.25; // office scale: sketch units → meters
@@ -1944,7 +1950,7 @@ renderCatFilter(); renderCat();
 const zl=$('#zonesList'); for(const k in ZONES){const el=document.createElement('div'); el.className='zt'; el.innerHTML=`<i style="background:${ZONES[k].c}"></i>${ZONES[k].n}`; zl.appendChild(el);}
 
 /* tabs */
-$$('#tabs button[role="tab"]').forEach(b=>b.onclick=()=>{tab=b.dataset.tab; app.dataset.tab=tab; app.dataset.dock='open'; $$('#tabs button[role="tab"]').forEach(x=>x.setAttribute('aria-selected',x===b)); $$('.pane').forEach(p=>p.classList.toggle('on',p.dataset.pane===tab)); select(null); closePops(); cancelDrag(); updateZoneHint();});
+$$('#tabs button[role="tab"]').forEach(b=>b.onclick=()=>{if(b.dataset.tab!=='stats'&&anView) anView.exitFull(); tab=b.dataset.tab; app.dataset.tab=tab; app.dataset.dock='open'; $$('#tabs button[role="tab"]').forEach(x=>x.setAttribute('aria-selected',x===b)); $$('.pane').forEach(p=>p.classList.toggle('on',p.dataset.pane===tab)); select(null); closePops(); cancelDrag(); updateZoneHint();});
 $('#collapseBtn').onclick=()=>{app.dataset.dock=app.dataset.dock==='closed'?'open':'closed';};
 function updateZoneHint(){$('#zoneHint').textContent=settings.zoning==='rect'?'Проведіть прямокутник по підлозі, щоб створити зону':'Натисніть на кімнату в офісі, щоб призначити зону';}
 
@@ -2254,53 +2260,23 @@ c2.addEventListener('contextmenu',e=>e.preventDefault());
 c2.addEventListener('wheel',e=>{e.preventDefault(); const w=s2w(e.clientX,e.clientY); view2.scale=Math.max(4,Math.min(120,view2.scale*Math.exp(-e.deltaY*.0012))); const w2=s2w(e.clientX,e.clientY); view2.ox+=w.x-w2.x; view2.oz+=w.z-w2.z; dirty2d=true;},{passive:false});
 $('#v2rotL').onclick=()=>rotateView(-1); $('#v2rotR').onclick=()=>rotateView(1); $('#v2flip').onclick=flipView;
 
-/* ---------- HR analytics tab (spec 005 E): mood trend, remote share, quiet people ---------- */
+/* ---------- HR analytics tab (spec 008): shared module public/analytics.js ---------- */
+let anView=null;
 async function renderStats(){const box=$('#stats'); if(!box) return; const tok=getToken();
-  if(!tok){box.innerHTML='<p class="hint">Аналітика доступна HR. <button class="btn" id="statsLogin">Ввести код доступу</button></p>'; $('#statsLogin').onclick=()=>openTokenModal(); return;}
-  box.innerHTML='<p class="hint">Завантаження…</p>';
-  let a; try{const r=await fetch(API+'/analytics?days=30',{headers:{'X-Edit-Token':tok}}); if(!r.ok) throw new Error(r.status); a=await r.json();}
-  catch(e){box.innerHTML='<p class="hint">Не вдалося завантажити аналітику.</p>'; return;}
-  const fmtD=k=>{const [y,m,d]=k.split('-').map(Number); return new Date(y,m-1,d).toLocaleDateString('uk-UA',{day:'numeric',month:'short'});};
-  const last=a.mood[a.mood.length-1]||{status:{},avg:null,n:0}, st=last.status||{};
-  const tile=(v,l)=>`<div class="tile"><b>${v}</b><span>${l}</span></div>`;
-  box.innerHTML=`<div class="tiles">${tile(st.office||0,'🏢 сьогодні в офісі')}${tile(st.remote||0,'🏠 працюють віддалено')}${tile(last.avg!=null?last.avg.toFixed(1)+'/5':'—','🙂 настрій сьогодні')}${tile(a.quiet.length,'🔕 не відмічались 7+ днів')}</div>
-    <div class="grid2"><div><h5>Настрій команди <small>· середнє за день, 1–5 · ${a.days} днів</small></h5><div id="stMood"></div></div>
-    <div><h5>Віддалена робота по відділах <small>· частка днів «з дому» серед робочих</small></h5><div id="stRemote"></div></div></div>
-    <h5 style="margin-top:14px">Давно не відмічались <small>· без відповіді на ранковий опитувальник 7+ днів</small></h5>
-    <table>${a.quiet.length?a.quiet.map(q=>`<tr><td>${esc(q.name)}</td><td>${esc(q.dept||'')}</td><td>${q.last?'востаннє '+fmtD(q.last):'ще не відповідав(ла)'}</td></tr>`).join(''):'<tr><td>Усі на зв’язку 🎉</td><td></td><td></td></tr>'}</table>
-    <div class="vtip" id="stTip"></div>`;
-  const tip=$('#stTip'), showTip=(ev,html)=>{tip.innerHTML=html; tip.style.display='block'; tip.style.left=Math.min(innerWidth-tip.offsetWidth-8,ev.clientX+12)+'px'; tip.style.top=(ev.clientY-36)+'px';}, hideTip=()=>{tip.style.display='none';};
-  // line: mood per day (gaps where nobody answered), crosshair + tooltip
-  const W=560,H=160,L=28,R=34,T=10,B=24, pts=a.mood, n=Math.max(1,pts.length-1);
-  const X=i=>L+i*(W-L-R)/n, Y=v=>T+(5-v)*(H-T-B)/4;
-  let d='', pen=false; pts.forEach((p,i)=>{if(p.avg==null){pen=false; return;} d+=(pen?'L':'M')+X(i).toFixed(1)+' '+Y(p.avg).toFixed(1)+' '; pen=true;});
-  const lastI=pts.map(p=>p.avg!=null).lastIndexOf(true);
-  $('#stMood').innerHTML=pts.some(p=>p.avg!=null)?`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Настрій команди за ${a.days} днів">
-    ${[1,2,3,4,5].map(v=>`<line class="gl" x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}"/><text class="ax" x="${L-6}" y="${Y(v)+3}" text-anchor="end">${v}</text>`).join('')}
-    <text class="ax" x="${X(0)}" y="${H-6}">${fmtD(pts[0].day)}</text><text class="ax" x="${X(pts.length-1)}" y="${H-6}" text-anchor="end">${fmtD(pts[pts.length-1].day)}</text>
-    <path d="${d}" fill="none" stroke="var(--viz)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-    ${lastI>=0?`<circle cx="${X(lastI)}" cy="${Y(pts[lastI].avg)}" r="4" fill="var(--viz)" stroke="var(--panel-solid)" stroke-width="2"/><text x="${X(lastI)+8}" y="${Y(pts[lastI].avg)+4}" style="font-size:11px;font-weight:900;fill:var(--ink)">${pts[lastI].avg.toFixed(1)}</text>`:''}
-    <line id="stX" class="gl" y1="${T}" y2="${H-B}" style="display:none;stroke:var(--muted)"/><circle id="stDot" r="4" fill="var(--viz)" stroke="var(--panel-solid)" stroke-width="2" style="display:none"/>
-    <rect x="${L}" y="${T}" width="${W-L-R}" height="${H-T-B}" fill="transparent" id="stHit"/></svg>`:'<p class="hint">Історія збирається щодня — графік з’явиться завтра.</p>';
-  const hit=$('#stHit'); if(hit){const svg=hit.ownerSVGElement, xl=$('#stX'), dot=$('#stDot');
-    hit.onmousemove=ev=>{const r=svg.getBoundingClientRect(), x=(ev.clientX-r.left)*W/r.width, i=Math.max(0,Math.min(pts.length-1,Math.round((x-L)/(W-L-R)*n))), p=pts[i];
-      xl.setAttribute('x1',X(i)); xl.setAttribute('x2',X(i)); xl.style.display='';
-      if(p.avg!=null){dot.setAttribute('cx',X(i)); dot.setAttribute('cy',Y(p.avg)); dot.style.display='';} else dot.style.display='none';
-      showTip(ev,`${fmtD(p.day)} · ${p.avg!=null?p.avg.toFixed(1)+'/5 · відповідей: '+p.n:'немає відповідей'}`);};
-    hit.onmouseleave=()=>{xl.style.display='none'; dot.style.display='none'; hideTip();};}
-  // bars: remote share per department, value labels at the bar end
-  const rows=a.remote.filter(x=>x.dept!=='—'||a.remote.length===1), bh=22, gap=8, BW=560, LL=110, RR=48, BH=rows.length*(bh+gap);
-  $('#stRemote').innerHTML=rows.length?`<svg viewBox="0 0 ${BW} ${BH}" role="img" aria-label="Частка віддаленої роботи по відділах">
-    ${rows.map((x,i)=>{const y=i*(bh+gap), w=Math.max(0,(BW-LL-RR)*x.share/100); return `<g data-i="${i}"><rect x="0" y="${y}" width="${BW}" height="${bh+gap}" fill="transparent"/>
-      <text class="ax" x="${LL-8}" y="${y+bh/2+4}" text-anchor="end" style="font-size:11.5px;fill:var(--ink)">${esc(x.dept.length>16?x.dept.slice(0,15)+'…':x.dept)}</text>
-      <line class="gl" x1="${LL}" x2="${LL}" y1="${y}" y2="${y+bh}"/>
-      ${w>0?`<path d="M${LL} ${y}h${Math.max(0,w-4)}a4 4 0 0 1 4 4v${bh-8}a4 4 0 0 1 -4 4h${-Math.max(0,w-4)}z" fill="var(--viz)"/>`:''}
-      <text x="${LL+w+6}" y="${y+bh/2+4}" style="font-size:11.5px;font-weight:900;fill:var(--ink)">${x.share}%</text></g>`;}).join('')}</svg>`:'<p class="hint">Ще немає даних.</p>';
-  $$('#stRemote g[data-i]').forEach(g=>{const x=rows[+g.dataset.i]; g.onmousemove=ev=>showTip(ev,`${esc(x.dept)} · ${x.share}% днів з дому · людей: ${x.people}`); g.onmouseleave=hideTip;});}
+  if(!tok){anView&&anView.destroy(); anView=null; box.innerHTML='<p class="hint">Аналітика доступна HR. <button class="btn" id="statsLogin">Ввести код доступу</button></p>'; $('#statsLogin').onclick=()=>openTokenModal(); return;}
+  if(anView){anView.reload(); return;}
+  box.innerHTML='<div id="anRoot"></div><details id="hrToolsWrap"><summary>Налаштування HR · пульс, онбординг, ігри</summary><div id="hrTools"></div></details>';
+  const H=()=>({'X-Edit-Token':getToken()});
+  const get=async p=>{const r=await fetch(API+'/analytics'+p,{headers:H()}); if(!r.ok) throw Object.assign(new Error(r.status),{code:r.status}); return r.json();};
+  anView=mountAnalytics($('#anRoot'),{get,toast,
+    fullscreen:on=>{if(on) app.dataset.anfull='1'; else delete app.dataset.anfull;},
+    async exportFile(kind,q){const r=await fetch(`${API}/analytics/export.${kind}?${q}`,{headers:H()}); if(!r.ok) throw new Error(r.status);
+      const name=decodeURIComponent((/filename\*=UTF-8''([^;]+)/.exec(r.headers.get('content-disposition')||'')||[])[1]||`analytics.${kind}`);
+      const url=URL.createObjectURL(await r.blob()), a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000); toast('Файл завантажено');}});}
 $('#tabs [data-tab="stats"]').addEventListener('click',()=>renderStats().then(renderHrTools));
 /* ---------- HR tools (spec 007): weekly pulse, newcomer onboarding, games schedule + quiz ---------- */
 async function renderHrTools(){const box=$('#stats'), tok=getToken(); if(!box||!tok) return;
-  let el=$('#hrTools'); if(!el){el=document.createElement('div'); el.id='hrTools'; box.appendChild(el);}
+  let el=$('#hrTools'); if(!el) return;
   const H={'X-Edit-Token':tok,'content-type':'application/json'};
   const get=p=>fetch(API+p,{headers:H}).then(r=>r.ok?r.json():null).catch(()=>null);
   const put=(p,b)=>fetch(API+p,{method:'PUT',headers:H,body:JSON.stringify(b)}).then(r=>{if(!r.ok) throw new Error(r.status); return r.json();});

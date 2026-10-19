@@ -35,6 +35,9 @@ services:
       CHECKIN_HOUR: ${CHECKIN_HOUR:-9}             # task "deadline today" pings from this hour
       CHECKIN_TZ: ${CHECKIN_TZ:-Europe/Kyiv}       # reminders / digest timezone
       ANNOUNCE_ALLOWED: ${ANNOUNCE_ALLOWED:-*}     # who may post 📢 announcements from the Mini App (names; * = everyone)
+      # HR analytics v2 (spec 008): who gets the «Аналітика» app in the Mini App + weekly/monthly reports
+      HR_NAMES: ${HR_NAMES:-Тахтаулова,Свистельник}  # linked employees by name (comma list; every word of an entry must match)
+      HR_TG_IDS: ${HR_TG_IDS:-}                   # …and/or telegram ids (comma list)
     volumes:
       - uploads:/data/uploads
     # Loopback-only: nothing exposed publicly — Caddy fronts TLS and routing.
@@ -62,6 +65,7 @@ services:
       REPORT_HR_TG: ${REPORT_HR_TG:-}             # …or telegram id (wins)
       COFFEE_HR_TG: ${COFFEE_HR_TG:-}
       REPORT_VIEWERS: ${REPORT_VIEWERS:-Артем Свистельник}  # may also run /report (names, any word order)
+      ANALYTICS_REPORT_HOUR: ${ANALYTICS_REPORT_HOUR:-10}  # spec 008: weekly (Mon) + monthly (1st) Excel/PDF to HR_NAMES, Kyiv time
     # Long polling — no inbound ports, only outbound to Telegram + the api service.
 
   # Daily pg_dump + attachments archive into ./backups on the host (spec 005).

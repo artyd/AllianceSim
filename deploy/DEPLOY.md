@@ -165,6 +165,24 @@ site within ~12 s (the page polls `/api/employees`). People are now stored in th
 > were embedded in the layout blob into the `employees` table and strips them from the
 > blob. This is automatic and idempotent.
 
+## HR analytics v2 (spec 008)
+
+The «Аналітика» tab (site, HR code) and the HR-only «Аналітика» app in the Mini App share one
+module (`public/analytics.js`). The api builds Excel/PDF exports (`exceljs`, `pdfkit`; the api
+image installs `font-dejavu` for Cyrillic), the bot sends weekly/monthly reports.
+
+```bash
+# .env (optional — the compose file defaults HR_NAMES to «Тахтаулова,Свистельник»)
+#   HR_NAMES=Тахтаулова,Свистельник   <- linked employees who get the Mini App app + reports
+#   HR_TG_IDS=                        <- …or telegram ids (comma list)
+#   ANALYTICS_REPORT_HOUR=10          <- Mon (previous week) and the 1st (previous month)
+sudo docker compose up -d --build api bot      # new npm deps + font → rebuild
+# copy public/index.html, public/phone.js, public/analytics.js, public/sw.js to the web root
+```
+
+Check: the HR person opens the Mini App → «Аналітика» icon on the home screen; in Telegram
+`/analytics` (or `/analytics month`) sends the summary + Excel + PDF right away.
+
 ## Backups
 
 ```bash
