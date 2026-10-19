@@ -1,11 +1,11 @@
 import express from 'express';
-import { query } from './db.js';
-import { signSession } from './session.js';
-import { emit } from './realtime.js';
-import { queueNotif } from './notify.js';
-import { requireEditToken } from './auth.js';
-import { occurrences, nextOccurrence, FREQS, todayWindow, TZ } from './recur.js';
-import { invalidateOffice } from './office.js';
+import { query } from '../lib/db.js';
+import { signSession } from '../lib/session.js';
+import { emit } from '../lib/realtime.js';
+import { queueNotif } from '../lib/notify.js';
+import { requireEditToken } from '../lib/auth.js';
+import { occurrences, nextOccurrence, FREQS, todayWindow, TZ } from '../lib/recur.js';
+import { invalidateOffice } from '../office/live.js';
 
 // Personal phone: calendar, tasks, notification prefs (spec 004). Everything under /me is
 // scoped to req.me — the HR edit token deliberately grants NO access to these routes.

@@ -1,10 +1,11 @@
 import express from 'express';
-import { query } from './db.js';
-import { requireMe } from './session.js';
-import { queueNotif } from './notify.js';
-import { isoWeek, ymdTz } from './kv.js';
-import { pulseQuestion, onboardingTemplate } from './people.js';
-import { snapshotDay } from './office.js';
+import { query } from '../lib/db.js';
+import { requireMe } from '../lib/session.js';
+import { nameMatches } from '../lib/names.js';
+import { queueNotif } from '../lib/notify.js';
+import { isoWeek, ymdTz } from '../lib/kv.js';
+import { pulseQuestion, onboardingTemplate } from '../phone/people.js';
+import { snapshotDay } from '../office/live.js';
 import { buildXlsx, buildPdf, fileBase } from './export.js';
 
 // Spec 008: HR analytics v2 — period/department filters with the previous period for Δ,
@@ -17,11 +18,6 @@ export const analytics = express.Router();
 // ── who is HR ────────────────────────────────────────────────────────────────
 // Web: the EDIT_TOKEN code. Telegram: a linked employee listed in HR_NAMES (comma list,
 // every word of an entry must appear in the name, any order) or HR_TG_IDS.
-const words = (s) => String(s || '').toLocaleLowerCase('uk').replace(/[’'ʼ`]/g, '').split(/[\s,]+/).filter(Boolean);
-export function nameMatches(name, entry) {
-  const have = new Set(words(name)), need = words(entry);
-  return need.length > 0 && need.every((w) => have.has(w));
-}
 const list = (v) => String(v || '').split(',').map((s) => s.trim()).filter(Boolean);
 const hrNames = () => list(process.env.HR_NAMES || process.env.REPORT_HR_NAME || process.env.COFFEE_HR_NAME);
 const hrTgIds = () => list(process.env.HR_TG_IDS || process.env.REPORT_HR_TG || process.env.COFFEE_HR_TG).map((s) => s.replace(/[^0-9]/g, ''));

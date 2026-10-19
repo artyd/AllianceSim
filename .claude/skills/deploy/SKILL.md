@@ -10,8 +10,8 @@ commands yourself.
 
 ## Frontend-only change (the usual case)
 
-Only `public/index.html` changed → no Docker rebuild, no restart. Fastest path
-(works even if `git pull` is misconfigured, since the repo is public):
+Only `public/` changed → no Docker rebuild, no restart. Single file (works even if
+`git pull` is misconfigured, since the repo is public):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/artyd/AllianceSim/main/public/index.html \

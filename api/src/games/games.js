@@ -1,10 +1,10 @@
 import express from 'express';
-import { query } from './db.js';
-import { emit, online } from './realtime.js';
-import { queueNotif } from './notify.js';
-import { requireEditToken } from './auth.js';
-import { postMessage, directChatId, chatRow, msgById, memberIds } from './chats.js';
-import { kvGet, kvSet, hhmm } from './kv.js';
+import { query } from '../lib/db.js';
+import { emit, online } from '../lib/realtime.js';
+import { queueNotif } from '../lib/notify.js';
+import { requireEditToken } from '../lib/auth.js';
+import { postMessage, directChatId, chatRow, msgById, memberIds } from '../phone/chats.js';
+import { kvGet, kvSet, hhmm } from '../lib/kv.js';
 
 // Mini-games (spec 007). A `games` row is a room: lobby → active → done | cancelled.
 // Duels keep a client-defined state; the server guards membership, move order

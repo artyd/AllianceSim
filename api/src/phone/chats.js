@@ -2,10 +2,10 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { query } from './db.js';
-import { attach, emit, setViewing, isViewing } from './realtime.js';
-import { queueNotif } from './notify.js';
-import { requireEditToken } from './auth.js';
+import { query } from '../lib/db.js';
+import { attach, emit, setViewing, isViewing } from '../lib/realtime.js';
+import { queueNotif } from '../lib/notify.js';
+import { requireEditToken } from '../lib/auth.js';
 
 // Real chats between colleagues (spec 004). Only members can read or write a chat; the
 // HR edit token grants nothing here. Live updates go out over SSE (/me/stream).

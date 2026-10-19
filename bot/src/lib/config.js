@@ -1,4 +1,4 @@
-// Enums kept in sync with the web app (public/index.html): STATUS, MOODS, DEPT_COLORS.
+// Enums kept in sync with the web app (public/js/office/catalog.js): STATUS, MOODS, DEPT_COLORS.
 export const STATUS = [
   { key: 'office',   n: 'В офісі',        icon: '🏢' },
   { key: 'remote',   n: 'Працюю з дому',  icon: '🏠' },

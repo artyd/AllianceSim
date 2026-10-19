@@ -1,9 +1,9 @@
 import express from 'express';
-import { query } from './db.js';
-import { occurrences, parts, TZ } from './recur.js';
-import { systemPost } from './chats.js';
-import { queueNotif } from './notify.js';
-import { requireEditToken } from './auth.js';
+import { query } from '../lib/db.js';
+import { occurrences, parts, TZ } from '../lib/recur.js';
+import { systemPost } from '../phone/chats.js';
+import { queueNotif } from '../lib/notify.js';
+import { requireEditToken } from '../lib/auth.js';
 
 // "Live office" data derived from calendars (spec 005): who is in a meeting right now and
 // which rooms are booked. The public view gets only times and room keys — never titles.

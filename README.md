@@ -19,16 +19,15 @@ Browser ──HTTPS──> Caddy
 ## Repository layout
 
 ```
-api/                Express + pg backend (Dockerized)
-  src/index.js      routes (layout + employees + health)
-  src/db.js         pg pool + idempotent schema init
-  src/auth.js       X-Edit-Token write guard
-caddy/Caddyfile     Caddy site block (imported into /etc/caddy/Caddyfile)
-public/             static frontend (index.html + assets) served by Caddy
-docker-compose.yml  db (postgres:16) + api services
-.env.example        POSTGRES_*, EDIT_TOKEN, PORT
-deploy/DEPLOY.md    step-by-step server deployment
+public/      static site, no build step: index.html + css/ + js/{office,phone,games,analytics}/
+api/src/     Express + Postgres: lib/ + office/ phone/ games/ analytics/ routers
+bot/src/     Telegram bot (grammy): lib/ + features/
+tests/       real-stack tests: api/, ui/ (headless Chrome), pw/ (Playwright)
+docs/        SDD.md, specs/, adr/, agents/      GLOSSARY.md — the project's vocabulary
+deploy/      DEPLOY.md runbook + backup.sh      caddy/ — Caddy site block
 ```
+
+The annotated map for contributors (and coding agents) is in [`CLAUDE.md`](CLAUDE.md).
 
 ## API
 

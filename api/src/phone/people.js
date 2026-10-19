@@ -1,7 +1,7 @@
 import express from 'express';
-import { query } from './db.js';
-import { requireEditToken } from './auth.js';
-import { kvGet, kvSet, isoWeek, ymdTz } from './kv.js';
+import { query } from '../lib/db.js';
+import { requireEditToken } from '../lib/auth.js';
+import { kvGet, kvSet, isoWeek, ymdTz } from '../lib/kv.js';
 
 // Spec 007: weekly pulse (anonymous to HR — only averages of groups ≥ PULSE_MIN) and the
 // newcomer onboarding checklist (HR template, shown for ONBOARD_DAYS after hired_on).

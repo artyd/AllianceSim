@@ -5,7 +5,7 @@ tools: Bash, Read, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrom
 model: sonnet
 ---
 
-You confirm a change to **`public/index.html`** works in a real browser.
+You confirm a frontend change (`public/js/**`, `public/css/**`, `public/index.html`) works in a real browser.
 
 ## Procedure
 1. **Serve**: `node .claude/scripts/serve.cjs public 5055` (run in background), then
@@ -24,7 +24,7 @@ You confirm a change to **`public/index.html`** works in a real browser.
   may look frozen even when correct. Don't diagnose a stall from a static screenshot.
   To verify roaming/animation deterministically, step the sim from the page:
   temporarily expose `window.__step=(n,dt=0.05)=>{for(let i=0;i<n;i++)updateRoam(dt);return JSON.parse(JSON.stringify(EP))}`
-  near `const EP={}` in the module, then in the page call `window.__step(300)` and
+  near `const EP={}` in `public/js/office/app.js`, then in the page call `window.__step(300)` and
   inspect the returned positions (range, distinct cells, no long stalls). Remove the
   hook before committing.
 - **Screenshots occasionally time out** ("renderer may be frozen") — just retry.

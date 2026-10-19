@@ -1,12 +1,13 @@
 ---
 name: frontend-review
-description: Reviews changes to the AllianceSim frontend (public/index.html office app + public/phone.js phone module) — Three.js + Canvas-2D, no build step. Use after non-trivial edits to catch correctness bugs against the app's invariants before verifying in the browser. Read-only.
+description: Reviews changes to the AllianceSim frontend (public/js/office/* office app, public/js/phone/phone.js, public/css/*) — Three.js + Canvas-2D, no build step. Use after non-trivial edits to catch correctness bugs against the app's invariants before verifying in the browser. Read-only.
 tools: Read, Grep, Glob
 model: sonnet
 ---
 
-You review the diff/current state of **`public/index.html`** (HTML shell, `<style>`, one
-`<script type="module">` with the office app) and **`public/phone.js`** (the phone /
+You review the diff/current state of the frontend: **`public/js/office/app.js`** (office app:
+state, renderers, roaming, UI; data in `catalog.js`, HR tab in `hr.js`), **`public/css/*.css`**,
+`public/index.html` (markup only) and **`public/js/phone/phone.js`** (the phone /
 personal Mini App, `initPhone(O)` — office internals arrive via `O`, `state` only through
 the `O.state` getter; flag any phone code that caches `O.state` or a missing dependency).
 There is no build step. Report only
@@ -48,6 +49,6 @@ concrete, high-signal issues; rank most-severe first; say "no issues found" when
    frame, not require one to have run.
 9. **Escaping** — user text rendered via `esc()`; no raw interpolation into innerHTML.
 
-Point to `public/index.html:<line>` for each finding and give a one-line failure
+Point to `<file>:<line>` for each finding and give a one-line failure
 scenario. Prefer reuse of existing helpers (`fp`, `seatWorld`, `roomAt`, `fits`,
 `empPos`, `zoneColor`, `project`) over new code.

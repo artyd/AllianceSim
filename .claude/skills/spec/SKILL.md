@@ -29,7 +29,7 @@ step of the SDD loop documented in [`docs/SDD.md`](../../../docs/SDD.md).
      check.
    - **Status/Commit** — leave `planned`; fill the commit hash when merged.
 3. Implement in **plan mode** for anything with real surface area, in small edits.
-   The PostToolUse hook syntax-checks `public/index.html` on every save.
+   The PostToolUse hook checks every saved frontend file (`public/js/**`, `public/index.html`).
 4. Verify with the `app-verify` agent, then commit and set the spec's status.
 
 Keep specs short (half a page). They are living docs — update the spec if the design

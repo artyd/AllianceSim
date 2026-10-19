@@ -30,9 +30,8 @@ Specify  →  Plan  →  Implement  →  Verify  →  Commit
 - **Plan** — use **plan mode** (or a Plan agent) to design the approach against the
   actual code before editing. Read the invariants (below) first; prefer reusing
   existing helpers over new code.
-- **Implement** — small, focused edits. The whole frontend is one file
-  (`public/index.html`), so changes are surgical. After every save the **syntax hook**
-  runs automatically.
+- **Implement** — small, focused edits in the module that owns the area (map in
+  `CLAUDE.md`). After every save the **frontend hook** checks syntax and imports.
 - **Verify** — parsing is not proof. Serve the app (`/serve`) and drive it in the
   browser with the **`app-verify`** agent; a clean change reports **no console errors**
   and the behaviour is observed, not assumed. Roaming/animation is stepped
@@ -46,7 +45,7 @@ Specify  →  Plan  →  Implement  →  Verify  →  Commit
 |---|---|
 | Specify | `skills/spec` + `docs/specs/_template.md` |
 | Plan | plan mode; `agents/frontend-review` for a design/second read |
-| Implement | `hooks` → `scripts/check-html.mjs` syntax-checks `public/index.html` on every Edit/Write |
+| Implement | `hooks` → `scripts/check-html.mjs` checks every saved frontend file (syntax, relative imports, linked files) |
 | Verify | `skills/serve` + `scripts/serve.cjs`; `agents/app-verify` (browser + console) |
 | Ship | `skills/deploy` (frontend file copy; backend rebuild only if `api/` changed) |
 

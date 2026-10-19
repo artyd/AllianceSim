@@ -2,7 +2,7 @@
 // SVG is built by hand and rasterised with resvg (no headless browser). Emoji don't
 // render reliably without a colour-emoji font, so status/mood are coloured pills/dots.
 import { Resvg } from '@resvg/resvg-js';
-import { STATUS, statusName, moodName } from './config.js';
+import { STATUS, statusName, moodName } from '../lib/config.js';
 
 const FONT = "DejaVu Sans, Segoe UI, Arial, sans-serif";
 const STATUS_COLOR = { office: '#2E9E5B', remote: '#3E7BD6', absent: '#8A8F98', sick: '#D64545', vacation: '#E08A1E' };

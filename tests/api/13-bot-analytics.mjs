@@ -29,7 +29,7 @@ const srv = http.createServer((req, res) => {
 await new Promise((r) => srv.listen(18101, r));
 
 // ── report periods (pure) ──
-const per = await import(pathToFileURL(path.join(REPO, 'bot', 'src', 'periods.js')).href);
+const per = await import(pathToFileURL(path.join(REPO, 'bot', 'src', 'lib', 'periods.js')).href);
 eq(per.lastWeek('2026-10-19'), { from: '2026-10-12', to: '2026-10-18' }, 'Monday → previous Mon–Sun');
 eq(per.lastWeek('2026-10-25'), { from: '2026-10-12', to: '2026-10-18' }, 'Sunday → the week before');
 eq(per.lastMonth('2026-11-01'), { from: '2026-10-01', to: '2026-10-31' }, 'previous month');
