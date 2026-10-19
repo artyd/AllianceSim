@@ -1,7 +1,7 @@
 # 008 — HR analytics v2 (web + Mini App + Excel/PDF reports)
 
 - **Status:** done
-- **Commit(s):** —
+- **Commit(s):** ef49db8
 - **Date:** 2026-10-19
 
 ## Intent
