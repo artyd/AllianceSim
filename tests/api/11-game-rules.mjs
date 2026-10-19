@@ -1,5 +1,5 @@
-// Spec 007: unit tests of the pure game rules + bots (public/games-engines.js). No server.
-import { ttt, sea, FLEET, checkers, chess, g2048, snake, word, WORDS } from '../../public/games-engines.js';
+// Spec 007: unit tests of the pure game rules + bots (public/js/games/engines.js). No server.
+import { ttt, sea, FLEET, checkers, chess, g2048, snake, word, WORDS } from '../../public/js/games/engines.js';
 
 let passes = 0, fails = 0;
 const ok = (c, m) => { if (c) passes++; else { fails++; console.log('  ✗ ' + m); } };

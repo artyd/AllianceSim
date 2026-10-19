@@ -1,16 +1,15 @@
 #!/usr/bin/env node
-// PostToolUse hook: after an Edit/Write of the frontend, syntax-check it:
-//   public/index.html → its <script type="module"> block (the office app)
-//   public/phone.js   → the phone module (spec 005 F)
-// Exit 2 on a parse error so the harness shows the message and you fix it immediately.
+// PostToolUse hook: after an Edit/Write of the frontend, check it:
+//   public/js/**/*.js, public/sw.js → `node --check` + every relative import resolves to a file
+//   public/index.html               → every css/… and js/… it links exists
+// Exit 2 on an error so the harness shows the message and you fix it immediately.
 //
-// Also runnable by hand:  node .claude/scripts/check-html.mjs
+// Also runnable by hand (checks everything):  node .claude/scripts/check-html.mjs
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
-const HTML = 'public/index.html', PHONE = 'public/phone.js';
+const PUB = 'public';
 
 // The hook feeds a JSON payload on stdin ({ tool_input: { file_path } }). When run
 // by hand there is no stdin, so fall through and check everything.
@@ -20,24 +19,30 @@ try {
   if (raw.trim()) changed = JSON.parse(raw)?.tool_input?.file_path ?? '';
 } catch { /* no stdin / not JSON — check anyway */ }
 const ch = changed.replaceAll('\\', '/');
-if (changed && !ch.endsWith(HTML) && !ch.endsWith(PHONE)) process.exit(0);
+const isFront = (f) => /\/public\/(js\/.*\.js|sw\.js|index\.html|css\/.*\.css)$/.test('/' + f.replace(/^.*?(?=public\/)/, ''));
+if (changed && !isFront(ch)) process.exit(0);
 
-function check(label, source) {
-  const tmp = path.join(os.tmpdir(), 'alliancesim-check-' + path.basename(label) + '.mjs');
-  fs.writeFileSync(tmp, '//\n' + source);
-  try {
-    execFileSync(process.execPath, ['--check', tmp], { stdio: 'pipe' });
-    console.log(`check-html: ${label} — syntax OK`);
-  } catch (e) {
-    const msg = (e.stderr && e.stderr.toString()) || e.message;
-    console.error(`check-html: SYNTAX ERROR in ${label}:\n` + msg);
-    process.exit(2); // exit 2 → the harness feeds stderr back so it gets fixed
+const errors = [];
+const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]));
+const jsFiles = [...walk(path.join(PUB, 'js')).filter((f) => f.endsWith('.js')), path.join(PUB, 'sw.js')].map((f) => f.replaceAll('\\', '/'));
+
+function checkJs(file) {
+  try { execFileSync(process.execPath, ['--check', file], { stdio: 'pipe' }); }
+  catch (e) { errors.push(`SYNTAX ERROR in ${file}:\n` + ((e.stderr && e.stderr.toString()) || e.message)); return; }
+  const src = fs.readFileSync(file, 'utf8');
+  for (const m of src.matchAll(/\b(?:from|import)\s*\(?\s*['"](\.{1,2}\/[^'"]+)['"]/g)) {
+    const target = path.join(path.dirname(file), m[1]);
+    if (!fs.existsSync(target)) errors.push(`${file}: import '${m[1]}' → missing ${target.replaceAll('\\', '/')}`);
   }
 }
-
-if (fs.existsSync(HTML) && (!changed || ch.endsWith(HTML))) {
-  const m = fs.readFileSync(HTML, 'utf8').match(/<script type="module">([\s\S]*?)<\/script>/);
-  if (!m) console.error(`check-html: no <script type="module"> found in ${HTML}`);
-  else check('index.html module script', m[1]);
+function checkHtml() {
+  const file = path.join(PUB, 'index.html'), html = fs.readFileSync(file, 'utf8');
+  for (const m of html.matchAll(/(?:href|src)="((?:css|js)\/[^"]+)"/g)) if (!fs.existsSync(path.join(PUB, m[1]))) errors.push(`${file}: links missing ${m[1]}`);
 }
-if (fs.existsSync(PHONE) && (!changed || ch.endsWith(PHONE))) check('phone.js', fs.readFileSync(PHONE, 'utf8'));
+
+const touched = changed ? jsFiles.filter((f) => ch.endsWith(f)) : jsFiles;
+touched.forEach(checkJs);
+if (!changed || ch.endsWith('index.html') || ch.endsWith('.css')) checkHtml();
+
+if (errors.length) { console.error('check-html:\n' + errors.join('\n')); process.exit(2); }
+console.log(`check-html: OK (${changed ? path.basename(ch) : jsFiles.length + ' js files + index.html'})`);

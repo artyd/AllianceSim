@@ -1,8 +1,8 @@
 // AllianceOS — the phone (personal Mini App + office demo), split out of index.html (spec 005 F).
 // Office internals come in through `O` (see the initPhone(...) call in index.html):
 // constants/functions by value, `state` through a getter because the office reassigns it.
-import { initGamesUI } from './games.js';
-import {mountAnalytics} from './analytics.js';
+import { initGamesUI } from '../games/ui.js';
+import {mountAnalytics} from '../analytics/analytics.js';
 
 export function initPhone(O){
   const {$, API, DEPT_COLORS, MOODS, ROOMS, STATUS, TG, ZONES, apiEmpWrite, app, applySettings, avHTML, empPos, empUpsert, esc, focusEmployee, getToken, params, refreshLive, renderLabels, renderPeople, roomAt, roomName, settings, statusOf, syncAvatars, toast}=O;

@@ -2,8 +2,8 @@
 // Network-first for everything it touches, so a deploy is visible at once; the cache is
 // only a fallback when there is no connection. Live streams, writes and the private
 // /me API are never cached.
-const CACHE = 'alliancesim-v2';
-const SHELL = ['./', './index.html', './phone.js', './games.js', './games-engines.js', './analytics.js', './manifest.json', './assets/icon-192.png', './assets/logo.png'];
+const CACHE = 'alliancesim-v3';
+const SHELL = ['./', './index.html', './css/office.css', './css/phone.css', './css/games.css', './css/phone-shell.css', './js/office/app.js', './js/office/catalog.js', './js/office/hr.js', './js/phone/phone.js', './js/games/ui.js', './js/games/engines.js', './js/analytics/analytics.js', './manifest.json', './assets/icon-192.png', './assets/logo.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL).catch(() => {})).then(() => self.skipWaiting()));

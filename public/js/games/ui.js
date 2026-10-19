@@ -1,7 +1,7 @@
 // AllianceOS «Ігри» (spec 007): catalogue, bot/colleague setup, lobby, boards, leaderboard,
 // invites (island banner + chat card). Rules/bots live in games-engines.js; the phone
 // (phone.js) wires this in through initGamesUI(ctx) and forwards live events.
-import { ttt, sea, checkers, chess, g2048, snake, word, LEVEL_N } from './games-engines.js';
+import { ttt, sea, checkers, chess, g2048, snake, word, LEVEL_N } from './engines.js';
 
 export function initGamesUI(X) {
   const { meApi, toast, haptic, hapticOk, wire, go, back, pop, popIf, scr, body, esc, personal, TG, emp, avHTML, IC, islandTemp, islandEnd, segHTML, CHEV, empty, stackTop, load, save } = X;
