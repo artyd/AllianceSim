@@ -11,7 +11,7 @@ step of the SDD loop documented in [`docs/SDD.md`](../../../docs/SDD.md).
 ## Steps
 1. Pick the next number and a slug, copy the template:
    ```bash
-   cp specs/_template.md specs/003-<slug>.md   # use the next free NNN
+   cp docs/specs/_template.md docs/specs/NNN-<slug>.md   # next free NNN
    ```
    (Numbers 001–002 and the history are already captured in `docs/SDD.md`; start new
    specs at 003+ unless you're back-filling.)

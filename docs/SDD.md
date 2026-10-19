@@ -23,8 +23,8 @@ Specify  →  Plan  →  Implement  →  Verify  →  Commit
    └──────────────  (next spec)  ───────────────┘
 ```
 
-- **Specify** — for anything non-trivial, write a short spec in `specs/` (use the
-  `/spec` skill and `specs/_template.md`): *Intent · Requirements · Design & decisions
+- **Specify** — for anything non-trivial, write a short spec in `docs/specs/` (use the
+  `/spec` skill and `docs/specs/_template.md`): *Intent · Requirements · Design & decisions
   · Tasks · Verification*. Half a page. It is a living doc — update it if the design
   changes while building.
 - **Plan** — use **plan mode** (or a Plan agent) to design the approach against the
@@ -44,7 +44,7 @@ Specify  →  Plan  →  Implement  →  Verify  →  Commit
 
 | Stage | Support |
 |---|---|
-| Specify | `skills/spec` + `specs/_template.md` |
+| Specify | `skills/spec` + `docs/specs/_template.md` |
 | Plan | plan mode; `agents/frontend-review` for a design/second read |
 | Implement | `hooks` → `scripts/check-html.mjs` syntax-checks `public/index.html` on every Edit/Write |
 | Verify | `skills/serve` + `scripts/serve.cjs`; `agents/app-verify` (browser + console) |
@@ -140,7 +140,7 @@ Docker + Caddy. Below, each epic is a compact spec.
 ### 008 — Harness kit + this SDD documentation  ·  (this change)  ·  2026-09-04
 - **Intent:** capture the workflow and the specs so future work is structured, not ad-hoc.
 - **Deliverables:** `.claude/` (syntax-check hook, `serve`/`deploy`/`spec` skills,
-  `frontend-review`/`app-verify` agents, permissions), `specs/_template.md`, root
+  `frontend-review`/`app-verify` agents, permissions), `docs/specs/_template.md`, root
   `CLAUDE.md`, and this document.
 
 ---

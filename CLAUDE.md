@@ -18,7 +18,7 @@ free-roam colleagues, share a read-only link.
 - Deployed with Docker + Caddy — see `deploy/DEPLOY.md`.
 
 ## How to work here (SDD loop — see `docs/SDD.md`)
-1. For non-trivial changes, write a short spec first (`/spec`, `specs/_template.md`)
+1. For non-trivial changes, write a short spec first (`/spec`, `docs/specs/_template.md`)
    and design in **plan mode**.
 2. Edit `public/index.html` / `public/phone.js` in small steps. A **PostToolUse hook**
    syntax-checks both automatically after each save
@@ -47,3 +47,17 @@ free-roam colleagues, share a read-only link.
 Frontend-only change → copy the file, no rebuild (`/deploy` skill). Backend change
 (`api/` touched) → `docker compose up -d --build`. HR access code is `EDIT_TOKEN` in
 the server `.env` (not in the repo).
+
+## Agent skills
+
+### Issue tracker
+
+Specs and tickets are local markdown in `docs/specs/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five roles (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`) as `Status:` lines. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` + `docs/adr/` at the root. See `docs/agents/domain.md`.
