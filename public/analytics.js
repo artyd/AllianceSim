@@ -57,8 +57,8 @@ function lineChart(points, { min = 1, max = 5, step, pct = false, unit = '', lab
 function stackedDays(daily) { return spec('stack', { d: daily }) + legend(STATUS); }
 // which x labels fit: every k-th, always the last, never crowding it
 const xLab = (n, W) => { const every = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(W / 74)))); return (i) => i === n - 1 || (i % every === 0 && n - 1 - i >= every * 0.7); };
-function lineSvg(s, W) {
-  const H = 190, L = 36, R = 14, T = 12, B = 24, n = Math.max(1, s.p.length - 1);
+function lineSvg(s, W, H = 190) {
+  const L = 36, R = 14, T = 12, B = 24, n = Math.max(1, s.p.length - 1);
   const X = (i) => L + (i * (W - L - R)) / n, Y = (v) => T + ((s.max - v) * (H - T - B)) / (s.max - s.min);
   const ticks = []; for (let v = s.min; v <= s.max + 1e-9; v += s.step) ticks.push(v);
   let d = '', pen = false, area = '', run = [];
@@ -89,7 +89,7 @@ function stackSvg(s, W) {
 }
 const legend = (items) => `<div class="an-legend">${items.map((s) => `<span><i style="background:${s.c}"></i>${esc(s.n)}</span>`).join('')}</div>`;
 // Horizontal bars: [{label, v, sub?, color?, id?}]
-function hbars(items, { max, unit = '', d = 1, deltaOf } = {}) {
+export function hbars(items, { max, unit = '', d = 1, deltaOf } = {}) {
   if (!items.length) return '<p class="an-empty">Немає даних.</p>';
   const m = max || Math.max(1, ...items.map((x) => x.v || 0));
   return `<div class="an-hb">${items.map((x) => `<div class="an-hbr${x.id ? ' an-link' : ''}"${x.id ? ` data-person="${esc(x.id)}" tabindex="0" role="button"` : ''}>
@@ -97,6 +97,44 @@ function hbars(items, { max, unit = '', d = 1, deltaOf } = {}) {
     <span class="t"><i style="width:${x.v == null ? 0 : Math.max(0, Math.min(100, (x.v / m) * 100))}%;${x.color ? `background:${x.color}` : ''}"></i></span>
     <b>${x.v == null ? '—' : nf(x.v, d) + unit}</b>${deltaOf ? `<span class="dl">${deltaOf(x) || ''}</span>` : ''}${x.sub ? `<em>${esc(x.sub)}</em>` : ''}</div>`).join('')}</div>`;
 }
+// Masonry for a .an-grid of .an-card. Per run of non-wide cards: measure the cards, then pick
+// the FEWEST columns (≥2, ≤ what fits) that keep the run as short as the widest layout would —
+// so a few short cards don't leave a whole empty column (≤18% taller is fine). Cards go to the shortest column in
+// order; in each column one card grows to the bottom (the one with a line chart — the chart
+// then grows too — else the last). `.wide` cards break the run and span the row.
+// `paint(scope)` draws charts before measuring and once more after the final placement.
+export function layoutCards(grid, { min = 330, max = 3, gap = 14, paint } = {}) {
+  const W = grid.clientWidth || 600, cols = Math.max(1, Math.min(max, Math.floor((W + gap) / (min + gap))));
+  grid.dataset.cols = cols;
+  // re-layout: collect the cards back in their original order
+  const cards = [...grid.querySelectorAll(':scope > .an-card, :scope > .an-mas > .an-col > .an-card')];
+  cards.forEach((c, i) => { if (c.dataset.ord == null) c.dataset.ord = i; c.classList.remove('an-grow'); });
+  cards.sort((x, y) => x.dataset.ord - y.dataset.ord);
+  const runs = [];
+  for (const c of cards) { if (c.classList.contains('wide') || !runs.length || runs[runs.length - 1].wide) runs.push({ wide: c.classList.contains('wide'), cards: [c] }); else runs[runs.length - 1].cards.push(c); }
+  grid.textContent = '';
+  const mkCols = (mas, k) => { mas.textContent = ''; return Array.from({ length: k }, () => mas.appendChild(Object.assign(document.createElement('div'), { className: 'an-col' }))); };
+  for (const r of runs) {
+    const n = Math.min(cols, r.cards.length);
+    if (r.wide || n === 1) { r.cards.forEach((c) => grid.appendChild(c)); continue; }
+    const mas = document.createElement('div'); mas.className = 'an-mas measuring';
+    let cs = mkCols(mas, n);
+    r.cards.forEach((c, i) => cs[i % n].appendChild(c));
+    grid.appendChild(mas);
+    if (paint) paint(mas);
+    const h = r.cards.map((c) => c.offsetHeight);
+    const place = (k) => { const tot = Array(k).fill(0), at = h.map((hh) => { let j = 0; for (let i = 1; i < k; i++) if (tot[i] < tot[j] - 1) j = i; tot[j] += hh + gap; return j; }); return { k, at, max: Math.max(...tot) }; };
+    let best = place(n);
+    for (let k = 2; k < n; k++) { const p = place(k); if (p.max <= best.max * 1.18) { best = p; break; } }
+    cs = mkCols(mas, best.k);
+    r.cards.forEach((c, i) => cs[best.at[i]].appendChild(c));
+    for (const col of cs) { const kids = [...col.children]; (kids.find((c) => c.querySelector('.an-chart[data-kind="line"]')) || kids[kids.length - 1]).classList.add('an-grow'); }
+    mas.classList.remove('measuring');
+  }
+  if (paint) paint(grid);
+}
+const colsFor = (grid, min = 330, max = 3, gap = 14) => Math.max(1, Math.min(max, Math.floor(((grid.clientWidth || 600) + gap) / (min + gap))));
+
 // One 100% bar of parts [{n, c, v}]
 function share(parts) {
   const tot = parts.reduce((s, p) => s + p.v, 0);
@@ -131,10 +169,14 @@ const CSS = `
 .an-tile b{display:block;font-size:24px;font-weight:900;line-height:1.15;font-variant-numeric:tabular-nums}
 .an-tile span{display:block;font-size:11.5px;font-weight:700;color:var(--muted);margin-top:2px}
 .an-d{display:inline-block;font-size:11.5px;font-weight:800;margin-top:4px}.an-d.g{color:var(--an-g)}.an-d.b{color:var(--an-b)}.an-d.n{color:var(--muted)}
-.an-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:14px;margin-top:4px}
+.an-grid{display:flex;flex-direction:column;gap:14px;margin-top:4px;min-width:0}
+.an-mas{display:flex;gap:14px;align-items:stretch;min-width:0}
+.an-col{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:14px}
+.an-card.an-grow{flex:1 0 auto;display:flex;flex-direction:column}.an-card.an-grow>.an-chart{flex:1 1 auto}
+.an-mas.measuring .an-card{flex:none!important}.an-mas.measuring .an-chart{flex:none!important}
 .an-card{background:var(--panel-solid);border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-width:0}
 .an-card h5{margin:0 0 8px;font-size:13px;font-weight:900;color:var(--ink)}.an-card h5 small{font-weight:700;color:var(--muted)}
-.an-card.wide{grid-column:1/-1}
+.an-card.wide{width:100%}
 .an-chart{width:100%;min-width:0}.an-chart svg{display:block;overflow:visible;max-width:100%}
 .an .ax{font-size:10.5px;fill:var(--muted);font-weight:700}.an .gl{stroke:var(--line);stroke-width:1}
 .an .an-x{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
@@ -148,6 +190,11 @@ const CSS = `
 .an-hbr .dl{min-width:54px;text-align:right}.an-hbr .dl .an-d{margin:0}
 .an-hbr em{grid-column:2/-1;font-style:normal;font-size:11px;color:var(--muted);margin-top:-4px}
 .an-share{display:flex;height:16px;border-radius:8px;overflow:hidden;gap:2px}
+.an-who{display:flex;flex-direction:column;gap:10px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+.an-wl{display:block;font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-bottom:5px}
+.an-wl i{display:inline-block;width:8px;height:8px;border-radius:3px;margin-right:6px}
+.an-wn{display:flex;flex-wrap:wrap;gap:5px}
+.an-wp{font-size:12px!important;font-weight:700;padding:4px 9px!important;border-radius:999px;background:var(--chip)!important}
 .an-empty{color:var(--muted);font-weight:700;margin:6px 0}
 .an-att{display:flex;flex-direction:column;gap:6px}
 .an-ati{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;background:var(--chip);text-align:left;width:100%}
@@ -253,6 +300,13 @@ export function mountAnalytics(root, opt) {
     <div class="an-tabs" role="tablist">${TABS.map(([k, n]) => `<button type="button" role="tab" data-tab="${k}" aria-selected="${st.tab === k}">${n}${k === 'overview' && a.attention.length ? `<b>${a.attention.length}</b>` : ''}</button>`).join('')}</div>`;
   }
 
+  // who is not in the office today (from the timesheet's last column when the period ends today)
+  const todayWho = (a) => {
+    const sh = a.presence.sheet, i = sh.days.length - 1;
+    if (sh.days[i] !== a.today) return '';
+    const groups = STATUS.filter((x) => x.k !== 'office').map((x) => ({ ...x, ps: sh.people.filter((p) => p.cells[i] === x.k) })).filter((g) => g.ps.length);
+    return groups.length ? `<div class="an-who">${groups.map((g) => `<div><span class="an-wl"><i style="background:${g.c}"></i>${g.n} · ${g.ps.length}</span><div class="an-wn">${g.ps.map((p) => `<button type="button" class="an-wp an-link" data-person="${esc(p.id)}">${esc(p.name)}</button>`).join('')}</div></div>`).join('')}</div>` : '<p class="an-empty">Сьогодні всі в офісі.</p>';
+  };
   const tile = (v, label, dl = '') => `<div class="an-tile"><b>${v}</b><span>${label}</span>${dl}</div>`;
   const attList = (a) => (a.attention.length ? `<div class="an-att">${a.attention.map((x) => `<button type="button" class="an-ati an-link" data-person="${esc(x.id)}">
       <span class="av">${esc(initials(x.name))}</span><span class="nm"><b>${esc(x.name)} <span>· ${esc(x.dept)}</span></b>
@@ -276,7 +330,7 @@ export function mountAnalytics(root, opt) {
         <div class="an-card"><h5>Потребують уваги <small>· ${a.attention.length}</small></h5>${attList(a)}
           <p class="an-empty" style="font-size:11px;font-weight:600">Сигнали: 5+ робочих днів без check-in · «втомлений/стрес» 3 рази поспіль · настрій за тиждень нижчий за звичний на 1+ бал.</p></div>
         <div class="an-card"><h5>Настрій команди <small>· середнє за день</small></h5>${lineChart(a.mood.daily.map((d) => ({ day: d.day, v: d.avg, n: d.n })), { label: 'Настрій' })}</div>
-        <div class="an-card"><h5>Сьогодні</h5>${share(STATUS.map((s) => ({ n: s.n, c: s.c, v: t[s.k] })))}</div>
+        <div class="an-card"><h5>Сьогодні</h5>${share(STATUS.map((s) => ({ n: s.n, c: s.c, v: t[s.k] })))}${todayWho(a)}</div>
         <div class="an-card"><h5>Check-in по відділах <small>· частка відповідей</small></h5>${hbars(a.engagement.byDept.map((d) => ({ label: d.dept, v: d.rate, prev: d.prev })), { max: 100, unit: '%', deltaOf: (x) => delta(x.v, x.prev, { unit: '' }) })}</div>
       </div>`;
     },
@@ -294,7 +348,7 @@ export function mountAnalytics(root, opt) {
     mood(a) {
       return `<div class="an-grid">
         <div class="an-card wide"><h5>Середній настрій по днях <small>· 1 — у стресі, 5 — чудовий</small></h5>${lineChart(a.mood.daily.map((d) => ({ day: d.day, v: d.avg, n: d.n })), { label: 'Настрій' })}</div>
-        <div class="an-card"><h5>Розподіл відповідей</h5>${share(MOOD.map((m) => ({ n: m.n, c: m.c, v: a.mood.dist[m.k] || 0 })))}</div>
+        <div class="an-card"><h5>Розподіл відповідей</h5>${share(MOOD.map((m) => ({ n: m.n, c: m.c, v: a.mood.dist[m.k] || 0 })))}<div style="margin-top:14px">${hbars(MOOD.map((m) => ({ label: m.n, v: a.mood.dist[m.k] || 0, color: m.c, sub: '' })), { d: 0 })}</div></div>
         <div class="an-card"><h5>По відділах <small>· Δ до попереднього періоду</small></h5>${hbars(a.mood.byDept.map((d) => ({ label: d.dept, v: d.avg, prev: d.prev, sub: d.n ? `${d.n} відповідей` : 'немає відповідей' })), { max: 5, d: 2, deltaOf: (x) => delta(x.v, x.prev, { d: 2 }) })}</div>
         <div class="an-card wide"><h5>Пульс тижня <small>· анонімно: середнє лише для груп від ${a.pulse.minGroup} людей</small></h5><div class="an-scroll"><table class="an-tbl"><thead><tr><th>Тиждень</th><th>Питання</th><th class="r">Відповідей</th><th class="r">Середнє</th></tr></thead>
           <tbody>${a.pulse.weeks.map((w) => `<tr><td>${esc(w.week)}</td><td>${esc(w.question)}</td><td class="r">${w.n}</td><td class="r"><b>${w.avg == null ? (w.n ? 'мала група' : '—') : nf(w.avg, 2)}</b></td></tr>`).join('')}</tbody></table></div></div>
@@ -329,6 +383,7 @@ export function mountAnalytics(root, opt) {
   function render() {
     const a = data; hideTip();
     root.innerHTML = toolbar(a) + `<div class="an-body" role="tabpanel">${SECTIONS[st.tab](a)}</div>`;
+    root.querySelectorAll('.an-grid').forEach((g) => layoutCards(g, { paint: paintAll }));
     wire();
   }
 
@@ -347,7 +402,6 @@ export function mountAnalytics(root, opt) {
     });
     const fb = root.querySelector('[data-full]'); if (fb) fb.onclick = () => { full = !full; opt.fullscreen(full); render(); };
     root.querySelectorAll('[data-person]').forEach((el) => { el.onclick = () => openPerson(el.dataset.person); el.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPerson(el.dataset.person); } }; });
-    paintAll(root);
     const sh = root.querySelector('.an-sheet');
     if (sh) { sh.onpointerover = (ev) => { const c = ev.target.closest('[data-sc]'); if (!c) return hideTip(); const [r, i] = c.dataset.sc.split(':').map(Number), sh0 = data.presence.sheet, p = sh0.people[r], d = sh0.days[i], s = p && p.cells[i]; if (!p) return; showTip(ev, `${esc(p.name)} · ${WD[wdOf(d)]}, ${fD(d)} · ${s && SC[s] ? SC[s].n : 'немає даних'}`); }; sh.onpointerleave = hideTip; }
   }
@@ -362,8 +416,10 @@ export function mountAnalytics(root, opt) {
         g.onpointermove = (ev) => showTip(ev, `${WD[wdOf(d.day)]}, ${fD(d.day)} · ${STATUS.filter((x) => d[x.k]).map((x) => `${x.n}: ${d[x.k]}`).join(' · ') || 'немає даних'}`); g.onpointerleave = hideTip; });
       return;
     }
-    el.innerHTML = lineSvg(s, W);
-    const L = 36, R = 14, T = 12, B = 24, H = 190, n = Math.max(1, s.p.length - 1);
+    el.textContent = ''; // measure the free height without the old svg
+    const H = Math.max(190, Math.min(460, Math.floor(el.clientHeight || 0)));
+    el.innerHTML = lineSvg(s, W, H);
+    const L = 36, R = 14, T = 12, B = 24, n = Math.max(1, s.p.length - 1);
     const hit = el.querySelector('.an-hit'), xl = el.querySelector('.an-x'), dot = el.querySelector('.an-dot');
     const move = (ev) => {
       const r = el.querySelector('svg').getBoundingClientRect(), i = Math.max(0, Math.min(s.p.length - 1, Math.round(((ev.clientX - r.left - L) / (W - L - R)) * n))), [day, v, cnt] = s.p[i];
@@ -377,6 +433,7 @@ export function mountAnalytics(root, opt) {
   const paintAll = (scope) => scope.querySelectorAll('.an-chart[data-kind]').forEach(paint);
   let rsT = 0;
   const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(() => { clearTimeout(rsT); rsT = setTimeout(() => {
+    if (data && [...root.querySelectorAll('.an-grid')].some((g) => colsFor(g) !== +g.dataset.cols)) { render(); return; }
     document.querySelectorAll('.an-chart[data-kind]').forEach((el) => { if ((root.contains(el) || el.closest('.an-ov')) && Math.abs((+el.dataset.w || 0) - el.clientWidth) > 4) paint(el); }); }, 80); }) : null;
   if (ro) ro.observe(root);
 

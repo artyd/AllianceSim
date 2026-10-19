@@ -112,10 +112,37 @@ a{color:var(--red)}a:hover{color:#b5000f}
 #app[data-anfull] #dock .pane.on{max-height:none!important;flex:1;min-height:0;display:flex;flex-direction:column}
 #app[data-anfull] #stats{max-height:none;flex:1;min-height:0}
 #app[data-anfull] .an-sheet{max-height:none}
-#hrToolsWrap{margin-top:18px;border-top:1px solid var(--line);padding-top:10px}
-#hrToolsWrap>summary{cursor:pointer;font-weight:900;font-size:13px;color:var(--ink);padding:4px 0}
-#hrToolsWrap h5{font-size:13px;font-weight:900;margin:0 0 6px;color:var(--ink)}#hrToolsWrap h5 small{font-weight:700;color:var(--muted)}
-#hrToolsWrap table{width:100%;border-collapse:collapse;font-size:12.5px}#hrToolsWrap td{padding:6px 4px;border-bottom:1px solid var(--line)}#hrToolsWrap td:last-child{text-align:right;color:var(--muted);font-weight:700}
+/* HR settings (spec 008): cards in the analytics style, same masonry layout */
+#hrToolsWrap{margin-top:18px;border-top:1px solid var(--line);padding-top:14px}
+#hrToolsWrap>summary{list-style:none;display:flex;align-items:center;gap:12px;cursor:pointer;padding:10px 14px;border-radius:14px;background:var(--chip);transition:filter .15s}
+#hrToolsWrap>summary::-webkit-details-marker{display:none}#hrToolsWrap>summary:hover{filter:brightness(.97)}
+#hrToolsWrap>summary .tx{flex:1;min-width:0;display:flex;flex-direction:column}#hrToolsWrap>summary b{font-size:14px;font-weight:900;color:var(--ink)}
+#hrToolsWrap>summary small{font-size:12px;font-weight:700;color:var(--muted)}
+#hrToolsWrap>summary .chev{width:18px;height:18px;fill:none;stroke:var(--muted);stroke-width:2.4;stroke-linecap:round;transition:transform .2s}#hrToolsWrap[open]>summary .chev{transform:rotate(180deg)}
+#hrTools{margin-top:14px}
+.hr-ic{width:36px;height:36px;border-radius:11px;flex:none;display:grid;place-items:center;background:linear-gradient(145deg,var(--c1),var(--c2));box-shadow:0 3px 8px rgba(0,0,0,.12)}
+.hr-ic svg{width:20px;height:20px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.hr-c{display:flex;flex-direction:column}
+.hr-h{display:flex;gap:11px;align-items:center;margin-bottom:6px}.hr-h h5{margin:0!important;font-size:14.5px}.hr-h p{margin:2px 0 0;font-size:12px;color:var(--muted);font-weight:600;line-height:1.35}
+.hr-l{display:block;font-size:11px;font-weight:800;color:var(--muted);margin:14px 0 6px;text-transform:uppercase;letter-spacing:.04em}
+.hr-row{display:flex;gap:8px;align-items:center}
+.hr-row>.hr-in,.hr-item>.hr-in{flex:1}
+.hr-in{flex:none;min-width:0;width:100%;font:inherit;font-size:13px;font-weight:600;color:var(--ink);background:var(--chip);border:1.5px solid transparent;border-radius:10px;padding:8px 11px;outline:0;transition:border-color .15s,background .15s}
+.hr-in:focus{border-color:var(--viz);background:var(--panel-solid)}
+textarea.hr-in{resize:vertical;min-height:120px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;line-height:1.5}
+.hr-hint{margin:5px 0 0;font-size:11.5px;color:var(--muted);font-weight:600}
+.hr-item{display:flex;gap:7px;align-items:center;margin-bottom:6px}
+.hr-num{width:22px;height:22px;border-radius:50%;flex:none;display:grid;place-items:center;background:var(--chip);color:var(--muted);font-size:11px;font-weight:800}
+.hr-x{width:30px;height:30px;flex:none;border-radius:9px;font-size:19px;line-height:1;color:var(--muted)}.hr-x:hover{background:var(--chip);color:var(--red)}
+.hr-add{align-self:flex-start;font-weight:800;font-size:12.5px;color:var(--viz);padding:4px 0}
+.hr-np{display:grid;grid-template-columns:minmax(0,1fr) 80px auto;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.hr-np span:first-child{display:flex;flex-direction:column;min-width:0}.hr-np b{font-weight:800}.hr-np small{color:var(--muted);font-weight:600;font-size:11.5px}
+.hr-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:auto;padding-top:14px}
+.hr-swrow{display:flex;align-items:center;gap:12px;margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--chip);cursor:pointer}
+.hr-swrow span{flex:1;display:flex;flex-direction:column}.hr-swrow b{font-weight:800;font-size:13px}.hr-swrow small{color:var(--muted);font-weight:600;font-size:11.5px}
+.hr-sw{appearance:none;-webkit-appearance:none;width:44px;height:26px;border-radius:13px;background:#B9B3BC;position:relative;cursor:pointer;flex:none;transition:background .2s;margin:0}
+.hr-sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+.hr-sw:checked{background:#34C759}.hr-sw:checked::after{transform:translateX(18px)}.hr-sw:focus-visible{outline:2px solid var(--viz);outline-offset:2px}
 .pane{display:none;padding:14px;background:var(--panel-solid);border-radius:3px 14px 14px 14px;margin:0 10px 10px}.pane.on{display:block}
 .hint{font-size:12px;color:var(--muted);font-weight:600;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;text-align:center;gap:8px}
 .hint-i{width:13px;height:13px;fill:var(--red);flex:none;opacity:.85}
@@ -203,7 +230,6 @@ kbd{font:700 11px Nunito;background:var(--chip);border:1px solid var(--line);bor
 #itemBar svg{width:14px;height:14px;fill:currentColor;stroke:none}
 /* labels */
 .rl{position:absolute;transform:translate(-50%,-50%);padding:5px 10px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap;background:rgba(255,255,255,.82);color:var(--ink);box-shadow:0 2px 8px rgba(60,40,30,.10);transition:opacity .2s}
-#hrTools .hrrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0}#hrTools .hrrow .field{flex:1;min-width:200px}#hrTools textarea.field{width:100%;resize:vertical;font:inherit}#hrTools .hrchk{display:flex;gap:6px;align-items:center;font-weight:700}
 #app[data-ui="dark"] .rl{background:rgba(40,38,48,.85);color:#f3eef2}
 .rl.busy{box-shadow:0 0 0 2px #E2001A,0 4px 12px rgba(226,0,26,.25)}
 .rl .bz{margin-left:6px;font-size:11px;color:#E2001A}
@@ -1325,7 +1351,7 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {initPhone} from './phone.js';
-import {mountAnalytics} from './analytics.js';
+import {mountAnalytics,layoutCards,hbars} from './analytics.js';
 
 /* ---------- data ---------- */
 const S=2.25; // office scale: sketch units → meters
@@ -2265,7 +2291,7 @@ let anView=null;
 async function renderStats(){const box=$('#stats'); if(!box) return; const tok=getToken();
   if(!tok){anView&&anView.destroy(); anView=null; box.innerHTML='<p class="hint">Аналітика доступна HR. <button class="btn" id="statsLogin">Ввести код доступу</button></p>'; $('#statsLogin').onclick=()=>openTokenModal(); return;}
   if(anView){anView.reload(); return;}
-  box.innerHTML='<div id="anRoot"></div><details id="hrToolsWrap"><summary>Налаштування HR · пульс, онбординг, ігри</summary><div id="hrTools"></div></details>';
+  box.innerHTML='<div id="anRoot"></div><details id="hrToolsWrap"><summary><span class="hr-ic" style="--c1:#A9AFB7;--c2:#5B626B"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg></span><span class="tx"><b>Налаштування HR</b><small>Пульс тижня · онбординг новачків · ігри в телефоні</small></span><svg class="chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></summary><div id="hrTools"></div></details>';
   const H=()=>({'X-Edit-Token':getToken()});
   const get=async p=>{const r=await fetch(API+'/analytics'+p,{headers:H()}); if(!r.ok) throw Object.assign(new Error(r.status),{code:r.status}); return r.json();};
   anView=mountAnalytics($('#anRoot'),{get,toast,
@@ -2281,25 +2307,48 @@ async function renderHrTools(){const box=$('#stats'), tok=getToken(); if(!box||!
   const get=p=>fetch(API+p,{headers:H}).then(r=>r.ok?r.json():null).catch(()=>null);
   const put=(p,b)=>fetch(API+p,{method:'PUT',headers:H,body:JSON.stringify(b)}).then(r=>{if(!r.ok) throw new Error(r.status); return r.json();});
   const [pulse,onb,gs]=await Promise.all([get('/pulse?weeks=8'),get('/onboarding'),get('/games/settings')]);
-  el.innerHTML=`<h5 style="margin-top:18px">Пульс тижня <small>· анонімно, середнє лише для груп від ${pulse?pulse.minGroup:3} людей</small></h5>
-    ${pulse?`<div class="hrrow"><input class="field" id="hrPulseQ" maxlength="200" value="${esc(pulse.current.question)}" aria-label="Питання тижня"><button class="btn" id="hrPulseSave">Зберегти питання</button></div>
-    <table>${pulse.weeks.length?pulse.weeks.map(w=>`<tr><td>${esc(w.week)}</td><td>${esc(w.question)}</td><td>${w.avg!=null?w.avg.toFixed(2)+'/5':'—'} · ${w.n} відп.</td><td>${w.depts.map(d=>esc(d.dept)+': '+d.avg.toFixed(1)).join(', ')}</td></tr>`).join(''):'<tr><td>Ще немає відповідей</td></tr>'}</table>`:'<p class="hint">Недоступно</p>'}
-    <h5 style="margin-top:18px">Онбординг новачків <small>· перші 30 днів після дати найму; по рядку на пункт</small></h5>
-    ${onb?`<textarea class="field" id="hrOnb" rows="7" aria-label="Пункти онбордингу">${esc(onb.items.map(i=>i.text).join('\n'))}</textarea><div class="hrrow"><button class="btn" id="hrOnbSave">Зберегти чек-лист</button></div>
-    <table>${onb.people.length?onb.people.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(p.dept||'')}</td><td>${p.done}/${p.total}</td></tr>`).join(''):'<tr><td>Новачків зараз немає — вкажіть «Дату найму» в картці співробітника</td></tr>'}</table>`:''}
-    <h5 style="margin-top:18px">Ігри в телефоні</h5>
-    ${gs?`<div class="hrrow"><label class="hrchk"><input type="checkbox" id="hrGamesOn" ${gs.enabled?'checked':''}> Ігри дозволені</label><input class="field" id="hrGamesWin" placeholder="Будь-коли · або 12:00-14:00, 18:00-21:00" value="${esc(gs.windows.map(w=>w.from+'-'+w.to).join(', '))}" aria-label="Години для ігор"></div>
-    <p class="hint">Питання для вікторини — по рядку: <b>Питання | правильна відповідь | варіант | варіант</b></p>
-    <textarea class="field" id="hrQuiz" rows="5" aria-label="Питання вікторини">${esc(gs.quiz.map(q=>[q.q,q.options[q.answer],...q.options.filter((_,i)=>i!==q.answer)].join(' | ')).join('\n'))}</textarea>
-    <div class="hrrow"><button class="btn" id="hrGamesSave">Зберегти налаштування ігор</button></div>`:''}`;
-  const ps=$('#hrPulseSave'); if(ps) ps.onclick=async()=>{try{await put('/pulse/question',{question:$('#hrPulseQ').value}); toast('Питання тижня збережено');}catch(e){toast('Не вдалося зберегти');}};
-  const os=$('#hrOnbSave'); if(os) os.onclick=async()=>{const old=onb.items, lines=$('#hrOnb').value.split('\n').map(x=>x.trim()).filter(Boolean);
-    try{await put('/onboarding/template',{items:lines.map(t=>({id:(old.find(i=>i.text===t)||{}).id,text:t}))}); toast('Чек-лист збережено'); renderHrTools();}catch(e){toast('Не вдалося зберегти');}};
-  const gsv=$('#hrGamesSave'); if(gsv) gsv.onclick=async()=>{
+  const SV=(d,c1,c2)=>`<span class="hr-ic" style="--c1:${c1};--c2:${c2}"><svg viewBox="0 0 24 24"><path d="${d}"/></svg></span>`;
+  const headr=(ic,t,sub)=>`<div class="hr-h">${ic}<div><h5>${t}</h5><p>${sub}</p></div></div>`;
+  const fmtD=k=>{const [y,m,d]=String(k).slice(0,10).split('-').map(Number); return new Date(y,m-1,d).toLocaleDateString('uk-UA',{day:'numeric',month:'short'});};
+  const pulseCard=pulse?`<section class="an-card hr-c">${headr(SV('M3 12h4l3-7 4 14 3-7h4','#8EA2F5','#4A5FD6'),'Пульс тижня',`Анонімне питання щотижня · середнє видно лише для груп від ${pulse.minGroup} людей`)}
+      <label class="hr-l" for="hrPulseQ">Питання цього тижня · ${esc(pulse.current.week)}</label>
+      <div class="hr-row"><input class="hr-in" id="hrPulseQ" maxlength="200" value="${esc(pulse.current.question)}"><button class="an-btn pri" id="hrPulseSave">Зберегти</button></div>
+      <div class="hr-l">Останні тижні</div>
+      ${pulse.weeks.length?hbars(pulse.weeks.map(w=>({label:w.week,v:w.avg,sub:`${w.n} відп. · ${w.question}${w.depts.length?' · '+w.depts.map(d=>d.dept+' '+d.avg.toFixed(1)).join(', '):''}`})),{max:5,d:2}):'<p class="an-empty">Ще немає відповідей.</p>'}</section>`:'';
+  const onbCard=onb?`<section class="an-card hr-c">${headr(SV('M9 4h6v2.5H9zM8 5H5v15h14V5h-3M8.5 13l2.2 2.2L15 11','#4FE0BC','#16917A'),'Онбординг новачків',`Чек-лист на перші ${onb.days} днів після дати найму`)}
+      <div class="hr-l">Пункти чек-листа</div>
+      <div id="hrOnbList">${onb.items.map(i=>`<div class="hr-item" data-id="${esc(i.id)}"><span class="hr-num"></span><input class="hr-in" value="${esc(i.text)}" maxlength="160" aria-label="Пункт"><button type="button" class="hr-x" aria-label="Видалити пункт">×</button></div>`).join('')}</div>
+      <button type="button" class="hr-add" id="hrOnbAdd">+ Додати пункт</button>
+      <div class="hr-l">Новачки зараз</div>
+      ${onb.people.length?onb.people.map(p=>`<div class="hr-np"><span><b>${esc(p.name)}</b><small>${esc(p.dept||'')}${p.hiredOn?' · з '+fmtD(p.hiredOn):''}</small></span><span class="an-prog"><i style="width:${p.total?p.done/p.total*100:0}%"></i></span><b>${p.done}/${p.total}</b></div>`).join(''):'<p class="an-empty">Новачків немає — вкажіть «Дату найму» в картці співробітника.</p>'}
+      <div class="hr-foot"><button class="an-btn pri" id="hrOnbSave">Зберегти чек-лист</button></div></section>`:'';
+  const gamesCard=gs?`<section class="an-card hr-c">${headr(SV('M6 9h12a4 4 0 0 1 3.9 4.9l-.6 2.6a2.6 2.6 0 0 1-4.5 1.1L15 15.5H9l-1.8 2.1a2.6 2.6 0 0 1-4.5-1.1l-.6-2.6A4 4 0 0 1 6 9Z','#FFB04A','#FF5E3A'),'Ігри в телефоні','Коли співробітникам доступні міні-ігри та вікторина')}
+      <label class="hr-swrow"><span><b>Ігри дозволені</b><small>Вимкніть, щоб сховати ігри для всіх</small></span><input type="checkbox" class="hr-sw" id="hrGamesOn" ${gs.enabled?'checked':''}></label>
+      <label class="hr-l" for="hrGamesWin">Години для ігор</label>
+      <input class="hr-in" id="hrGamesWin" placeholder="Будь-коли · або 12:00-14:00, 18:00-21:00" value="${esc(gs.windows.map(w=>w.from+'-'+w.to).join(', '))}">
+      <p class="hr-hint">Порожньо — будь-коли. Кілька проміжків — через кому.</p>
+      <label class="hr-l" for="hrQuiz">Питання вікторини · ${gs.quiz.length}</label>
+      <textarea class="hr-in" id="hrQuiz" rows="6">${esc(gs.quiz.map(q=>[q.q,q.options[q.answer],...q.options.filter((_,i)=>i!==q.answer)].join(' | ')).join('\n'))}</textarea>
+      <p class="hr-hint">По рядку: <b>Питання | правильна відповідь | варіант | варіант</b></p>
+      <div class="hr-foot"><button class="an-btn pri" id="hrGamesSave">Зберегти налаштування ігор</button></div></section>`:'';
+  el.className='an an-hr';
+  el.innerHTML=`<div class="an-grid">${pulseCard}${onbCard}${gamesCard}</div>`;
+  const grid=el.querySelector('.an-grid'), lay=()=>{if(grid.isConnected&&grid.clientWidth) layoutCards(grid);};
+  lay(); const det=$('#hrToolsWrap'); if(det) det.ontoggle=lay;
+  if(!el._ro&&typeof ResizeObserver==='function'){let t=0; el._ro=new ResizeObserver(()=>{clearTimeout(t); t=setTimeout(()=>{const g=el.querySelector('.an-grid'); if(g&&g.clientWidth&&Math.max(1,Math.min(3,Math.floor((g.clientWidth+14)/344)))!==+g.dataset.cols) layoutCards(g);},80);}); el._ro.observe(el);}
+  // onboarding list editor
+  const list=$('#hrOnbList'), renum=()=>list&&list.querySelectorAll('.hr-num').forEach((n,i)=>n.textContent=i+1);
+  if(list){renum(); list.onclick=e=>{const x=e.target.closest('.hr-x'); if(x){x.parentElement.remove(); renum();}};
+    $('#hrOnbAdd').onclick=()=>{list.insertAdjacentHTML('beforeend','<div class="hr-item"><span class="hr-num"></span><input class="hr-in" maxlength="160" placeholder="Новий пункт" aria-label="Пункт"><button type="button" class="hr-x" aria-label="Видалити пункт">×</button></div>'); renum(); list.lastElementChild.querySelector('input').focus();};}
+  const busy=async(b,fn)=>{b.disabled=true; try{await fn();}finally{b.disabled=false;}};
+  const ps=$('#hrPulseSave'); if(ps) ps.onclick=()=>busy(ps,async()=>{try{await put('/pulse/question',{question:$('#hrPulseQ').value}); toast('Питання тижня збережено');}catch(e){toast('Не вдалося зберегти');}});
+  const os=$('#hrOnbSave'); if(os) os.onclick=()=>busy(os,async()=>{const items=[...list.querySelectorAll('.hr-item')].map(r=>({id:r.dataset.id,text:r.querySelector('input').value.trim()})).filter(i=>i.text);
+    try{await put('/onboarding/template',{items}); toast('Чек-лист збережено'); renderHrTools();}catch(e){toast('Не вдалося зберегти');}});
+  const gsv=$('#hrGamesSave'); if(gsv) gsv.onclick=()=>busy(gsv,async()=>{
     const windows=$('#hrGamesWin').value.split(',').map(x=>x.trim()).filter(Boolean).map(x=>{const m=/^(\d{1,2}:\d\d)\s*[-–]\s*(\d{1,2}:\d\d)$/.exec(x); return m?{from:m[1].padStart(5,'0'),to:m[2].padStart(5,'0')}:null;});
     if(windows.some(w=>!w)){toast('Години у форматі 12:00-14:00'); return;}
     const quiz=$('#hrQuiz').value.split('\n').map(l=>l.split('|').map(x=>x.trim()).filter(Boolean)).filter(p=>p.length>=3).map(p=>({q:p[0],options:p.slice(1,5),answer:0}));
-    try{await put('/games/settings',{enabled:$('#hrGamesOn').checked,windows,quiz}); toast('Налаштування ігор збережено');}catch(e){toast('Не вдалося зберегти');}};}
+    try{await put('/games/settings',{enabled:$('#hrGamesOn').checked,windows,quiz}); toast('Налаштування ігор збережено');}catch(e){toast('Не вдалося зберегти');}});}
 
 /* ---------- init ---------- */
 const params=new URLSearchParams(location.search);
