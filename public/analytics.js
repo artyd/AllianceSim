@@ -164,7 +164,9 @@ const CSS = `
 .an-tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--red)}
 .an-tabs button b{margin-left:5px;font-size:10.5px;background:var(--red);color:#fff;border-radius:999px;padding:1px 6px}
 .an-body{min-width:0}
-.an-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.an{container-type:inline-size}
+.an-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@container (max-width:620px){.an-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .an-tile{background:var(--chip);border-radius:14px;padding:10px 13px;min-width:0}
 .an-tile b{display:block;font-size:24px;font-weight:900;line-height:1.15;font-variant-numeric:tabular-nums}
 .an-tile span{display:block;font-size:11.5px;font-weight:700;color:var(--muted);margin-top:2px}
@@ -239,7 +241,7 @@ const CSS = `
 .an.compact .an-sheet{max-height:none}
 .an.compact .an-hbr{grid-template-columns:minmax(60px,34%) 1fr auto}
 .an.compact .an-hbr .dl{display:none}
-@media (max-width:560px){.an-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.an-hbr{grid-template-columns:minmax(60px,34%) 1fr auto}.an-hbr .dl{display:none}}
+@media (max-width:560px){.an-hbr{grid-template-columns:minmax(60px,34%) 1fr auto}.an-hbr .dl{display:none}}
 `;
 function injectCss() {
   if (document.getElementById('an-css')) return;
