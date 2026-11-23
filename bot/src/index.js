@@ -1,6 +1,6 @@
 // AllianceSim Telegram bot (grammy, long polling). lib/: the Bot instance, api client, enums;
 // features/: one file per bot feature. Talks to the api only (ADR-0004).
-import { bot, CHECKIN_HOUR, CHECKIN_TZ, WEBAPP_URL } from './lib/bot.js';
+import { bot, CHECKIN_HHMM, CHECKIN_TZ, WEBAPP_URL } from './lib/bot.js';
 // Features register their handlers on import — keep this order (grammy runs middleware in registration order).
 import './features/character.js';
 import './features/checkin.js';
@@ -17,4 +17,4 @@ if (WEBAPP_URL) {
     .catch((e) => console.error('[bot] setChatMenuButton failed:', e.message));
 }
 
-bot.start({ onStart: (info) => console.log(`[bot] @${info.username} started (polling); check-in ${CHECKIN_HOUR}:00, HR report ${REPORT_HOUR}:00 ${CHECKIN_TZ}${WEBAPP_URL ? '; mini app on' : ''}`) });
+bot.start({ onStart: (info) => console.log(`[bot] @${info.username} started (polling); check-in ${CHECKIN_HHMM}, HR report ${REPORT_HOUR}:00 ${CHECKIN_TZ}${WEBAPP_URL ? '; mini app on' : ''}`) });

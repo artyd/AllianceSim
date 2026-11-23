@@ -7,7 +7,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const pend = async () => (await call('GET', '/notifications/pending', { hr: true })).data;
 const kyiv = () => { const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Kyiv', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()).map((x) => [x.type, x.value])); return `${p.year}-${p.month}-${p.day}`; };
 
-await start({ CHECKIN_HOUR: '0' }); // daily posts may run at any hour in tests
+await start({ CHECKIN_HOUR: '0', CHECKIN_MINUTE: '0' }); // daily posts may run at any hour in tests
 try {
   const today = kyiv(), md = today.slice(5);
   await seed([

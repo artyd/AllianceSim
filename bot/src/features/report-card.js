@@ -13,16 +13,16 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 // Parts of a Date as seen in `tz` (day key + hour) — for "answered after today's check-in".
 function tzParts(d, tz) {
   const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
-    timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23',
+    timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
   }).formatToParts(d).map((x) => [x.type, x.value]));
-  return { day: `${p.year}-${p.month}-${p.day}`, hour: Number(p.hour) };
+  return { day: `${p.year}-${p.month}-${p.day}`, hour: Number(p.hour), minute: Number(p.minute) };
 }
 
 // Linked people who haven't touched their card since this morning's check-in went out.
-export function answeredToday(e, now, tz, checkinHour) {
+export function answeredToday(e, now, tz, checkinHour, checkinMinute = 0) {
   if (!e.updated_at) return false;
   const u = tzParts(new Date(e.updated_at), tz), n = tzParts(now, tz);
-  return u.day === n.day && u.hour >= checkinHour;
+  return u.day === n.day && u.hour * 60 + u.minute >= checkinHour * 60 + checkinMinute;
 }
 
 // Group by department, case/space-insensitive ("Продажі" == "продажі "), first spelling wins.
@@ -43,11 +43,11 @@ function pill(x, y, text, color, w) {
     `<text x="${x + 25}" y="${y}" font-size="15" fill="${color}" font-weight="bold">${esc(text)}</text>`;
 }
 
-export function renderReport(list, { now = new Date(), tz = 'Europe/Kyiv', checkinHour = 9 } = {}) {
+export function renderReport(list, { now = new Date(), tz = 'Europe/Kyiv', checkinHour = 8, checkinMinute = 30 } = {}) {
   const W = 900, PAD = 36, ROW = 34;
   const counts = Object.fromEntries(STATUS.map((s) => [s.key, 0]));
   for (const e of list) if (e.status in counts) counts[e.status]++;
-  const pending = list.filter((e) => e.telegram_id && !answeredToday(e, now, tz, checkinHour));
+  const pending = list.filter((e) => e.telegram_id && !answeredToday(e, now, tz, checkinHour, checkinMinute));
   const pendingIds = new Set(pending.map((e) => e.id));
   const groups = groupByDept(list);
 

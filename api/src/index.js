@@ -47,7 +47,7 @@ initSchema()
     safe('attachment cleanup', cleanupAttachments)();
     // Calendar reminders + task deadlines → Telegram (queued for the bot).
     setInterval(safe('reminders', runReminders), Number(process.env.JOBS_INTERVAL_MS || 60 * 1000));
-    // Spec 005: birthday/anniversary posts (once a day from CHECKIN_HOUR), HR analytics snapshots.
+    // Spec 005: birthday/anniversary posts (once a day from the check-in time, 08:30), HR analytics snapshots.
     setInterval(safe('daily posts', runDailyPosts), Number(process.env.JOBS_INTERVAL_MS || 60 * 1000));
     setInterval(safe('snapshot', snapshotDay), Number(process.env.SNAPSHOT_MS || process.env.JOBS_INTERVAL_MS || 10 * 60 * 1000));
     safe('snapshot', snapshotDay)();

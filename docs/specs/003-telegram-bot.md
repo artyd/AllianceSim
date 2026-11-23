@@ -28,7 +28,7 @@ Telegram notification.
   avatar (same `avHTML` rendering the site already uses).
 
 ### Daily check-in
-- Sent **weekday mornings** at a configurable time in **Europe/Kyiv** (default 09:00),
+- Sent **weekday mornings** at a configurable time in **Europe/Kyiv** (default 08:30 — start of the working day),
   Mon–Fri only.
 - Inline survey updates the employee's **status** (`office | remote | absent | sick |
   vacation`) and **mood** — the exact enums the form/`STATUS` already use.
@@ -75,7 +75,7 @@ Telegram notification.
 - New **separate service** `bot/` (Node, ESM, `grammy`) in `docker-compose.yml`
   alongside `api`, on the same Postgres. **Long polling** (no public webhook / Caddy
   route). Env: `TELEGRAM_BOT_TOKEN`, `EDIT_TOKEN` (to call the API), `DATABASE_URL`,
-  `CHECKIN_HOUR` (default 9), `CHECKIN_TZ=Europe/Kyiv`. Daily job via `node-cron`.
+  `CHECKIN_HOUR` + `CHECKIN_MINUTE` (default 8:30), `CHECKIN_TZ=Europe/Kyiv`. Daily job via `node-cron`.
 - Bot token comes from **@BotFather** — user supplies it into the server `.env`
   (prerequisite; not in repo).
 

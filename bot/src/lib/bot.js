@@ -6,7 +6,10 @@ if (!TOKEN) {
   console.error('[bot] TELEGRAM_BOT_TOKEN is not set — get one from @BotFather and put it in .env');
   process.exit(1);
 }
-export const CHECKIN_HOUR = Number(process.env.CHECKIN_HOUR || 9);
+// Morning check-in time, Kyiv wall clock (default 08:30 — the start of the working day).
+export const CHECKIN_HOUR = Number(process.env.CHECKIN_HOUR ?? 8);
+export const CHECKIN_MINUTE = Number(process.env.CHECKIN_MINUTE ?? 30);
+export const CHECKIN_HHMM = `${String(CHECKIN_HOUR).padStart(2, '0')}:${String(CHECKIN_MINUTE).padStart(2, '0')}`;
 export const CHECKIN_TZ = process.env.CHECKIN_TZ || 'Europe/Kyiv';
 export const WEBAPP_URL = process.env.WEBAPP_URL || ''; // https URL of the site → opened as a Mini App
 

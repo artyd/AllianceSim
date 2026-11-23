@@ -1,6 +1,6 @@
 import { InputFile } from 'grammy';
 import cron from 'node-cron';
-import { bot, CHECKIN_HOUR, CHECKIN_TZ, firstOf } from '../lib/bot.js';
+import { bot, CHECKIN_HOUR, CHECKIN_MINUTE, CHECKIN_TZ, firstOf } from '../lib/bot.js';
 import { api } from '../lib/api.js';
 import { nameMatches } from '../lib/names.js';
 import { renderReport, reportCaption } from './report-card.js';
@@ -24,7 +24,7 @@ async function sendReport(toChatId, greetName) {
   const hr = reportRecipient(list);
   const chatId = toChatId || hr?.telegram_id;
   if (!chatId) { console.error('[bot] HR report: no recipient (set REPORT_HR_NAME / REPORT_HR_TG, HR must be linked)'); return; }
-  const rep = renderReport(list, { tz: CHECKIN_TZ, checkinHour: CHECKIN_HOUR });
+  const rep = renderReport(list, { tz: CHECKIN_TZ, checkinHour: CHECKIN_HOUR, checkinMinute: CHECKIN_MINUTE });
   // Week-over-week team mood (spec 005 analytics), if there is history yet.
   let trend = '';
   try {

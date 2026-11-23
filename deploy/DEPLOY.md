@@ -147,7 +147,7 @@ notifications from the site. It talks to the `api` over the internal network and
 cd /opt/alliancesim
 nano .env
 #   TELEGRAM_BOT_TOKEN=123456:ABC...     <- required
-#   CHECKIN_HOUR=9                        <- optional (default 9)
+#   CHECKIN_HOUR=8  CHECKIN_MINUTE=30     <- optional (default 08:30)
 #   CHECKIN_TZ=Europe/Kyiv               <- optional
 
 # 3. Build & start (rebuilds api too — the employees schema expanded):

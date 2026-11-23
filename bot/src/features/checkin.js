@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import { statusKeyboard } from './character.js';
-import { bot, CHECKIN_HOUR, CHECKIN_TZ } from '../lib/bot.js';
+import { bot, CHECKIN_HOUR, CHECKIN_MINUTE, CHECKIN_TZ } from '../lib/bot.js';
 import { api } from '../lib/api.js';
 
 // Weekday-morning check-in (status + mood) to every linked employee.
@@ -34,5 +34,5 @@ async function sendCheckins() {
   }
   console.log(`[bot] check-in sent to ${linked.length} people`);
 }
-// Mon–Fri at CHECKIN_HOUR:00, Europe/Kyiv.
-cron.schedule(`0 ${CHECKIN_HOUR} * * 1-5`, sendCheckins, { timezone: CHECKIN_TZ });
+// Mon–Fri at CHECKIN_HOUR:CHECKIN_MINUTE (08:30 by default), Europe/Kyiv.
+cron.schedule(`${CHECKIN_MINUTE} ${CHECKIN_HOUR} * * 1-5`, sendCheckins, { timezone: CHECKIN_TZ });

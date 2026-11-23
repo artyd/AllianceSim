@@ -14,7 +14,8 @@ import { invalidateOffice } from '../office/live.js';
 export const personal = express.Router();
 
 export { TZ }; // office timezone (re-exported for older imports)
-export const CHECKIN_HOUR = Number(process.env.CHECKIN_HOUR || 9);
+// Morning check-in time as minutes after midnight, Kyiv (default 08:30).
+export const CHECKIN_MIN = Number(process.env.CHECKIN_HOUR ?? 8) * 60 + Number(process.env.CHECKIN_MINUTE ?? 30);
 
 // ── input helpers ────────────────────────────────────────────────────────────
 const str = (v, max) => {
@@ -517,14 +518,14 @@ export async function runReminders() {
       pref: 'events', payload: { open: `event_${r.id}` },
     });
   }
-  // Task deadline today — once, from the morning check-in hour (tasks that existed by then).
+  // Task deadline today — once, from the morning check-in time (tasks that existed by then).
   const { rows: today } = await query(
     `UPDATE tasks SET due_notified_at = now()
      WHERE done_at IS NULL AND due_at IS NOT NULL AND due_notified_at IS NULL AND due_at > now()
        AND (due_at AT TIME ZONE '${tz}')::date = (now() AT TIME ZONE '${tz}')::date
-       AND extract(hour FROM now() AT TIME ZONE '${tz}') >= $1::int
-       AND created_at < date_trunc('day', now() AT TIME ZONE '${tz}') AT TIME ZONE '${tz}' + make_interval(hours => $1::int)
-     RETURNING *`, [CHECKIN_HOUR]);
+       AND extract(hour FROM now() AT TIME ZONE '${tz}') * 60 + extract(minute FROM now() AT TIME ZONE '${tz}') >= $1::int
+       AND created_at < date_trunc('day', now() AT TIME ZONE '${tz}') AT TIME ZONE '${tz}' + make_interval(mins => $1::int)
+     RETURNING *`, [CHECKIN_MIN]);
   for (const t of today) {
     await queueNotif(t.assignee_id, 'task_due', { text: taskLine(t), pref: 'tasks', payload: { open: `task_${t.id}`, buttons: [{ text: '✓ Виконано', data: `tk:done:${t.id}` }] } });
   }

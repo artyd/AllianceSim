@@ -142,14 +142,15 @@ office.delete('/me/desk', async (req, res, next) => {
 });
 
 // ── daily jobs: birthday / anniversary posts, HR snapshots ───────────────────
-const CHECKIN_HOUR = Number(process.env.CHECKIN_HOUR || 9);
+const CHECKIN_MIN = Number(process.env.CHECKIN_HOUR ?? 8) * 60 + Number(process.env.CHECKIN_MINUTE ?? 30);
 async function once(day, kind, empId) {
   const r = await query('INSERT INTO system_posts (day, kind, employee_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', [day, kind, empId]);
   return r.rowCount > 0;
 }
 const plural = (n, one, few, many) => (n % 10 === 1 && n % 100 !== 11 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? few : many);
 export async function runDailyPosts(now = new Date()) {
-  if (parts(now, TZ).h < CHECKIN_HOUR) return;
+  const p = parts(now, TZ);
+  if (p.h * 60 + p.mi < CHECKIN_MIN) return;
   const day = localDay(now), md = day.slice(5);
   const { rows: bd } = await query('SELECT id, name FROM employees WHERE birthday = $1 AND telegram_id IS NOT NULL', [md]);
   for (const e of bd) {
